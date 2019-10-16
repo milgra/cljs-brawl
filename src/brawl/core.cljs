@@ -91,7 +91,7 @@
    uniform mat4 projection;
    void main ( )
    {
-	gl_Position = position;
+	gl_Position = projection * position;
 	gl_PointSize = 8.0;
 	colorv = color;
 	positionv = position;
@@ -118,6 +118,33 @@
    }")
 
 
+
+(defn default_ortho [ left right bottom top near far ]
+  (let [rpl ( + right left )
+        rml ( - right left )
+        tpb ( + top bottom )
+        tmb ( - top bottom )
+        fpn ( + far near )
+        fmn ( - far near ) ]
+
+    [( / 2.0 rml )
+     0.0
+     0.0
+     0.0
+     0.0
+     ( / 2.0 tmb )
+     0.0
+     0.0
+     0.0
+     0.0
+     ( / -2.0 fmn )
+     0.0
+     (/ (- rpl) rml)
+     (/ (- tpb) tmb)
+     (/ (- fpn) fmn)
+     1.0 ]))
+
+
 (defn starttest []
   (let
       [gl (context/get-context (.getElementById js/document "main"))
@@ -134,10 +161,9 @@
                       buffer-object/array-buffer
                       buffer-object/static-draw)
 
-       projection [1.0 0.0 0.0 0.0
-                   0.0 1.0 0.0 0.0
-                   0.0 0.0 1.0 0.0
-                   0.0 0.0 0.0 1.0]]
+       projection (default_ortho -1.0 1.0 -1.0 1.0 -1.0 1.0)]
+
+    (println "projection" projection)
     
 ;;       (animate
 ;;        (fn [frame]              
@@ -163,8 +189,10 @@
                  :offset 16
                  :stride 32}]
                
-;;               :uniforms
-;;               [{:name "projection" :type :float-mat4 :values projection}]
+               :uniforms
+               [{:name "projection"
+                 :type :mat4
+                 :values projection}]
            
 ;;           )
 ;;          )
