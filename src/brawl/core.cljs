@@ -44,41 +44,137 @@
               (shaders/create-shader gl shader/vertex-shader vertex-shader-source)
               (shaders/create-shader gl shader/fragment-shader fragment-shader-source))
 
-       vertex-buffer (buffers/create-buffer gl (ta/float32 [1.0 1.0 0.0
-                                                            -1.0 1.0 0.0
-                                                            1.0 -1.0 0.0])
-                                            buffer-object/array-buffer
-                                            buffer-object/static-draw)
+       vertex-buffer (buffers/create-buffer
+                      gl
+                      (ta/float32 [1.0 1.0 0.0
+                                   -1.0 1.0 0.0
+                                   1.0 -1.0 0.0])
+                      buffer-object/array-buffer
+                      buffer-object/static-draw)
        
-       element-buffer (buffers/create-buffer gl (ta/unsigned-int16 [0 1 2])
-                                             buffer-object/element-array-buffer
-                                             buffer-object/static-draw)]
+       element-buffer (buffers/create-buffer
+                       gl
+                       (ta/unsigned-int16 [0 1 2])
+                       buffer-object/element-array-buffer
+                       buffer-object/static-draw)]
 
        (animate
         (fn [frame]
               
               (-> gl
                   (buffers/clear-color-buffer 1 0 0 1)
-                  (buffers/draw! :shader shader
-                                 :draw-mode draw-mode/triangles
-                                 :count 3
-                                 
-                                 :attributes
-                               [{:buffer vertex-buffer
-                                 :location (shaders/get-attrib-location gl shader "vertex_position")
-                                 :components-per-vertex 3
-                                 :type data-type/float}]
-                               
-                               :uniforms
-                               [{:name "frame" :type :int :values (ta/int32 [frame])}]
-                               
-                               :element-array
-                               {:buffer element-buffer
-                                :count 3
-                                :type data-type/unsigned-short
-                                :offset 0}))))))
+                  (buffers/draw!
+                   :shader shader
+                   :draw-mode draw-mode/triangles
+                   :count 3
+                   
+                   :attributes
+                   [{:buffer vertex-buffer
+                     :location (shaders/get-attrib-location gl shader "vertex_position")
+                     :components-per-vertex 3
+                     :type data-type/float}]
 
-(start)
+                   :uniforms
+                   [{:name "frame" :type :int :values (ta/int32 [frame])}]
+                   
+                   :element-array
+                   {:buffer element-buffer
+                    :count 3
+                    :type data-type/unsigned-short
+                    :offset 0}))))))
+
+(def vertex-source
+  "attribute highp vec4 position;
+   attribute highp vec4 color;
+   varying highp vec4 colorv;
+   varying highp vec4 positionv;
+   uniform mat4 projection;
+   void main ( )
+   {
+	gl_Position = position;
+	gl_PointSize = 8.0;
+	colorv = color;
+	positionv = position;
+   }")
+
+(def fragment-source
+  "varying highp vec4 colorv;
+   varying highp vec4 positionv;
+   void main( )
+   {
+	gl_FragColor = colorv;
+   	if ( colorv.w == 1.0 && colorv.x < 0.8 )
+   	{
+       	 highp float ver = sin(positionv.y)+1.0;
+       	 highp float hor = sin(positionv.x)+1.0;
+       	 highp float dia = sin((positionv.x+positionv.y)/1.5)+1.0;
+       	 ver = floor(ver * 2.0)/4.0;
+       	 hor = floor(hor * 2.0)/4.0;
+       	 dia = floor(dia * 2.0)/4.0;
+       	 if ( colorv.x >= colorv.y && colorv.x >= colorv.z ) gl_FragColor.x -= ver*0.05;
+       	 if ( colorv.y >= colorv.x && colorv.y >= colorv.z ) gl_FragColor.y -= hor*0.05;
+	 	if ( colorv.z >= colorv.x && colorv.z >= colorv.y ) gl_FragColor.z -= dia*0.2;
+   	}
+   }")
+
+
+(defn starttest []
+  (let
+      [gl (context/get-context (.getElementById js/document "main"))
+       shader (shaders/create-program
+               gl
+               (shaders/create-shader gl shader/vertex-shader vertex-source)
+               (shaders/create-shader gl shader/fragment-shader fragment-source))
+
+       vertex-buffer (buffers/create-buffer
+                      gl
+                      (ta/float32 [ 1.0  1.0 0.0 1.0 1.0 0.0 0.0 1.0
+                                   -1.0  1.0 0.0 1.0 1.0 0.0 0.0 1.0
+                                    1.0 -1.0 0.0 1.0 1.0 0.0 0.0 1.0])
+                      buffer-object/array-buffer
+                      buffer-object/static-draw)
+
+       projection [1.0 0.0 0.0 0.0
+                   0.0 1.0 0.0 0.0
+                   0.0 0.0 1.0 0.0
+                   0.0 0.0 0.0 1.0]]
+    
+;;       (animate
+;;        (fn [frame]              
+          (-> gl
+              (buffers/clear-color-buffer 0 0.1 0 1)
+              
+              (buffers/draw!
+               :shader shader
+               :draw-mode draw-mode/triangles
+               :count 3
+               
+               :attributes
+               [{:buffer vertex-buffer
+                 :location (shaders/get-attrib-location gl shader "position")
+                 :components-per-vertex 4
+                 :type data-type/float
+                 :offset 0
+                 :stride 32}
+                {:buffer vertex-buffer
+                 :location (shaders/get-attrib-location gl shader "color")
+                 :components-per-vertex 4
+                 :type data-type/float
+                 :offset 16
+                 :stride 32}]
+               
+;;               :uniforms
+;;               [{:name "projection" :type :float-mat4 :values projection}]
+           
+;;           )
+;;          )
+               )
+              )
+          )
+  )
+
+
+(starttest)
 
 (defn get-test []
   (go
