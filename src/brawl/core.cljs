@@ -8,7 +8,12 @@
             [cljs-webgl.constants.buffer-object :as buffer-object]
             [cljs-webgl.constants.shader :as shader]
             [cljs-webgl.buffers :as buffers]
-            [cljs-webgl.typed-arrays :as ta] )
+            [cljs-webgl.typed-arrays :as ta]
+            [clojure.data.xml :as xml]
+            [brawl.surface :as surface]
+            [brawl.svg :as svg]
+            [brawl.physics :as physics]
+            [brawl.mass :as mass])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (enable-console-print!)
@@ -19,69 +24,6 @@
               (.requestAnimationFrame  js/window (loop (inc frame)))
               (draw-fn frame)))]
     ((loop 0))))
-
-(def vertex-shader-source
-  "attribute vec3 vertex_position;
-   void main() {
-     gl_Position = vec4(vertex_position, 1);
-   }")
-
-(def fragment-shader-source
-  "uniform int frame;
-   void main() {
-     gl_FragColor.r = sin(float(frame) * 0.05) / 2.0 + 0.5;
-     gl_FragColor.g = sin(float(frame) * 0.1) / 2.0 + 0.5;
-     gl_FragColor.b = sin(float(frame) * 0.02) / 2.0 + 0.5;
-     gl_FragColor.a = 1.0;
-   }")
-
-
-(defn start []
-  (let
-      [gl (context/get-context (.getElementById js/document "main"))
-       
-       shader (shaders/create-program gl
-              (shaders/create-shader gl shader/vertex-shader vertex-shader-source)
-              (shaders/create-shader gl shader/fragment-shader fragment-shader-source))
-
-       vertex-buffer (buffers/create-buffer
-                      gl
-                      (ta/float32 [1.0 1.0 0.0
-                                   -1.0 1.0 0.0
-                                   1.0 -1.0 0.0])
-                      buffer-object/array-buffer
-                      buffer-object/static-draw)
-       
-       element-buffer (buffers/create-buffer
-                       gl
-                       (ta/unsigned-int16 [0 1 2])
-                       buffer-object/element-array-buffer
-                       buffer-object/static-draw)]
-
-       (animate
-        (fn [frame]
-              
-              (-> gl
-                  (buffers/clear-color-buffer 1 0 0 1)
-                  (buffers/draw!
-                   :shader shader
-                   :draw-mode draw-mode/triangles
-                   :count 3
-                   
-                   :attributes
-                   [{:buffer vertex-buffer
-                     :location (shaders/get-attrib-location gl shader "vertex_position")
-                     :components-per-vertex 3
-                     :type data-type/float}]
-
-                   :uniforms
-                   [{:name "frame" :type :int :values (ta/int32 [frame])}]
-                   
-                   :element-array
-                   {:buffer element-buffer
-                    :count 3
-                    :type data-type/unsigned-short
-                    :offset 0}))))))
 
 (def vertex-source
   "attribute highp vec4 position;
@@ -118,7 +60,6 @@
    }")
 
 
-
 (defn default_ortho [ left right bottom top near far ]
   (let [rpl ( + right left )
         rml ( - right left )
@@ -144,8 +85,51 @@
      (/ (- fpn) fmn)
      1.0 ]))
 
+(defn init[]
+(go
+  (let [response (<! (http/get "level0.svg"
+                           ;; parameters
+                           {:with-credentials? false}))
+
+        xmlstr (xml/parse-str (:body response))
+        level (svg/psvg xmlstr "")]
+        ;;shapes (filter #(not= (% :id) "Surfaces") level)
+        ;;surfacepoints (filter #(= (% :id) "Surfaces") level)
+        ;;surfaces (surface/generate-from-pointlist surfacepoints)
+        ;;masses [(mass/mass2 500.0 0.0)]]
+        ;;(for [x (range 0 10)] (p/mass2 (rand 1000) (rand 1000)))
+
+    
+    (println "level" level))))
+    
+   ;; {:mainmass (mass/mass2 500.0 0.0)
+   ;;  :trans [0.0 0.0]
+   ;;  :keysdown { :l-down false :r-down false :u-down false :d-down false }
+   ;;  :shapes shapes
+   ;;  :masses masses
+   ;;  :surfaces surfaces
+   ;;  :surfacepoints surfacepoints})))
+
+
+(defn get-test []
+  (go
+    (let [response (<! (http/get "level0.svg"
+                                 ;; parameters
+                                 {:with-credentials? false
+                                  :query-params {"since" 135}}))]
+      (prn  (:body response)))))
+
+(defn post-test []
+  (go
+    (let [response (<! (http/post "https://api.github.com/graphql"
+                                  {:with-credentials? false
+                                   :headers {"Authorization" "SuperSecretToken1234"}
+                                   :json-params {:query "query { viewer { login }}"}}))]
+      (prn (:data (:body response))))))
+
 
 (defn starttest []
+  (init)
   (let
       [gl (context/get-context (.getElementById js/document "main"))
        shader (shaders/create-program
@@ -155,20 +139,24 @@
 
        vertex-buffer (buffers/create-buffer
                       gl
-                      (ta/float32 [ 1.0  1.0 0.0 1.0 1.0 0.0 0.0 1.0
+                      (ta/float32 [ 1.0  1.0 0.0 1.0 1.0 1.0 0.0 1.0
                                    -1.0  1.0 0.0 1.0 1.0 0.0 0.0 1.0
                                     1.0 -1.0 0.0 1.0 1.0 0.0 0.0 1.0])
                       buffer-object/array-buffer
                       buffer-object/static-draw)
 
+       location_pos (shaders/get-attrib-location gl shader "position")
+       location_col (shaders/get-attrib-location gl shader "color")
+
        projection (default_ortho -1.0 1.0 -1.0 1.0 -1.0 1.0)]
 
+    
     (println "projection" projection)
     
 ;;       (animate
 ;;        (fn [frame]              
           (-> gl
-              (buffers/clear-color-buffer 0 0.1 0 1)
+              (buffers/clear-color-buffer 0.1 0.0 0 1)
               
               (buffers/draw!
                :shader shader
@@ -177,13 +165,13 @@
                
                :attributes
                [{:buffer vertex-buffer
-                 :location (shaders/get-attrib-location gl shader "position")
+                 :location location_pos
                  :components-per-vertex 4
                  :type data-type/float
                  :offset 0
-                 :stride 32}
+`                 :stride 32}
                 {:buffer vertex-buffer
-                 :location (shaders/get-attrib-location gl shader "color")
+                 :location location_col
                  :components-per-vertex 4
                  :type data-type/float
                  :offset 16
@@ -203,22 +191,6 @@
 
 
 (starttest)
-
-(defn get-test []
-  (go
-    (let [response (<! (http/get "level0.svg"
-                                 ;; parameters
-                                 {:with-credentials? false
-                                  :query-params {"since" 135}}))]
-      (prn  (:body response)))))
-
-(defn post-test []
-  (go
-    (let [response (<! (http/post "https://api.github.com/graphql"
-                                  {:with-credentials? false
-                                   :headers {"Authorization" "SuperSecretToken1234"}
-                                   :json-params {:query "query { viewer { login }}"}}))]
-      (prn (:data (:body response))))))
 
 
 ;; define your app data so that it doesn't get over-written on reload
