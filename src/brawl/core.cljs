@@ -9,11 +9,13 @@
             [cljs-webgl.constants.shader :as shader]
             [cljs-webgl.buffers :as buffers]
             [cljs-webgl.typed-arrays :as ta]
-            [clojure.data.xml :as xml]
+            [tubax.core :refer [xml->clj]]
             [brawl.surface :as surface]
             [brawl.svg :as svg]
             [brawl.physics :as physics]
-            [brawl.mass :as mass])
+            [brawl.mass :as mass]
+            [brawl.math4 :as math4]
+            [brawl.shape :as shape])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (enable-console-print!)
@@ -60,57 +62,6 @@
    }")
 
 
-(defn default_ortho [ left right bottom top near far ]
-  (let [rpl ( + right left )
-        rml ( - right left )
-        tpb ( + top bottom )
-        tmb ( - top bottom )
-        fpn ( + far near )
-        fmn ( - far near ) ]
-
-    [( / 2.0 rml )
-     0.0
-     0.0
-     0.0
-     0.0
-     ( / 2.0 tmb )
-     0.0
-     0.0
-     0.0
-     0.0
-     ( / -2.0 fmn )
-     0.0
-     (/ (- rpl) rml)
-     (/ (- tpb) tmb)
-     (/ (- fpn) fmn)
-     1.0 ]))
-
-(defn init[]
-(go
-  (let [response (<! (http/get "level0.svg"
-                           ;; parameters
-                           {:with-credentials? false}))
-
-        xmlstr (xml/parse-str (:body response))
-        level (svg/psvg xmlstr "")]
-        ;;shapes (filter #(not= (% :id) "Surfaces") level)
-        ;;surfacepoints (filter #(= (% :id) "Surfaces") level)
-        ;;surfaces (surface/generate-from-pointlist surfacepoints)
-        ;;masses [(mass/mass2 500.0 0.0)]]
-        ;;(for [x (range 0 10)] (p/mass2 (rand 1000) (rand 1000)))
-
-    
-    (println "level" level))))
-    
-   ;; {:mainmass (mass/mass2 500.0 0.0)
-   ;;  :trans [0.0 0.0]
-   ;;  :keysdown { :l-down false :r-down false :u-down false :d-down false }
-   ;;  :shapes shapes
-   ;;  :masses masses
-   ;;  :surfaces surfaces
-   ;;  :surfacepoints surfacepoints})))
-
-
 (defn get-test []
   (go
     (let [response (<! (http/get "level0.svg"
@@ -118,6 +69,7 @@
                                  {:with-credentials? false
                                   :query-params {"since" 135}}))]
       (prn  (:body response)))))
+
 
 (defn post-test []
   (go
@@ -129,7 +81,7 @@
 
 
 (defn starttest []
-  (init)
+  (println "starttest")
   (let
       [gl (context/get-context (.getElementById js/document "main"))
        shader (shaders/create-program
@@ -148,10 +100,9 @@
        location_pos (shaders/get-attrib-location gl shader "position")
        location_col (shaders/get-attrib-location gl shader "color")
 
-       projection (default_ortho -1.0 1.0 -1.0 1.0 -1.0 1.0)]
+       projection (math4/proj_ortho -1.0 1.0 -1.0 1.0 -1.0 1.0)]
 
-    
-    (println "projection" projection)
+    (println "projection e" projection)
     
 ;;       (animate
 ;;        (fn [frame]              
@@ -169,7 +120,7 @@
                  :components-per-vertex 4
                  :type data-type/float
                  :offset 0
-`                 :stride 32}
+                 :stride 32}
                 {:buffer vertex-buffer
                  :location location_col
                  :components-per-vertex 4
@@ -190,7 +141,37 @@
   )
 
 
-(starttest)
+
+(defn init[]
+  (go
+    (let [response (<! (http/get "level0.svg"
+                                 ;; parameters
+                                 {:with-credentials? false}))
+          xmlstr (xml->clj (:body response) {:strict false})
+          level (svg/psvg xmlstr "")
+          shapes (filter #(not= (% :id) "Surfaces") level)
+          surfacepoints (filter #(= (% :id) "Surfaces") level)
+          surfaces (surface/generate-from-pointlist surfacepoints)
+          masses [(mass/mass2 500.0 0.0)]
+          triangles (map #( :triangles (shape/triangulate (:path %)) ) shapes)]
+      ;;(for [x (range 0 10)] (p/mass2 (rand 1000) (rand 1000)))]
+      
+      (println "shapes " shapes)
+      (println "triangles " triangles)
+
+      {:mainmass (mass/mass2 500.0 0.0)
+       :trans [0.0 0.0]
+       :keysdown { :l-down false :r-down false :u-down false :d-down false }
+       :shapes shapes
+       :masses masses
+       :surfaces surfaces
+       :surfacepoints surfacepoints})
+
+    (starttest)
+    ))
+
+
+(init)
 
 
 ;; define your app data so that it doesn't get over-written on reload

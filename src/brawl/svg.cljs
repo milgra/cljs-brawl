@@ -1,5 +1,5 @@
 (ns brawl.svg
-  (:require [clojure.data.xml :as xml]
+  (:require [tubax.core :refer [xml->clj]]
             [clojure.string :as s]))
 
 
@@ -31,20 +31,19 @@
 (defn psvg
   "parse svg recursively"
   [element id]
-  (println "parse type" (type element) element )
-  (cond
-    (map? element)
-    (let [{:keys [tag attrs content]} element]
-      (cond
-        (= tag :g)
-        (psvg content (attrs :id))
-        (= tag :path)
-        (concat [(pshp attrs id)] (psvg content id))
-        :else
-        (psvg content id)))
-    (seq? element)
-    (reduce #(concat %1 (psvg %2 id)) [] element)))
-
+  (if (not= nil element)
+    (cond
+      (map? element)
+      (let [{:keys [tag attributes content]} element]
+        (cond
+          (= tag :g)
+          (psvg content (attributes :id))
+          (= tag :path)
+          (concat [(pshp attributes id)] (psvg content id))
+          :else
+          (psvg content id)))
+      (vector? element)
+      (reduce #(concat %1 (psvg %2 id)) [] element))))
 
 ;;(brawl.svg/psvg (xml/parse "level0.svg") "")
 
