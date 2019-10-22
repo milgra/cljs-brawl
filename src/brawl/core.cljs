@@ -22,7 +22,7 @@
 
             ))
   
-(println "AA This text is printed from src/brawl/core.cljs. Go ahead and edit it and see reloading in action.")
+;;(println "AA This text is printed from src/brawl/core.cljs. Go ahead and edit it and see reloading in action.")
 
 (defn animate [draw-fn]
   (letfn [(loop [frame]
@@ -107,7 +107,8 @@
 
        projection (math4/proj_ortho -1.0 1.0 -1.0 1.0 -1.0 1.0)]
 
-    (println "projection e" projection)
+    
+    (println "projection e" projection )
     
 ;;       (animate
 ;;        (fn [frame]              
@@ -145,6 +146,14 @@
           )
   )
 
+(defn gen-vertex-triangle [ vertexes color ]
+  (let [r ( / (bit-shift-right (bit-and color 0xFF0000) 16) 255.0 )
+        g ( / (bit-shift-right (bit-and color 0x00FF00) 8) 255.9 )
+        b ( / (bit-and color 0x0000FF) 255.0 ) ]
+    (println "vertex" r g b)
+    [0.0 1.0 r g b]
+    )
+  )
 
 
 (defn init[]
@@ -158,7 +167,7 @@
           surfacepoints (filter #(= (% :id) "Surfaces") level)
           surfaces (surface/generate-from-pointlist surfacepoints)
           masses [(mass/mass2 500.0 0.0)]
-          triangles (map #( :triangles (shape/triangulate (:path %)) ) shapes)]
+          triangles ( map (fn [shape] gen-vertex-triangle (shape/triangulate_c (:path shape) ) (:color shape ) ) shapes )]
       ;;(for [x (range 0 10)] (p/mass2 (rand 1000) (rand 1000)))]
       
       (println "shapes " shapes)
