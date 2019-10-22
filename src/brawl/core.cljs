@@ -1,6 +1,10 @@
-(ns brawl.core
-  (:require [cljs-http.client :as http]
+(ns ^:figwheel-hooks brawl.core
+  (:require [goog.dom :as gdom]
+            [tubax.core :refer [xml->clj]]
+            [cljs-http.client :as http]
             [cljs.core.async :refer [<!]]
+            [cljs.core.async :refer-macros [go]]
+
             [cljs-webgl.context :as context]
             [cljs-webgl.shaders :as shaders]
             [cljs-webgl.constants.draw-mode :as draw-mode]
@@ -9,16 +13,16 @@
             [cljs-webgl.constants.shader :as shader]
             [cljs-webgl.buffers :as buffers]
             [cljs-webgl.typed-arrays :as ta]
-            [tubax.core :refer [xml->clj]]
             [brawl.surface :as surface]
             [brawl.svg :as svg]
             [brawl.physics :as physics]
             [brawl.mass :as mass]
             [brawl.math4 :as math4]
-            [brawl.shape :as shape])
-  (:require-macros [cljs.core.async.macros :refer [go]]))
+            [brawl.shape :as shape]
 
-(enable-console-print!)
+            ))
+  
+(println "AA This text is printed from src/brawl/core.cljs. Go ahead and edit it and see reloading in action.")
 
 (defn animate [draw-fn]
   (letfn [(loop [frame]
@@ -61,7 +65,6 @@
    	}
    }")
 
-
 (defn get-test []
   (go
     (let [response (<! (http/get "level0.svg"
@@ -78,6 +81,8 @@
                                    :headers {"Authorization" "SuperSecretToken1234"}
                                    :json-params {:query "query { viewer { login }}"}}))]
       (prn (:data (:body response))))))
+
+
 
 
 (defn starttest []
@@ -170,17 +175,22 @@
     (starttest)
     ))
 
-
 (init)
+
+(defn multiply [a b] (* a b))
 
 
 ;; define your app data so that it doesn't get over-written on reload
+(defonce app-state (atom {:text "Hello world!"}))
 
-(defonce app-state (atom {:text "WellHello world!"}))
+(defn get-app-element []
+  (gdom/getElement "app"))
 
-(defn on-js-reload []
+
+
+;; specify reload hook with ^;after-load metadata
+(defn ^:after-load on-reload []
   ;; optionally touch your app-state to force rerendering depending on
   ;; your application
-  (swap! app-state update-in [:__figwheel_counter] inc)
-  (println "appsate" app-state)
+  ;; (swap! app-state update-in [:__figwheel_counter] inc)
 )
