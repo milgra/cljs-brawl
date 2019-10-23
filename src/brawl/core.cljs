@@ -156,7 +156,7 @@
 
 (defn init[]
   (go
-    (let [response (<! (http/get "level1.svg"
+    (let [response (<! (http/get "level0.svg"
                                  ;; parameters
                                  {:with-credentials? false}))
           xmlstr (xml->clj (:body response) {:strict false})

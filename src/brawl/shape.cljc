@@ -71,56 +71,50 @@
   )
 
 (defn triangulate_c [points]
-  (let [n (count points)]
-    (when (> n 3)
-      (let [area (triangulate_area points)
-            ;; we want a counter-clockwise polygon
-            V (if (> area 0.0)
-                     (vec (range 0 n))
-                     (vec (reverse (range 0 n))) )]
-        (loop [m 0
-               nv n
-               v (- nv 1)
-               ;; remove nv-2 verices, creating 1 triangle every time
-               count (dec (* 2 nv))
-               result []
-               NV V]
-          (if (> nv 2 )
-            (do
-              (let [tu v
-                    _u ( if ( <= nv tu ) 0 tu )
-                    tv (+ _u 1 )
-                    _v ( if ( <= nv tv ) 0 tv )
-                    tw (+ _v 1 )
-                    _w ( if ( <= nv tw ) 0 tw )
-                    tri ( triangulate_snip points _u _v _w nv NV )]
-                (if (> count -1 )
-                  (if tri
-                    ( let [a (nth NV _u)
-                           b (nth NV _v)
-                           c (nth NV _w)]
-                     ( recur
-                      (inc m)
-                      (dec nv)
-                      _v 
-                      (dec (* 2 (dec nv)))
-                      (conj result (nth points a) (nth points b ) (nth points c ) )
-                      (vec (concat (subvec NV 0 _v ) (subvec NV (+ _v 1 ) (+ _v (- nv _v ) ) ) (subvec NV (+ _v (- nv _v 1) ) ) ) )
-                      )
-                     )
-                    (recur m nv _v (dec count) result NV)
-                    )
-                  result
-                  )
-                )
-              )
-            result
-            )
-          )
-        )
-      )    
-    )
-  )
+  (let [length (count points)]
+    (when (> length 3)
+      (loop [;; actual indexes, we want a counter-clockwise polygon
+             indexes (if (> (triangulate_area points) 0.0)
+                       (vec (range 0 length))
+                       (vec (reverse (range 0 length))) )
+             ;; remaining points length
+             remaining length
+             ;; error detection counter
+             ecounter (dec (* 2 remaining))
+             ;; actual index in indexes
+             actual (- remaining 1)
+             ;; result container
+             result []]
+        (println "indexes" indexes)
+        (if (> remaining 2)
+          (do
+            ;; select three consecutive vertices in polygon
+            (let [va ( if (<= remaining actual) 0 actual )
+                  vb ( if (<= remaining (inc va)) 0 (inc va) )
+                  vc ( if (<= remaining (inc vb)) 0 (inc vb))                  
+                  snipable ( triangulate_snip points va vb vc remaining indexes )]
+              ;; if we arexs looping polygon is irregular
+              (if (> ecounter -1 )
+                ;; if snip is possible
+                (if snipable
+                  (let [pa (nth indexes va)
+                        pb (nth indexes vb)
+                        pc (nth indexes vc)]
+                    (recur
+                     ;; cut used indexes out
+                     (vec
+                      (concat
+                       (subvec indexes 0 vb )
+                       (subvec indexes (+ vb 1 ) (+ vb (- remaining vb ) ) )
+                       (subvec indexes (+ vb (- remaining vb 1) ) ) ) )
+                     (dec remaining)
+                     (dec (* 2 (dec remaining)))
+                     vb
+                     (conj result (nth points pa) (nth points pb ) (nth points pc ))))
+                  (recur indexes remaining (dec ecounter) vb result ))
+                result)))
+          result)))))
+
 
 
 (triangulate_c[ '( 0.0 0.0 ) '( -5.0 5.0 ) '( 0.0 10.0 ) '( 10.0 10.0 ) '( 10.0 0.0 ) '( 5.0 -5.0 ) ] )
