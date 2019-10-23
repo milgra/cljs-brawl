@@ -10,7 +10,9 @@
    (fn extract [res act]
      (cond
        (or (s/starts-with? act "M") (s/starts-with? act "L"))
-       (conj res (map cljs.reader/read-string (s/split (subs act 1) #",")))
+       (conj res (map #(float (cljs.reader/read-string %)) (s/split (subs act 1) #",")))
+       ;;(s/starts-with? act "z")
+       ;;(conj res (first res))
        :else
        res))
    []
@@ -20,12 +22,15 @@
 (defn pshp
   "parse shape, extract color and path from xml node"
   [attrs id]
+  (if (contains? attrs :fill)
   {:type "shape"
    :id id
-   :color (if (contains? attrs :fill)
-            (js/parseInt (subs (attrs :fill) 1) 16)
-            0)`
-   :path (ppth (attrs :d))})
+   :color (js/parseInt (subs (attrs :fill) 1) 16)
+   :path (ppth (attrs :d))}
+  {:type "shape"
+   :id id
+   :path (ppth (attrs :d))}
+  ))
 
 
 (defn psvg

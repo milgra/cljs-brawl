@@ -83,6 +83,7 @@
       (prn (:data (:body response))))))
 
 
+(def state (atom {}))
 
 
 (defn starttest []
@@ -93,20 +94,20 @@
                gl
                (shaders/create-shader gl shader/vertex-shader vertex-source)
                (shaders/create-shader gl shader/fragment-shader fragment-source))
-
+       count (count (:vertexes @state))
        vertex-buffer (buffers/create-buffer
                       gl
-                      (ta/float32 [ 1.0  1.0 0.0 1.0 1.0 1.0 0.0 1.0
-                                   -1.0  1.0 0.0 1.0 1.0 0.0 0.0 1.0
-                                    1.0 -1.0 0.0 1.0 1.0 0.0 0.0 1.0])
+                      (ta/float32 (:vertexes @state))
+                      ;;(ta/float32 [ 1.0  1.0 0.0 1.0 1.0 1.0 0.0 1.0
+                      ;;             -1.0  1.0 0.0 1.0 1.0 0.0 0.0 1.0
+                      ;;              1.0 -1.0 0.0 1.0 1.0 0.0 0.0 1.0])
                       buffer-object/array-buffer
                       buffer-object/static-draw)
 
        location_pos (shaders/get-attrib-location gl shader "position")
        location_col (shaders/get-attrib-location gl shader "color")
 
-       projection (math4/proj_ortho -1.0 1.0 -1.0 1.0 -1.0 1.0)]
-
+       projection (math4/proj_ortho 0.0 2000.0 2000.0 0.0 -1.0 1.0)]
     
     (println "projection e" projection )
     
@@ -118,7 +119,7 @@
               (buffers/draw!
                :shader shader
                :draw-mode draw-mode/triangles
-               :count 3
+               :count (/ count 8)
                
                :attributes
                [{:buffer vertex-buffer
@@ -148,40 +149,46 @@
 
 (defn gen-vertex-triangle [ vertexes color ]
   (let [r ( / (bit-shift-right (bit-and color 0xFF0000) 16) 255.0 )
-        g ( / (bit-shift-right (bit-and color 0x00FF00) 8) 255.9 )
+        g ( / (bit-shift-right (bit-and color 0x00FF00) 8) 255.0 )
         b ( / (bit-and color 0x0000FF) 255.0 ) ]
-    (println "vertex" r g b)
-    [0.0 1.0 r g b]
-    )
-  )
+    (map #( concat % [0.0 1.0 r g b 1.0] ) vertexes )))
 
 
 (defn init[]
   (go
-    (let [response (<! (http/get "level0.svg"
+    (let [response (<! (http/get "level1.svg"
                                  ;; parameters
                                  {:with-credentials? false}))
           xmlstr (xml->clj (:body response) {:strict false})
           level (svg/psvg xmlstr "")
-          shapes (filter #(not= (% :id) "Surfaces") level)
+          shapes level ;; (filter #(not= (% :id) "Surfaces") level)
           surfacepoints (filter #(= (% :id) "Surfaces") level)
           surfaces (surface/generate-from-pointlist surfacepoints)
           masses [(mass/mass2 500.0 0.0)]
-          triangles ( map (fn [shape] gen-vertex-triangle (shape/triangulate_c (:path shape) ) (:color shape ) ) shapes )]
+          triangles (flatten
+                     ( map
+                      (fn [shape]
+                        (if (contains? shape :color)
+                          ( gen-vertex-triangle (shape/triangulate_c (:path shape) ) (:color shape ) ))
+                        )
+                      shapes
+                      )
+                     )]
       ;;(for [x (range 0 10)] (p/mass2 (rand 1000) (rand 1000)))]
-      
-      (println "shapes " shapes)
-      (println "triangles " triangles)
 
+      
       {:mainmass (mass/mass2 500.0 0.0)
        :trans [0.0 0.0]
        :keysdown { :l-down false :r-down false :u-down false :d-down false }
        :shapes shapes
        :masses masses
        :surfaces surfaces
-       :surfacepoints surfacepoints})
+       :surfacepoints surfacepoints}
 
-    (starttest)
+      (swap! state assoc :vertexes triangles)
+      
+      (starttest)
+      )
     ))
 
 (init)
