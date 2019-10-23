@@ -1,10 +1,9 @@
-(ns brawl.shape
-  (:require [clojure.set]))
+(ns brawl.shape)
 
 
 (def EPSILON 0.0000000001)
 
-;; I leave this here if new function causes problems later (slow, or removin the last item is needed)
+;; I leave this here if the second function below causes problems later (slow, or removing the last item is needed)
 ;;(defn triangulate_area [points]
 ;;  "calculates area of polygon"  
 ;;  (loop [sum 0.40
@@ -56,20 +55,20 @@
      (loop [actual 0]
        (if (< actual (count indexes) )
          (do
-           (let [ [Px Py] (nth points (nth indexes actual))]
+           (let [[Px Py] (nth points (nth indexes actual))]
              (if (and (not= actual va) (not= actual vb) (not= actual vc))
               (if ( triangulate_inside_triangle Ax Ay Bx By Cx Cy Px Py)
                 false
                 (recur (inc actual)))
               (recur (inc actual)))))
-         ;; if went went through all points and wasn't inside we are snippable
+         ;; if we went through all points and wasn't inside we are snippable
          true))
      ;;if area is negative or small no snippable
      false)))
 
 
 (defn triangulate_c [points]
-  "create building ccw triangles from polygon"
+  "creates ccw triangles that makes up the polygon"
   (let [length (count points)]
     (when (> length 3)
       (loop [;; actual indexes, we want a counter-clockwise polygon
@@ -100,19 +99,19 @@
                      ;; cut used indexes out
                      (vec
                       (concat
-                       (subvec indexes 0 vb )
-                       (subvec indexes (+ vb 1 ) (+ vb (- remaining vb ) ) )
-                      ))
+                       (subvec indexes 0 vb)
+                       (subvec indexes (+ vb 1) (+ vb (- remaining vb)))))
                      (dec (* 2 (dec remaining)))
                      vb
                      (conj result
                            (nth points pa)
-                           (nth points pb )
-                           (nth points pc ))))
+                           (nth points pb)
+                           (nth points pc))))
                   ;; if snip not possible
-                  (recur indexes (dec ecounter) vb result ))
+                  (recur indexes (dec ecounter) vb result))
                 result)))
           result)))))
+
 
 ;;(triangulate_area[ '( 0.0 0.0 ) '( -5.0 5.0 ) '( 0.0 10.0 ) '( 10.0 10.0 ) '( 10.0 0.0 ) '( 5.0 -5.0 ) ] )
 ;;(triangulate_c [[563.576 90.063] [566.246 83.125] [565.647 73.128] [559.187 61.8] [568.488 71.264] [570.83 82.929] [567.94 88.843] [563.57 90.063]])
