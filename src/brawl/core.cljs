@@ -70,15 +70,11 @@
 
 
 (defn key-down-handler [event]
-  (println "key-down" (.-keyCode event) )
   (swap! state assoc-in [:keypresses (.-keyCode event) ] true))
 
 
 (defn key-up-handler [event]
-  (println "key-up" (.-keyCode event ) )
-  (swap! state assoc-in [:keypresses (.-keyCode event) ] false)
-  (swap! state update-in [:trans 0] #(+ % 10.0))
-  )
+  (swap! state assoc-in [:keypresses (.-keyCode event) ] false))
 
 
 (defn start []
@@ -106,9 +102,7 @@
                       buffer-object/dynamic-draw)
        
        location_pos (shaders/get-attrib-location context shader "position")
-       location_col (shaders/get-attrib-location context shader "color")
-
-       projection (math4/proj_ortho 0.0 1500.0 1500.0 0.0 -1.0 1.0)]
+       location_col (shaders/get-attrib-location context shader "color")]
 
     (set! (.-onkeydown js/document) key-down-handler)
     (set! (.-onkeyup js/document) key-up-handler)
@@ -117,67 +111,91 @@
     
     (animate
      (fn [frame]
-           (buffers/clear-color-buffer context 0.1 0.0 0 1)
+       (let [[tx ty] (:trans @state)
+             projection (math4/proj_ortho
+                         (- tx 500.0)
+                         (+ tx 500.0)
+                         (+ ty 500.0)
+                         (- ty 500.0)
+                         -1.0 1.0)
+             key-code (:keypresses @state)]
 
-           ;; (actors/update actor controlstate)
-
-           ;; draw scene buffer
-
-           (.bindBuffer context buffer-object/array-buffer scene_buffer)
-           
-           (buffers/draw!
-            context
-            :count (/ (count (:vertexes @state)) 8)
-            :shader shader
-            :draw-mode draw-mode/triangles               
-            :attributes [{:buffer scene_buffer
-                          :location location_pos
-                          :components-per-vertex 4
-                          :type data-type/float
-                          :offset 0
-                          :stride 32}
-                         {:buffer scene_buffer
-                          :location location_col
-                          :components-per-vertex 4
-                          :type data-type/float
-                          :offset 16
-                          :stride 32}]
-            :uniforms [{:name "projection"
+         (buffers/clear-color-buffer context 0.1 0.0 0 1)
+         
+         ;; (actors/update actor controlstate)
+         
+         ;; draw scene buffer
+         
+         (.bindBuffer context buffer-object/array-buffer scene_buffer)
+         
+         (buffers/draw!
+          context
+          :count (/ (count (:vertexes @state)) 8)
+          :shader shader
+          :draw-mode draw-mode/triangles               
+          :attributes [{:buffer scene_buffer
+                        :location location_pos
+                        :components-per-vertex 4
+                        :type data-type/float
+                        :offset 0
+                        :stride 32}
+                       {:buffer scene_buffer
+                        :location location_col
+                        :components-per-vertex 4
+                        :type data-type/float
+                        :offset 16
+                        :stride 32}]
+          :uniforms [{:name "projection"
+                      :type :mat4
+                      :values projection}])
+         
+         ;; handle keypresses, modify main point trans
+         
+         (when (key-code 37) ; Left
+           (swap! state update-in [:trans 0] #(- % 5.0)))
+         
+         (when (key-code 39) ; Right
+           (swap! state update-in [:trans 0] #(+ % 5.0)))
+         
+         (when (key-code 38) ; Up
+           (swap! state update-in [:trans 1] #(- % 5.0)))
+         
+         (when (key-code 40) ; Down
+           (swap! state update-in [:trans 1] #(+ % 5.0)))
+          
+         ;; draw actor buffer
+         
+         (.bindBuffer context buffer-object/array-buffer actor_buffer)
+         
+         ;; load in new vertexdata
+         
+         (.bufferData context
+                      buffer-object/array-buffer
+                      (ta/float32 (concat (:trans @state ) [0.0 1.0 1.0 1.0 1.0 1.0]))
+                      buffer-object/dynamic-draw)
+         
+         (buffers/draw!
+          context
+          :count 1
+          :shader shader
+          :draw-mode draw-mode/points               
+          :attributes [{:buffer actor_buffer
+                        :location location_pos
+                        :components-per-vertex 4
+                        :type data-type/float
+                        :offset 0
+                        :stride 32}
+                       {:buffer actor_buffer
+                        :location location_col
+                        :components-per-vertex 4
+                        :type data-type/float
+                        :offset 16
+                        :stride 32}]
+          :uniforms [{:name "projection"
                         :type :mat4
-                        :values projection}])
-
-       (let [center (ta/float32 (concat (:trans @state ) [0.0 1.0 1.0 1.0 1.0 1.0]))]
-
-           ;; draw actor buffer
-
-           (.bindBuffer context buffer-object/array-buffer actor_buffer)
-
-           ;; load in new vertexdata
-
-           (.bufferData context buffer-object/array-buffer center buffer-object/dynamic-draw)
-                        
-           (buffers/draw!
-            context
-            :count 1
-            :shader shader
-            :draw-mode draw-mode/points               
-            :attributes [{:buffer actor_buffer
-                          :location location_pos
-                          :components-per-vertex 4
-                          :type data-type/float
-                          :offset 0
-                          :stride 32}
-                         {:buffer actor_buffer
-                          :location location_col
-                          :components-per-vertex 4
-                          :type data-type/float
-                          :offset 16
-                          :stride 32}]
-            :uniforms [{:name "projection"
-                        :type :mat4
-                        :values projection}]
-            )
-           )           
+                      :values projection}]
+          )
+         )           
        )
      )
     )
