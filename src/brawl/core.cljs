@@ -58,7 +58,8 @@
    }")
 
 
-(def state (atom { :keypresses { } } ) )
+(def state (atom {:keypresses { }
+                  :speed [0.0 0.0] } ) )
 
 
 (defn animate [draw-fn]
@@ -112,11 +113,12 @@
     (animate
      (fn [frame]
        (let [[tx ty] (:trans @state)
+             [sx sy] (:speed @state)
              projection (math4/proj_ortho
-                         (- tx 500.0)
-                         (+ tx 500.0)
-                         (+ ty 500.0)
-                         (- ty 500.0)
+                         (- tx (* 150.0 (+ 1.0 sx)))
+                         (+ tx (* 150.0 (+ 1.0 sx)))
+                         (+ ty (* 150.0 (+ 1.0 sx)))
+                         (- ty (* 150.0 (+ 1.0 sx)))
                          -1.0 1.0)
              key-code (:keypresses @state)]
 
@@ -150,19 +152,30 @@
                       :values projection}])
          
          ;; handle keypresses, modify main point trans
+
+         ;; use internal state in a loop construct
          
          (when (key-code 37) ; Left
-           (swap! state update-in [:trans 0] #(- % 5.0)))
+           (swap! state update-in [:speed 0] #(- % 2.0)))
          
          (when (key-code 39) ; Right
-           (swap! state update-in [:trans 0] #(+ % 5.0)))
+           (swap! state update-in [:speed 0] #(+ % 2.0)))
          
          (when (key-code 38) ; Up
-           (swap! state update-in [:trans 1] #(- % 5.0)))
+           (swap! state update-in [:speed 1] #(- % 2.0)))
          
          (when (key-code 40) ; Down
-           (swap! state update-in [:trans 1] #(+ % 5.0)))
-          
+           (swap! state update-in [:speed 1] #(+ % 2.0)))
+
+         (swap! state update-in [:trans 0] #(+ % (nth (:speed @state) 0)))
+         (swap! state update-in [:trans 1] #(+ % (nth (:speed @state) 1)))
+         (if (every? false (:keypresses state))
+           (do
+             (swap! state update-in [:speed 0] #(* % 0.9) )
+             (swap! state update-in [:speed 1] #(* % 0.9) )
+
+             ))
+         
          ;; draw actor buffer
          
          (.bindBuffer context buffer-object/array-buffer actor_buffer)
@@ -211,7 +224,7 @@
 
 (defn init[]
   (go
-    (let [response (<! (http/get "level0.svg"
+    (let [response (<! (http/get "level1.svg"
                                  ;; parameters
                                  {:with-credentials? false}))
           xmlstr (xml->clj (:body response) {:strict false})
