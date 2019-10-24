@@ -4,7 +4,6 @@
             [cljs-http.client :as http]
             [cljs.core.async :refer [<!]]
             [cljs.core.async :refer-macros [go]]
-
             [cljs-webgl.context :as context]
             [cljs-webgl.shaders :as shaders]
             [cljs-webgl.constants.draw-mode :as draw-mode]
@@ -18,18 +17,10 @@
             [brawl.physics :as physics]
             [brawl.mass :as mass]
             [brawl.math4 :as math4]
-            [brawl.shape :as shape]
-
-            ))
+            [brawl.shape :as shape]))
   
 ;;(println "AA This text is printed from src/brawl/core.cljs. Go ahead and edit it and see reloading in action.")
 
-(defn animate [draw-fn]
-  (letfn [(loop [frame]
-            (fn []
-              (.requestAnimationFrame  js/window (loop (inc frame)))
-              (draw-fn frame)))]
-    ((loop 0))))
 
 (def vertex-source
   "attribute highp vec4 position;
@@ -44,6 +35,7 @@
 	colorv = color;
 	positionv = position;
    }")
+
 
 (def fragment-source
   "varying highp vec4 colorv;
@@ -61,42 +53,43 @@
        	 dia = floor(dia * 2.0)/4.0;
        	 if ( colorv.x >= colorv.y && colorv.x >= colorv.z ) gl_FragColor.x -= ver*0.05;
        	 if ( colorv.y >= colorv.x && colorv.y >= colorv.z ) gl_FragColor.y -= hor*0.05;
-	 	if ( colorv.z >= colorv.x && colorv.z >= colorv.y ) gl_FragColor.z -= dia*0.2;
+	 if ( colorv.z >= colorv.x && colorv.z >= colorv.y ) gl_FragColor.z -= dia*0.2;
    	}
    }")
 
-(defn get-test []
-  (go
-    (let [response (<! (http/get "level0.svg"
-                                 ;; parameters
-                                 {:with-credentials? false
-                                  :query-params {"since" 135}}))]
-      (prn  (:body response)))))
+
+(def state (atom { :keypresses { } } ) )
 
 
-(defn post-test []
-  (go
-    (let [response (<! (http/post "https://api.github.com/graphql"
-                                  {:with-credentials? false
-                                   :headers {"Authorization" "SuperSecretToken1234"}
-                                   :json-params {:query "query { viewer { login }}"}}))]
-      (prn (:data (:body response))))))
+(defn animate [draw-fn]
+  (letfn [(loop [frame]
+            (fn []
+              (.requestAnimationFrame js/window (loop (inc frame)))
+              (draw-fn frame)))]
+    ((loop 0))))
 
 
-(def state (atom {}))
+(defn key-down-handler [event]
+  (println "key-down" (.-keyCode event) )
+  (swap! state assoc-in [:keypresses (.-keyCode event) ] true))
 
 
-(defn starttest []
-  (println "starttest")
+(defn key-up-handler [event]
+  (println "key-up" (.-keyCode event ) )
+  (swap! state assoc-in [:keypresses (.-keyCode event) ] false))
+
+
+(defn start []
   (let
-      [gl (context/get-context (.getElementById js/document "main"))
+      [context (context/get-context (.getElementById js/document "main"))
+
        shader (shaders/create-program
-               gl
-               (shaders/create-shader gl shader/vertex-shader vertex-source)
-               (shaders/create-shader gl shader/fragment-shader fragment-source))
-       count (count (:vertexes @state))
-       vertex-buffer (buffers/create-buffer
-                      gl
+               context
+               (shaders/create-shader context shader/vertex-shader vertex-source)
+               (shaders/create-shader context shader/fragment-shader fragment-source))
+
+       scene_buffer (buffers/create-buffer
+                      context
                       (ta/float32 (:vertexes @state))
                       ;;(ta/float32 [ 1.0  1.0 0.0 1.0 1.0 1.0 0.0 1.0
                       ;;             -1.0  1.0 0.0 1.0 1.0 0.0 0.0 1.0
@@ -104,48 +97,85 @@
                       buffer-object/array-buffer
                       buffer-object/static-draw)
 
-       location_pos (shaders/get-attrib-location gl shader "position")
-       location_col (shaders/get-attrib-location gl shader "color")
+       actor_buffer (buffers/create-buffer
+                      context
+                      (ta/float32 [ 500.0  500.0 0.0 1.0 1.0 1.0 1.0 1.0 ])
+                      buffer-object/array-buffer
+                      buffer-object/static-draw)
+       
+       location_pos (shaders/get-attrib-location context shader "position")
+       location_col (shaders/get-attrib-location context shader "color")
 
-       projection (math4/proj_ortho 0.0 2000.0 2000.0 0.0 -1.0 1.0)]
+       projection (math4/proj_ortho 0.0 1500.0 1500.0 0.0 -1.0 1.0)]
     
-    (println "projection e" projection )
+    (set! (.-onkeydown js/document) key-down-handler)
+    (set! (.-onkeyup js/document) key-up-handler)
     
-;;       (animate
-;;        (fn [frame]              
-          (-> gl
-              (buffers/clear-color-buffer 0.1 0.0 0 1)
-              
-              (buffers/draw!
-               :shader shader
-               :draw-mode draw-mode/triangles
-               :count (/ count 8)
-               
-               :attributes
-               [{:buffer vertex-buffer
-                 :location location_pos
-                 :components-per-vertex 4
-                 :type data-type/float
-                 :offset 0
-                 :stride 32}
-                {:buffer vertex-buffer
-                 :location location_col
-                 :components-per-vertex 4
-                 :type data-type/float
-                 :offset 16
-                 :stride 32}]
-               
-               :uniforms
-               [{:name "projection"
-                 :type :mat4
-                 :values projection}]
+    ;; runloop
+    
+;;    (animate
+;;     (fn [frame]
+           (buffers/clear-color-buffer context 0.1 0.0 0 1)
+
+           ;; (actors/update actor controlstate)
+
+           ;; draw scene buffer
+
+           (.bindBuffer context buffer-object/array-buffer scene_buffer)
            
+           (buffers/draw!
+            context
+            :count (/ (count (:vertexes @state)) 8)
+            :shader shader
+            :draw-mode draw-mode/triangles               
+            :attributes [{:buffer scene_buffer
+                          :location location_pos
+                          :components-per-vertex 4
+                          :type data-type/float
+                          :offset 0
+                          :stride 32}
+                         {:buffer scene_buffer
+                          :location location_col
+                          :components-per-vertex 4
+                          :type data-type/float
+                          :offset 16
+                          :stride 32}]
+            :uniforms [{:name "projection"
+                        :type :mat4
+                        :values projection}])
+
+           ;; draw actor buffer
+
+           (.bindBuffer context buffer-object/array-buffer actor_buffer)
+
+           (buffers/draw!
+            context
+            :count 1
+            :shader shader
+            :draw-mode draw-mode/points               
+            :attributes [{:buffer actor_buffer
+                          :location location_pos
+                          :components-per-vertex 4
+                          :type data-type/float
+                          :offset 0
+                          :stride 32}
+                         {:buffer actor_buffer
+                          :location location_col
+                          :components-per-vertex 4
+                          :type data-type/float
+                          :offset 16
+                          :stride 32}]
+            :uniforms [{:name "projection"
+                        :type :mat4
+                        :values projection}]
+            
+;;            )           
 ;;           )
-;;          )
-               )
-              )
-          )
+     
+     )
+    )
   )
+
 
 (defn gen-vertex-triangle [ vertexes color ]
   (let [r ( / (bit-shift-right (bit-and color 0xFF0000) 16) 255.0 )
@@ -186,15 +216,17 @@
        :surfacepoints surfacepoints}
 
       (swap! state assoc :vertexes triangles)
+      (swap! state assoc :masses masses)
       
-      (starttest)
+      (start)
       )
     ))
 
 (init)
 
-(defn multiply [a b] (* a b))
+;; template functions
 
+(defn multiply [a b] (* a b))
 
 ;; define your app data so that it doesn't get over-written on reload
 (defonce app-state (atom {:text "Hello world!"}))
@@ -202,11 +234,10 @@
 (defn get-app-element []
   (gdom/getElement "app"))
 
-
-
 ;; specify reload hook with ^;after-load metadata
 (defn ^:after-load on-reload []
   ;; optionally touch your app-state to force rerendering depending on
   ;; your application
-  ;; (swap! app-state update-in [:__figwheel_counter] inc)
+  (swap! app-state update-in [:__figwheel_counter] inc)
+  (println "app-state" app-state)
 )
