@@ -76,7 +76,9 @@
 
 (defn key-up-handler [event]
   (println "key-up" (.-keyCode event ) )
-  (swap! state assoc-in [:keypresses (.-keyCode event) ] false))
+  (swap! state assoc-in [:keypresses (.-keyCode event) ] false)
+  (swap! state update-in [:trans 0] #(+ % 10.0))
+  )
 
 
 (defn start []
@@ -101,20 +103,20 @@
                       context
                       (ta/float32 [ 500.0  500.0 0.0 1.0 1.0 1.0 1.0 1.0 ])
                       buffer-object/array-buffer
-                      buffer-object/static-draw)
+                      buffer-object/dynamic-draw)
        
        location_pos (shaders/get-attrib-location context shader "position")
        location_col (shaders/get-attrib-location context shader "color")
 
        projection (math4/proj_ortho 0.0 1500.0 1500.0 0.0 -1.0 1.0)]
-    
+
     (set! (.-onkeydown js/document) key-down-handler)
     (set! (.-onkeyup js/document) key-up-handler)
     
     ;; runloop
     
-;;    (animate
-;;     (fn [frame]
+    (animate
+     (fn [frame]
            (buffers/clear-color-buffer context 0.1 0.0 0 1)
 
            ;; (actors/update actor controlstate)
@@ -144,10 +146,16 @@
                         :type :mat4
                         :values projection}])
 
+       (let [center (ta/float32 (concat (:trans @state ) [0.0 1.0 1.0 1.0 1.0 1.0]))]
+
            ;; draw actor buffer
 
            (.bindBuffer context buffer-object/array-buffer actor_buffer)
 
+           ;; load in new vertexdata
+
+           (.bufferData context buffer-object/array-buffer center buffer-object/dynamic-draw)
+                        
            (buffers/draw!
             context
             :count 1
@@ -168,10 +176,9 @@
             :uniforms [{:name "projection"
                         :type :mat4
                         :values projection}]
-            
-;;            )           
-;;           )
-     
+            )
+           )           
+       )
      )
     )
   )
@@ -199,17 +206,13 @@
                      ( map
                       (fn [shape]
                         (if (contains? shape :color)
-                          ( gen-vertex-triangle (shape/triangulate_c (:path shape) ) (:color shape ) ))
-                        )
-                      shapes
-                      )
-                     )]
+                          ( gen-vertex-triangle (shape/triangulate_c (:path shape) ) (:color shape ))))
+                      shapes))]
       ;;(for [x (range 0 10)] (p/mass2 (rand 1000) (rand 1000)))]
 
-      
+     
       {:mainmass (mass/mass2 500.0 0.0)
        :trans [0.0 0.0]
-       :keysdown { :l-down false :r-down false :u-down false :d-down false }
        :shapes shapes
        :masses masses
        :surfaces surfaces
@@ -217,6 +220,7 @@
 
       (swap! state assoc :vertexes triangles)
       (swap! state assoc :masses masses)
+      (swap! state assoc :trans [500.0 500.0])
       
       (start)
       )
