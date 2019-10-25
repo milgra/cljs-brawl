@@ -71,11 +71,12 @@
 
 
 (defn animate [draw-fn]
-  (letfn [(loop [frame]
-            (fn []
-              (.requestAnimationFrame js/window (loop (inc frame)))
-              (draw-fn frame)))]
-    ((loop 0))))
+  (letfn [(loop [state frame]
+            (fn [time]
+              (let [newstate (draw-fn state frame time)]
+              (.requestAnimationFrame js/window (loop newstate (inc frame))))
+              ))]
+    ((loop {}  0))))
 
 
 (defn start []
@@ -108,7 +109,8 @@
     ;; runloop
     
     (animate
-     (fn [frame]
+     (fn [mainstate frame time]
+       (println "mainstate" mainstate "frame" frame "time" time)
        (let [[tx ty] (:trans @state)
              [sx sy] (:speed @state)
              ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
