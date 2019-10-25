@@ -76,7 +76,7 @@
               (let [newstate (draw-fn state frame time)]
               (.requestAnimationFrame js/window (loop newstate (inc frame))))
               ))]
-    ((loop {}  0))))
+    ((loop {} 0) 0 )))
 
 
 (defn start []
@@ -96,7 +96,7 @@
        
        actor_buffer (buffers/create-buffer
                      context
-                     (ta/float32 [ 500.0  500.0 0.0 1.0 1.0 1.0 1.0 1.0 ])
+                     (ta/float32 [ 500.0 500.0 0.0 1.0 1.0 1.0 1.0 1.0 ])
                      buffer-object/array-buffer
                      buffer-object/dynamic-draw)
        
@@ -110,7 +110,6 @@
     
     (animate
      (fn [mainstate frame time]
-       (println "mainstate" mainstate "frame" frame "time" time)
        (let [[tx ty] (:trans @state)
              [sx sy] (:speed @state)
              ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
@@ -174,7 +173,7 @@
              (swap! state update-in [:speed 0] #(* % 0.9) )
              (swap! state update-in [:speed 1] #(* % 0.9) )
 
-             ))
+         ))
          
          ;; draw actor buffer
          
@@ -184,7 +183,7 @@
          
          (.bufferData context
                       buffer-object/array-buffer
-                      (ta/float32 (concat (:trans @state ) [0.0 1.0 1.0 1.0 1.0 1.0]))
+                      (ta/float32 [tx ty 0.0 1.0 1.0 1.0 1.0 1.0])
                       buffer-object/dynamic-draw)
          
          (buffers/draw!
@@ -209,6 +208,7 @@
                       :values projection}]
           )
          )           
+         {:tele "ehe"}
        )
      )
     )
