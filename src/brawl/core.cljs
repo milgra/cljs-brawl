@@ -2,7 +2,7 @@
   (:require [goog.dom :as gdom]
             [tubax.core :refer [xml->clj]]
             [cljs-http.client :as http]
-            [cljs.core.async :refer [<!]]
+            [cljs.core.async :refer [<! chan put! take! poll!]]
             [cljs.core.async :refer-macros [go]]
             [cljs-webgl.context :as context]
             [cljs-webgl.shaders :as shaders]
@@ -57,29 +57,62 @@
    	}
    }")
 
+(def channel (chan))
 
-(def state (atom {:keypresses { }
-                  :speed [0.0 0.0] } ) )
-
+;; define your app data so that it doesn't get over-written on reload
+(defonce app-state (atom {:text "Hello world!"
+                          :keypresses { }
+                          :speed [0.0 0.0]
+                          :trans [500.0 500.0]
+                          }))
 
 (defn key-down-handler [event]
-  (swap! state assoc-in [:keypresses (.-keyCode event) ] true))
+  (swap! app-state assoc-in [:keypresses (.-keyCode event) ] true))
 
 
 (defn key-up-handler [event]
-  (swap! state assoc-in [:keypresses (.-keyCode event) ] false))
+  (swap! app-state assoc-in [:keypresses (.-keyCode event) ] false))
 
 
-(defn animate [draw-fn]
-  (letfn [(loop [state frame]
+(defn gen-vertex-triangle [ vertexes color ]
+  (let [r ( / (bit-shift-right (bit-and color 0xFF0000) 16) 255.0 )
+        g ( / (bit-shift-right (bit-and color 0x00FF00) 8) 255.0 )
+        b ( / (bit-and color 0x0000FF) 255.0 ) ]
+    (map #( concat % [0.0 1.0 r g b 1.0] ) vertexes )))
+
+
+(defn load-level! [name]
+  (go
+    (let [response (<! (http/get "level1.svg"
+                                 ;; parameters
+                                 {:with-credentials? false}))
+          xmlstr (xml->clj (:body response) {:strict false})
+          level (svg/psvg xmlstr "")
+          shapes level ;; (filter #(not= (% :id) "Surfaces") level)
+          surfacepoints (filter #(= (% :id) "Surfaces") level)
+          surfaces (surface/generate-from-pointlist surfacepoints)
+          vertexes (flatten
+                     ( map
+                      (fn [shape]
+                        (if (contains? shape :color)
+                          ( gen-vertex-triangle (shape/triangulate_c (:path shape) ) (:color shape ))))
+                      shapes))]
+      ;;(for [x (range 0 10)] (p/mass2 (rand 1000) (rand 1000)))]
+      (println "map loaded")
+      (put! channel vertexes))))
+
+
+(defn animate [state draw-fn]
+  (letfn [(loop [oldstate frame]
             (fn [time]
-              (let [newstate (draw-fn state frame time)]
+              (let [newstate (draw-fn oldstate frame time)]
               (.requestAnimationFrame js/window (loop newstate (inc frame))))
               ))]
-    ((loop {} 0) 0 )))
+    ((loop state 0) 0 )))
 
 
-(defn start []
+(defn main []
+  (println "main") 
   (let
       [context (context/get-context (.getElementById js/document "main"))
 
@@ -90,10 +123,10 @@
 
        scene_buffer (buffers/create-buffer
                      context
-                     (ta/float32 (:vertexes @state))
+                     (ta/float32 [ 500.0 500.0 0.0 1.0 1.0 1.0 1.0 1.0 ])
                      buffer-object/array-buffer
                      buffer-object/static-draw)
-       
+
        actor_buffer (buffers/create-buffer
                      context
                      (ta/float32 [ 500.0 500.0 0.0 1.0 1.0 1.0 1.0 1.0 ])
@@ -101,7 +134,12 @@
                      buffer-object/dynamic-draw)
        
        location_pos (shaders/get-attrib-location context shader "position")
-       location_col (shaders/get-attrib-location context shader "color")]
+       location_col (shaders/get-attrib-location context shader "color")
+
+       initstate {:level_file "level0.svg"
+                  :level_state "none"
+                  :trans [500.0 500.0]
+                  :speed [0.0 0.0]}]
 
     (set! (.-onkeydown js/document) key-down-handler)
     (set! (.-onkeyup js/document) key-up-handler)
@@ -109,162 +147,146 @@
     ;; runloop
     
     (animate
-     (fn [mainstate frame time]
-       (let [[tx ty] (:trans @state)
-             [sx sy] (:speed @state)
-             ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
-             projection (math4/proj_ortho
-                         (- tx (+ 150.0 (* ratio 50.0)))
-                         (+ tx (+ 150.0 (* ratio 50.0)))
-                         (+ ty (+ 150.0 (* ratio 50.0)))
-                         (- ty (+ 150.0 (* ratio 50.0)))
-                         -1.0 1.0)
-             key-code (:keypresses @state)]
+     initstate
+     (fn [state frame time]
+       (cond 
+         
+         (= (:level_state state) "none")
+         (do
+           (load-level! (:level_file state))
+           (assoc state :level_state "loading")
+           )
+         
+         (= (:level_state state) "loading")
+         (let [vertexes (poll! channel)]
+           (if (not= nil vertexes)
+             (do
+               (println "vertexes arrived")
+               (.bindBuffer context buffer-object/array-buffer scene_buffer)
+               (.bufferData context
+                            buffer-object/array-buffer
+                            (ta/float32 vertexes)
+                            buffer-object/static-draw)
+               (-> state
+                   (assoc :level_state "loaded")
+                   (assoc :vertexes vertexes)))
+             state
+           )
+         )
 
-         (buffers/clear-color-buffer context 0.1 0.0 0 1)
-         
-         ;; (actors/update actor controlstate)
-         
-         ;; draw scene buffer
-         
-         (.bindBuffer context buffer-object/array-buffer scene_buffer)
-         
-         (buffers/draw!
-          context
-          :count (/ (count (:vertexes @state)) 8)
-          :shader shader
-          :draw-mode draw-mode/triangles               
-          :attributes [{:buffer scene_buffer
-                        :location location_pos
-                        :components-per-vertex 4
-                        :type data-type/float
-                        :offset 0
-                        :stride 32}
-                       {:buffer scene_buffer
-                        :location location_col
-                        :components-per-vertex 4
-                        :type data-type/float
-                        :offset 16
-                        :stride 32}]
-          :uniforms [{:name "projection"
-                      :type :mat4
-                      :values projection}])
-         
-         ;; handle keypresses, modify main point trans
+         (= (:level_state state) "loaded")
+         (let [[tx ty] (:trans @app-state)
+               [sx sy] (:speed @app-state)
+               ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
+               projection (math4/proj_ortho
+                           (- tx (+ 150.0 (* ratio 50.0)))
+                           (+ tx (+ 150.0 (* ratio 50.0)))
+                           (+ ty (+ 150.0 (* ratio 50.0)))
+                           (- ty (+ 150.0 (* ratio 50.0)))
+                           -1.0 1.0)
+               key-code (:keypresses @app-state)]
 
-         ;; use internal state in a loop construct
-         
-         (when (key-code 37) ; Left
-           (swap! state update-in [:speed 0] #(- % 1.0)))
-         
-         (when (key-code 39) ; Right
-           (swap! state update-in [:speed 0] #(+ % 1.0)))
-         
-         (when (key-code 38) ; Up
-           (swap! state update-in [:speed 1] #(- % 1.0)))
-         
-         (when (key-code 40) ; Down
-           (swap! state update-in [:speed 1] #(+ % 1.0)))
-
-         (swap! state update-in [:trans 0] #(+ % (nth (:speed @state) 0)))
-         (swap! state update-in [:trans 1] #(+ % (nth (:speed @state) 1)))
-         (if (every? false (:keypresses state))
-           (do
-             (swap! state update-in [:speed 0] #(* % 0.9) )
-             (swap! state update-in [:speed 1] #(* % 0.9) )
-
-         ))
-         
-         ;; draw actor buffer
-         
-         (.bindBuffer context buffer-object/array-buffer actor_buffer)
-         
-         ;; load in new vertexdata
-         
-         (.bufferData context
-                      buffer-object/array-buffer
-                      (ta/float32 [tx ty 0.0 1.0 1.0 1.0 1.0 1.0])
-                      buffer-object/dynamic-draw)
-         
-         (buffers/draw!
-          context
-          :count 1
-          :shader shader
-          :draw-mode draw-mode/points               
-          :attributes [{:buffer actor_buffer
-                        :location location_pos
-                        :components-per-vertex 4
-                        :type data-type/float
-                        :offset 0
-                        :stride 32}
-                       {:buffer actor_buffer
-                        :location location_col
-                        :components-per-vertex 4
-                        :type data-type/float
-                        :offset 16
-                        :stride 32}]
-          :uniforms [{:name "projection"
+           (buffers/clear-color-buffer context 0.1 0.0 0 1)
+           
+           ;; (actors/update actor controlstate)
+           
+           ;; draw scene buffer
+           
+           (.bindBuffer context buffer-object/array-buffer scene_buffer)
+           
+           (buffers/draw!
+            context
+            :count (/ (count (:vertexes state)) 8)
+            :shader shader
+            :draw-mode draw-mode/triangles               
+            :attributes [{:buffer scene_buffer
+                          :location location_pos
+                          :components-per-vertex 4
+                          :type data-type/float
+                          :offset 0
+                          :stride 32}
+                         {:buffer scene_buffer
+                          :location location_col
+                          :components-per-vertex 4
+                          :type data-type/float
+                          :offset 16
+                          :stride 32}]
+            :uniforms [{:name "projection"
                         :type :mat4
-                      :values projection}]
-          )
-         )           
-         {:tele "ehe"}
+                        :values projection}])
+         
+           ;; handle keypresses, modify main point trans
+           
+           ;; use internal state in a loop construct
+           
+           (when (key-code 37) ; Left
+             (swap! app-state update-in [:speed 0] #(- % 1.0)))
+           
+           (when (key-code 39) ; Right
+             (swap! app-state update-in [:speed 0] #(+ % 1.0)))
+           
+           (when (key-code 38) ; Up
+             (swap! app-state update-in [:speed 1] #(- % 1.0)))
+           
+           (when (key-code 40) ; Down
+             (swap! app-state update-in [:speed 1] #(+ % 1.0)))
+
+           (swap! app-state update-in [:trans 0] #(+ % (nth (:speed @app-state) 0)))
+           (swap! app-state update-in [:trans 1] #(+ % (nth (:speed @app-state) 1)))
+           (if (every? false (:keypresses app-state))
+             (do
+               (swap! app-state update-in [:speed 0] #(* % 0.9) )
+               (swap! app-state update-in [:speed 1] #(* % 0.9) ) ) )
+           
+           ;; draw actor buffer
+           
+           (.bindBuffer context buffer-object/array-buffer actor_buffer)
+
+           (println "appstate" app-state)
+           
+           ;; load in new vertexdata
+           
+           (.bufferData context
+                        buffer-object/array-buffer
+                        (ta/float32 [tx ty 0.0 1.0 1.0 1.0 1.0 1.0])
+                        buffer-object/dynamic-draw)
+           
+           (buffers/draw!
+            context
+            :count 1
+            :shader shader
+            :draw-mode draw-mode/points               
+            :attributes [{:buffer actor_buffer
+                          :location location_pos
+                          :components-per-vertex 4
+                          :type data-type/float
+                          :offset 0
+                          :stride 32}
+                         {:buffer actor_buffer
+                          :location location_col
+                          :components-per-vertex 4
+                          :type data-type/float
+                          :offset 16
+                          :stride 32}]
+            :uniforms [{:name "projection"
+                        :type :mat4
+                        :values projection}]
+            )
+           
+           state
+           )
+         )
        )
      )
     )
   )
 
 
-(defn gen-vertex-triangle [ vertexes color ]
-  (let [r ( / (bit-shift-right (bit-and color 0xFF0000) 16) 255.0 )
-        g ( / (bit-shift-right (bit-and color 0x00FF00) 8) 255.0 )
-        b ( / (bit-and color 0x0000FF) 255.0 ) ]
-    (map #( concat % [0.0 1.0 r g b 1.0] ) vertexes )))
-
-
-(defn init[]
-  (go
-    (let [response (<! (http/get "level1.svg"
-                                 ;; parameters
-                                 {:with-credentials? false}))
-          xmlstr (xml->clj (:body response) {:strict false})
-          level (svg/psvg xmlstr "")
-          shapes level ;; (filter #(not= (% :id) "Surfaces") level)
-          surfacepoints (filter #(= (% :id) "Surfaces") level)
-          surfaces (surface/generate-from-pointlist surfacepoints)
-          masses [(mass/mass2 500.0 0.0)]
-          triangles (flatten
-                     ( map
-                      (fn [shape]
-                        (if (contains? shape :color)
-                          ( gen-vertex-triangle (shape/triangulate_c (:path shape) ) (:color shape ))))
-                      shapes))]
-      ;;(for [x (range 0 10)] (p/mass2 (rand 1000) (rand 1000)))]
-
-     
-      {:mainmass (mass/mass2 500.0 0.0)
-       :trans [0.0 0.0]
-       :shapes shapes
-       :masses masses
-       :surfaces surfaces
-       :surfacepoints surfacepoints}
-
-      (swap! state assoc :vertexes triangles)
-      (swap! state assoc :masses masses)
-      (swap! state assoc :trans [500.0 500.0])
-      
-      (start)
-      )
-    ))
-
-(init)
+(main)
 
 ;; template functions
 
 (defn multiply [a b] (* a b))
-
-;; define your app data so that it doesn't get over-written on reload
-(defonce app-state (atom {:text "Hello world!"}))
 
 (defn get-app-element []
   (gdom/getElement "app"))
