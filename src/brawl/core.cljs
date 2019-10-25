@@ -62,20 +62,20 @@
                   :speed [0.0 0.0] } ) )
 
 
-(defn animate [draw-fn]
-  (letfn [(loop [frame]
-            (fn []
-              (.requestAnimationFrame js/window (loop (inc frame)))
-              (draw-fn frame)))]
-    ((loop 0))))
-
-
 (defn key-down-handler [event]
   (swap! state assoc-in [:keypresses (.-keyCode event) ] true))
 
 
 (defn key-up-handler [event]
   (swap! state assoc-in [:keypresses (.-keyCode event) ] false))
+
+
+(defn animate [draw-fn]
+  (letfn [(loop [frame]
+            (fn []
+              (.requestAnimationFrame js/window (loop (inc frame)))
+              (draw-fn frame)))]
+    ((loop 0))))
 
 
 (defn start []
@@ -88,19 +88,16 @@
                (shaders/create-shader context shader/fragment-shader fragment-source))
 
        scene_buffer (buffers/create-buffer
-                      context
-                      (ta/float32 (:vertexes @state))
-                      ;;(ta/float32 [ 1.0  1.0 0.0 1.0 1.0 1.0 0.0 1.0
-                      ;;             -1.0  1.0 0.0 1.0 1.0 0.0 0.0 1.0
-                      ;;              1.0 -1.0 0.0 1.0 1.0 0.0 0.0 1.0])
-                      buffer-object/array-buffer
-                      buffer-object/static-draw)
-
+                     context
+                     (ta/float32 (:vertexes @state))
+                     buffer-object/array-buffer
+                     buffer-object/static-draw)
+       
        actor_buffer (buffers/create-buffer
-                      context
-                      (ta/float32 [ 500.0  500.0 0.0 1.0 1.0 1.0 1.0 1.0 ])
-                      buffer-object/array-buffer
-                      buffer-object/dynamic-draw)
+                     context
+                     (ta/float32 [ 500.0  500.0 0.0 1.0 1.0 1.0 1.0 1.0 ])
+                     buffer-object/array-buffer
+                     buffer-object/dynamic-draw)
        
        location_pos (shaders/get-attrib-location context shader "position")
        location_col (shaders/get-attrib-location context shader "color")]
@@ -114,11 +111,12 @@
      (fn [frame]
        (let [[tx ty] (:trans @state)
              [sx sy] (:speed @state)
+             ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
              projection (math4/proj_ortho
-                         (- tx (* 150.0 (+ 1.0 sx)))
-                         (+ tx (* 150.0 (+ 1.0 sx)))
-                         (+ ty (* 150.0 (+ 1.0 sx)))
-                         (- ty (* 150.0 (+ 1.0 sx)))
+                         (- tx (+ 150.0 (* ratio 50.0)))
+                         (+ tx (+ 150.0 (* ratio 50.0)))
+                         (+ ty (+ 150.0 (* ratio 50.0)))
+                         (- ty (+ 150.0 (* ratio 50.0)))
                          -1.0 1.0)
              key-code (:keypresses @state)]
 
@@ -156,16 +154,16 @@
          ;; use internal state in a loop construct
          
          (when (key-code 37) ; Left
-           (swap! state update-in [:speed 0] #(- % 2.0)))
+           (swap! state update-in [:speed 0] #(- % 1.0)))
          
          (when (key-code 39) ; Right
-           (swap! state update-in [:speed 0] #(+ % 2.0)))
+           (swap! state update-in [:speed 0] #(+ % 1.0)))
          
          (when (key-code 38) ; Up
-           (swap! state update-in [:speed 1] #(- % 2.0)))
+           (swap! state update-in [:speed 1] #(- % 1.0)))
          
          (when (key-code 40) ; Down
-           (swap! state update-in [:speed 1] #(+ % 2.0)))
+           (swap! state update-in [:speed 1] #(+ % 1.0)))
 
          (swap! state update-in [:trans 0] #(+ % (nth (:speed @state) 0)))
          (swap! state update-in [:trans 1] #(+ % (nth (:speed @state) 1)))
