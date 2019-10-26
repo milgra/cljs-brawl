@@ -42,7 +42,7 @@
                   :keypresses {}
                   :trans [500.0 500.0]
                   :speed [0.0 0.0]
-                  :masses [(mass/mass2 500.0 500.0)]}
+                  :masses [(mass/mass2 500.0 400.0)]}
 
        filechannel (chan)
        keychannel (chan)]
@@ -69,15 +69,14 @@
          (= (:level_state state) "none")
          (do
            (load-level! filechannel (:level_file state))
-           (assoc state :level_state "loading")
-           )
+           (assoc state :level_state "loading"))
          
          (= (:level_state state) "loading")
          (let [shapes (poll! filechannel)]
            (if shapes
              (-> state
                  (assoc :glstate (webgl/loadshapes (:glstate state) shapes))
-                 (assoc :surfaces (filter #(= (% :id) "Surfaces") shapes))
+                 (assoc :surfaces (surface/generate-from-pointlist (filter #(= (% :id) "Surfaces") shapes)))
                  ;;shapes level ;; (filter #(not= (% :id) "Surfaces") level)
                  (assoc :level_state "loaded"))
              state))
@@ -103,11 +102,12 @@
                masses (:masses state)
                
                newmasses (mass/update-masses masses surfaces 1.0)]
-           
+
+           (println "surfaces" surfaces)
            ;; draw scene
            
            (webgl/draw! (:glstate state) projection (:trans state))
-           (webgl/drawmasses! (:glstate state) projection (:masses state))
+           (webgl/drawmasses! (:glstate state) projection newmasses)
            
            ;; (actors/update actor controlstate)
            
@@ -133,7 +133,7 @@
              ;; return with updated state
              
              (-> state
-                 (assoc :masses masses)
+                 (assoc :masses newmasses)
                  (assoc :keypresses keycodes)
                  (assoc :speed [nsx nsy])
                  (assoc :trans [ntx nty]))

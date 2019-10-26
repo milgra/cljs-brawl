@@ -21,6 +21,7 @@
         [bx by :as newbasis] (if (not-empty touched)
                                (p/mirror_vec2 ((first touched) :basis ) basis)
                                basis)]
+    (println "touched" touched)
         (-> mass
             (assoc ,,, :trans [(+ tx (* bx time))(+ ty (* by time ))])
             (assoc ,,, :basis newbasis))))
