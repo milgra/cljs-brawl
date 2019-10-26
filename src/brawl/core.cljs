@@ -103,7 +103,6 @@
                
                newmasses (mass/update-masses masses surfaces 1.0)]
 
-           (println "surfaces" surfaces)
            ;; draw scene
            
            (webgl/draw! (:glstate state) projection (:trans state))
