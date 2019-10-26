@@ -1,5 +1,6 @@
 (ns ^:figwheel-hooks brawl.core
   (:require [goog.dom :as gdom]
+            [goog.events :as events]
             [tubax.core :refer [xml->clj]]
             [cljs-http.client :as http]
             [cljs.core.async :refer [<! chan put! take! poll!]]
@@ -17,7 +18,8 @@
             [brawl.physics :as physics]
             [brawl.mass :as mass]
             [brawl.math4 :as math4]
-            [brawl.shape :as shape]))
+            [brawl.shape :as shape])
+  (:import [goog.events EventType]))
   
 ;;(println "AA This text is printed from src/brawl/core.cljs. Go ahead and edit it and see reloading in action.")
 
@@ -57,22 +59,6 @@
    	}
    }")
 
-(def channel (chan))
-
-;; define your app data so that it doesn't get over-written on reload
-(defonce app-state (atom {:text "Hello world!"
-                          :keypresses { }
-                          :speed [0.0 0.0]
-                          :trans [500.0 500.0]
-                          }))
-
-(defn key-down-handler [event]
-  (swap! app-state assoc-in [:keypresses (.-keyCode event) ] true))
-
-
-(defn key-up-handler [event]
-  (swap! app-state assoc-in [:keypresses (.-keyCode event) ] false))
-
 
 (defn gen-vertex-triangle [ vertexes color ]
   (let [r ( / (bit-shift-right (bit-and color 0xFF0000) 16) 255.0 )
@@ -81,7 +67,7 @@
     (map #( concat % [0.0 1.0 r g b 1.0] ) vertexes )))
 
 
-(defn load-level! [name]
+(defn load-level! [channel name]
   (go
     (let [response (<! (http/get "level1.svg"
                                  ;; parameters
@@ -138,12 +124,25 @@
 
        initstate {:level_file "level0.svg"
                   :level_state "none"
+                  :keypresses {}
                   :trans [500.0 500.0]
-                  :speed [0.0 0.0]}]
+                  :speed [0.0 0.0]}
 
-    (set! (.-onkeydown js/document) key-down-handler)
-    (set! (.-onkeyup js/document) key-up-handler)
+       filechannel (chan)
+       keychannel (chan)]
+
+    ;; key listeners
+
+    (events/listen
+     js/document
+     EventType.KEYDOWN
+     (fn [event] (put! keychannel {:code (.-keyCode event) :value true})))
     
+    (events/listen
+     js/document
+     EventType.KEYUP
+     (fn [event] (put! keychannel {:code (.-keyCode event) :value false})))
+
     ;; runloop
     
     (animate
@@ -153,13 +152,13 @@
          
          (= (:level_state state) "none")
          (do
-           (load-level! (:level_file state))
+           (load-level! filechannel (:level_file state))
            (assoc state :level_state "loading")
            )
          
          (= (:level_state state) "loading")
-         (let [vertexes (poll! channel)]
-           (if (not= nil vertexes)
+         (let [vertexes (poll! filechannel)]
+           (if vertexes
              (do
                (println "vertexes arrived")
                (.bindBuffer context buffer-object/array-buffer scene_buffer)
@@ -170,13 +169,11 @@
                (-> state
                    (assoc :level_state "loaded")
                    (assoc :vertexes vertexes)))
-             state
-           )
-         )
+             state))
 
          (= (:level_state state) "loaded")
-         (let [[tx ty] (:trans @app-state)
-               [sx sy] (:speed @app-state)
+         (let [[tx ty] (:trans state)
+               [sx sy] (:speed state)
                ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
                projection (math4/proj_ortho
                            (- tx (+ 150.0 (* ratio 50.0)))
@@ -184,8 +181,9 @@
                            (+ ty (+ 150.0 (* ratio 50.0)))
                            (- ty (+ 150.0 (* ratio 50.0)))
                            -1.0 1.0)
-               key-code (:keypresses @app-state)]
 
+               keyevent (poll! keychannel)]
+           
            (buffers/clear-color-buffer context 0.1 0.0 0 1)
            
            ;; (actors/update actor controlstate)
@@ -214,35 +212,10 @@
             :uniforms [{:name "projection"
                         :type :mat4
                         :values projection}])
-         
-           ;; handle keypresses, modify main point trans
-           
-           ;; use internal state in a loop construct
-           
-           (when (key-code 37) ; Left
-             (swap! app-state update-in [:speed 0] #(- % 1.0)))
-           
-           (when (key-code 39) ; Right
-             (swap! app-state update-in [:speed 0] #(+ % 1.0)))
-           
-           (when (key-code 38) ; Up
-             (swap! app-state update-in [:speed 1] #(- % 1.0)))
-           
-           (when (key-code 40) ; Down
-             (swap! app-state update-in [:speed 1] #(+ % 1.0)))
-
-           (swap! app-state update-in [:trans 0] #(+ % (nth (:speed @app-state) 0)))
-           (swap! app-state update-in [:trans 1] #(+ % (nth (:speed @app-state) 1)))
-           (if (every? false (:keypresses app-state))
-             (do
-               (swap! app-state update-in [:speed 0] #(* % 0.9) )
-               (swap! app-state update-in [:speed 1] #(* % 0.9) ) ) )
            
            ;; draw actor buffer
            
            (.bindBuffer context buffer-object/array-buffer actor_buffer)
-
-           (println "appstate" app-state)
            
            ;; load in new vertexdata
            
@@ -272,8 +245,34 @@
                         :type :mat4
                         :values projection}]
             )
-           
-           state
+
+         
+           ;; handle keypresses, modify main point trans
+
+           (let [keycodes (if keyevent
+                              (assoc (:keypresses state) (:code keyevent) (:value keyevent))
+                              (:keypresses state))
+
+                 nsx (cond
+                       (keycodes 37) (- sx 1.0)
+                       (keycodes 39) (+ sx 1.0)
+                       "default" (* sx 0.9))
+
+                 nsy (cond
+                       (keycodes 38) (- sy 1.0)
+                       (keycodes 40) (+ sy 1.0)
+                       "default" (* sy 0.9))
+
+                 ntx (+ tx sx)
+                 nty (+ ty sy)]
+
+             ;; return with updated state
+             
+             (-> state
+                 (assoc :keypresses keycodes)
+                 (assoc :speed [nsx nsy])
+                 (assoc :trans [ntx nty]))
+             )
            )
          )
        )
@@ -285,6 +284,8 @@
 (main)
 
 ;; template functions
+
+(def app-state (atom {}))
 
 (defn multiply [a b] (* a b))
 
