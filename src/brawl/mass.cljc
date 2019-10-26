@@ -44,9 +44,9 @@
 
 (defn update-masses
   "Moves masses to new positions considering collisions"
-  [{masses :masses surfaces :surfaces :as state} time]
+  [masses surfaces time]
   (let [newmasses
         (-> masses
             (add-gravity 0.5 time)
             (moves-masses surfaces time))]
-    (assoc state :masses newmasses)))
+    newmasses))

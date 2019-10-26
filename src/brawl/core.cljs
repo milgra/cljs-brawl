@@ -17,15 +17,10 @@
 
 (defn load-level! [channel name]
   (go
-    (let [response (<! (http/get "level1.svg"
-                                 ;; parameters
+    (let [response (<! (http/get name
                                  {:with-credentials? false}))
           xmlstr (xml->clj (:body response) {:strict false})
           shapes (svg/psvg xmlstr "")]
-      ;;shapes level ;; (filter #(not= (% :id) "Surfaces") level)
-      ;;surfacepoints (filter #(= (% :id) "Surfaces") level)
-      ;;surfaces (surface/generate-from-pointlist surfacepoints)
-      ;;(for [x (range 0 10)] (p/mass2 (rand 1000) (rand 1000)))]
       (put! channel shapes))))
 
 
@@ -46,7 +41,8 @@
                   :level_state "none"
                   :keypresses {}
                   :trans [500.0 500.0]
-                  :speed [0.0 0.0]}
+                  :speed [0.0 0.0]
+                  :masses [(mass/mass2 500.0 500.0)]}
 
        filechannel (chan)
        keychannel (chan)]
@@ -80,49 +76,64 @@
          (let [shapes (poll! filechannel)]
            (if shapes
              (-> state
-                 (assoc :glstate (webgl/loadshapes shapes))
-                 (assoc :level_state "loaded")
+                 (assoc :glstate (webgl/loadshapes (:glstate state) shapes))
+                 (assoc :surfaces (filter #(= (% :id) "Surfaces") shapes))
+                 ;;shapes level ;; (filter #(not= (% :id) "Surfaces") level)
+                 (assoc :level_state "loaded"))
              state))
-  
+         
          (= (:level_state state) "loaded")
          (let [[tx ty] (:trans state)
                [sx sy] (:speed state)
                ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
                projection (math4/proj_ortho
-                           (- tx (+ 150.0 (* ratio 50.0)))
-                           (+ tx (+ 150.0 (* ratio 50.0)))
-                           (+ ty (+ 150.0 (* ratio 50.0)))
-                           (- ty (+ 150.0 (* ratio 50.0)))
+                           (- tx 500.0)
+                           (+ tx 500.0)
+                           (+ ty 500.0)
+                           (- ty 500.0)
+                           ;; (- tx (+ 150.0 (* ratio 50.0)))
+                           ;; (+ tx (+ 150.0 (* ratio 50.0)))
+                           ;; (+ ty (+ 150.0 (* ratio 50.0)))
+                           ;; (- ty (+ 150.0 (* ratio 50.0)))
                            -1.0 1.0)
-
-               keyevent (poll! keychannel)]
-
-           (webgl/draw (:glstate state) projection (:trans state))
-
+               
+               keyevent (poll! keychannel)
+               
+               surfaces (:surfaces state)
+               masses (:masses state)
+               
+               newmasses (mass/update-masses masses surfaces 1.0)]
+           
+           ;; draw scene
+           
+           (webgl/draw! (:glstate state) projection (:trans state))
+           (webgl/drawmasses! (:glstate state) projection (:masses state))
+           
            ;; (actors/update actor controlstate)
-
+           
            ;; handle keypresses, modify main point trans
-
+           
            (let [keycodes (if keyevent
-                              (assoc (:keypresses state) (:code keyevent) (:value keyevent))
-                              (:keypresses state))
-
+                            (assoc (:keypresses state) (:code keyevent) (:value keyevent))
+                            (:keypresses state))
+                 
                  nsx (cond
-                       (keycodes 37) (- sx 1.0)
-                       (keycodes 39) (+ sx 1.0)
+                       (keycodes 37) (- sx 0.4)
+                       (keycodes 39) (+ sx 0.4)
                        "default" (* sx 0.9))
-
+                 
                  nsy (cond
-                       (keycodes 38) (- sy 1.0)
-                       (keycodes 40) (+ sy 1.0)
+                       (keycodes 38) (- sy 0.4)
+                       (keycodes 40) (+ sy 0.4)
                        "default" (* sy 0.9))
-
+                 
                  ntx (+ tx sx)
                  nty (+ ty sy)]
-
+             
              ;; return with updated state
              
              (-> state
+                 (assoc :masses masses)
                  (assoc :keypresses keycodes)
                  (assoc :speed [nsx nsy])
                  (assoc :trans [ntx nty]))
@@ -133,6 +144,7 @@
      )
     )
   )
+
 
 
 (main)
