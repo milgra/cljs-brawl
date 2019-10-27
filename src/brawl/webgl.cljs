@@ -44,11 +44,15 @@
    }")
 
 
+(defn fuzz-path! [ vertexes ]
+  (vec (map (fn [[x y]] (list (+ x (+ -1.0 (rand 2.0))) (+ y (+ -1.0 (rand 2.0))))) vertexes)))
+
+
 (defn gen-vertex-triangle [ vertexes color ]
   (let [r ( / (bit-shift-right (bit-and color 0xFF0000) 16) 255.0 )
         g ( / (bit-shift-right (bit-and color 0x00FF00) 8) 255.0 )
         b ( / (bit-and color 0x0000FF) 255.0 ) ]
-    (map #( concat % [0.0 1.0 r g b 1.0] ) vertexes )))
+      (map (fn [[x y]] [ x y 0.0 1.0 r g b 1.0] ) vertexes )))
 
 
 (defn init []
@@ -95,21 +99,31 @@
      :line_buffer line_buffer
      :location_pos location_pos
      :location_col location_col}))
-  
+
+(defn gen-shapes-triangle [shapes]
+  (remove nil? (flatten (map
+                         (fn [shape]
+                           (if (contains? shape :color)
+                             ( gen-vertex-triangle
+                              (shape/triangulate_c
+                               (fuzz-path! (:path shape)))
+                              (:color shape ))))
+                         shapes))))
+
 
 (defn loadshapes [{:keys [context scene_buffer line_buffer] :as state} shapes]
-  (let [vertexes (flatten
-                  (map
-                   (fn [shape]
-                     (if (contains? shape :color)
-                       ( gen-vertex-triangle (shape/triangulate_c (:path shape) ) (:color shape ))))
-                   shapes))
-
+  (let [vertexesA (gen-shapes-triangle shapes)
+        vertexesB (gen-shapes-triangle shapes)
+        vertexesC (gen-shapes-triangle shapes)
+        vertexes (concat vertexesA vertexesB vertexesC)
+        vertexcounts [ (count vertexesA) (count vertexesB) (count vertexesC) ]
+        vertexstarts [ 0 (vertexcounts 0) (+ (vertexcounts 0 ) ( vertexcounts 1 ) ) ]
+        
         surfaces (filter #(= (% :id) "Surfaces") shapes)
         lines (flatten
                (map
                 (fn [shape]
-                    ( gen-vertex-triangle (:path shape) 0xFFFFFF ))
+                    ( gen-vertex-triangle (:path shape) 0xFFFFFF))
                 surfaces))]
     
     (.bindBuffer context buffer-object/array-buffer scene_buffer)
@@ -125,10 +139,12 @@
                  buffer-object/static-draw)
     (-> state
         (assoc :vertexes vertexes)
+        (assoc :vertexcounts vertexcounts)
+        (assoc :vertexstarts vertexstarts)
         (assoc :lines lines))))
 
 
-(defn draw! [{:keys [context shader scene_buffer actor_buffer line_buffer location_pos location_col vertexes lines] :as state} projection [tx ty]]
+(defn drawshapes! [{:keys [context shader scene_buffer actor_buffer line_buffer location_pos location_col vertexes vertexcounts vertexstarts ] :as state} projection [tx ty] variation]
              
   (buffers/clear-color-buffer context 0.1 0.0 0 1)
 
@@ -138,7 +154,8 @@
   
   (buffers/draw!
    context
-   :count (/ (count vertexes) 8)
+   :count (int (/ (vertexcounts variation) 8))
+   :first (int (/ (vertexstarts variation) 8))
    :shader shader
    :draw-mode draw-mode/triangles               
    :attributes [{:buffer scene_buffer
@@ -156,33 +173,6 @@
    :uniforms [{:name "projection"
                :type :mat4
                :values projection}])
-
-  ;; draw line buffer
-
-    
-  (.bindBuffer context buffer-object/array-buffer line_buffer)
-  
-  (buffers/draw!
-   context
-   :count (/ (count lines) 8)
-   :shader shader
-   :draw-mode draw-mode/line-strip               
-   :attributes [{:buffer line_buffer
-                 :location location_pos
-                 :components-per-vertex 4
-                 :type data-type/float
-                 :offset 0
-                 :stride 32}
-                {:buffer line_buffer
-                 :location location_col
-                 :components-per-vertex 4
-                 :type data-type/float
-                 :offset 16
-                 :stride 32}]
-   :uniforms [{:name "projection"
-               :type :mat4
-               :values projection}])
-
   
   ;; draw actor buffer
   
@@ -219,6 +209,35 @@
   ;; return state
   state
   )
+
+(defn drawlines! [ {:keys [context shader line_buffer location_pos location_col lines] :as state} projection ]
+
+  ;; draw line buffer
+    
+  (.bindBuffer context buffer-object/array-buffer line_buffer)
+  
+  (buffers/draw!
+   context
+   :count (/ (count lines) 8)
+   :shader shader
+   :draw-mode draw-mode/line-strip               
+   :attributes [{:buffer line_buffer
+                 :location location_pos
+                 :components-per-vertex 4
+                 :type data-type/float
+                 :offset 0
+                 :stride 32}
+                {:buffer line_buffer
+                 :location location_col
+                 :components-per-vertex 4
+                 :type data-type/float
+                 :offset 16
+                 :stride 32}]
+   :uniforms [{:name "projection"
+               :type :mat4
+               :values projection}]
+
+  ))
 
 (defn drawmasses! [{:keys [context shader mass_buffer location_pos location_col] :as state} projection masses]
      

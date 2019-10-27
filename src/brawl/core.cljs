@@ -97,6 +97,8 @@
                            -1.0 1.0)
                
                keyevent (poll! keychannel)
+
+               variation (Math/floor (mod (/ time 500.0) 3.0 ))
                
                surfaces (:surfaces state)
                masses (:masses state)
@@ -105,7 +107,8 @@
 
            ;; draw scene
            
-           (webgl/draw! (:glstate state) projection (:trans state))
+           (webgl/drawshapes! (:glstate state) projection (:trans state) variation)
+           (webgl/drawlines! (:glstate state) projection )
            (webgl/drawmasses! (:glstate state) projection newmasses)
            
            ;; (actors/update actor controlstate)
