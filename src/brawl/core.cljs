@@ -144,10 +144,6 @@
     )
   )
 
-
-
-(main)
-
 ;; template functions
 
 ;;(println "AA This text is printed from src/brawl/core.cljs. Go ahead and edit it and see reloading in action.")
@@ -166,3 +162,6 @@
   (swap! app-state update-in [:__figwheel_counter] inc)
   (println "app-state" app-state)
 )
+
+;; start entry point, can we do this from project.clj?
+(main)

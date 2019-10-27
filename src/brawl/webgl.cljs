@@ -61,21 +61,28 @@
         
         scene_buffer (buffers/create-buffer
                       context
-                      (ta/float32 [ 500.0 500.0 0.0 1.0 1.0 1.0 1.0 1.0 ])
+                      (ta/float32 [500.0 500.0 0.0 1.0 1.0 1.0 1.0 1.0])
                       buffer-object/array-buffer
                       buffer-object/static-draw)
         
         actor_buffer (buffers/create-buffer
                       context
-                      (ta/float32 [ 500.0 500.0 0.0 1.0 1.0 1.0 1.0 1.0 ])
+                      (ta/float32 [500.0 500.0 0.0 1.0 1.0 1.0 1.0 1.0])
                       buffer-object/array-buffer
                       buffer-object/dynamic-draw)
      
         mass_buffer (buffers/create-buffer
                      context
-                     (ta/float32 [ 500.0 500.0 0.0 1.0 1.0 1.0 1.0 1.0 ])
+                     (ta/float32 [500.0 500.0 0.0 1.0 1.0 1.0 1.0 1.0])
                      buffer-object/array-buffer
                      buffer-object/dynamic-draw)
+
+        line_buffer (buffers/create-buffer
+                     context
+                     (ta/float32 [500.0 500.0 0.0 1.0 1.0 1.0 1.0 1.0
+                                  500.0 500.0 0.0 1.0 1.0 1.0 1.0 1.0])
+                     buffer-object/array-buffer
+                     buffer-object/static-draw)
         
         location_pos (shaders/get-attrib-location context shader "position")
         location_col (shaders/get-attrib-location context shader "color")]
@@ -85,28 +92,43 @@
      :scene_buffer scene_buffer
      :actor_buffer actor_buffer
      :mass_buffer mass_buffer
+     :line_buffer line_buffer
      :location_pos location_pos
      :location_col location_col}))
   
 
-(defn loadshapes [{:keys [context] :as state} shapes]
+(defn loadshapes [{:keys [context scene_buffer line_buffer] :as state} shapes]
   (let [vertexes (flatten
                   (map
                    (fn [shape]
                      (if (contains? shape :color)
                        ( gen-vertex-triangle (shape/triangulate_c (:path shape) ) (:color shape ))))
-                   shapes))]
+                   shapes))
+
+        surfaces (filter #(= (% :id) "Surfaces") shapes)
+        lines (flatten
+               (map
+                (fn [shape]
+                    ( gen-vertex-triangle (:path shape) 0xFFFFFF ))
+                surfaces))]
     
-    (.bindBuffer context buffer-object/array-buffer (:scene_buffer state))
+    (.bindBuffer context buffer-object/array-buffer scene_buffer)
     (.bufferData context
                  buffer-object/array-buffer
                  (ta/float32 vertexes)
                  buffer-object/static-draw)
-                 
-    (assoc state :vertexes vertexes)))
+
+    (.bindBuffer context buffer-object/array-buffer line_buffer)
+    (.bufferData context
+                 buffer-object/array-buffer
+                 (ta/float32 lines)
+                 buffer-object/static-draw)
+    (-> state
+        (assoc :vertexes vertexes)
+        (assoc :lines lines))))
 
 
-(defn draw! [{:keys [context shader scene_buffer actor_buffer location_pos location_col vertexes] :as state} projection [tx ty]]
+(defn draw! [{:keys [context shader scene_buffer actor_buffer line_buffer location_pos location_col vertexes lines] :as state} projection [tx ty]]
              
   (buffers/clear-color-buffer context 0.1 0.0 0 1)
 
@@ -134,6 +156,33 @@
    :uniforms [{:name "projection"
                :type :mat4
                :values projection}])
+
+  ;; draw line buffer
+
+    
+  (.bindBuffer context buffer-object/array-buffer line_buffer)
+  
+  (buffers/draw!
+   context
+   :count (/ (count lines) 8)
+   :shader shader
+   :draw-mode draw-mode/line-strip               
+   :attributes [{:buffer line_buffer
+                 :location location_pos
+                 :components-per-vertex 4
+                 :type data-type/float
+                 :offset 0
+                 :stride 32}
+                {:buffer line_buffer
+                 :location location_col
+                 :components-per-vertex 4
+                 :type data-type/float
+                 :offset 16
+                 :stride 32}]
+   :uniforms [{:name "projection"
+               :type :mat4
+               :values projection}])
+
   
   ;; draw actor buffer
   
