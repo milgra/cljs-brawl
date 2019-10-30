@@ -55,6 +55,17 @@
       (map (fn [[x y]] [ x y 0.0 1.0 r g b 1.0] ) vertexes )))
 
 
+(defn gen-shapes-triangle! [shapes]
+  (remove nil? (flatten (map
+                         (fn [shape]
+                           (if (contains? shape :color)
+                             ( gen-vertex-triangle
+                              (shape/triangulate_c
+                               (fuzz-path! (:path shape)))
+                              (:color shape ))))
+                         shapes))))
+
+
 (defn init []
   (let [context (context/get-context (.getElementById js/document "main"))
         
@@ -100,31 +111,26 @@
      :location_pos location_pos
      :location_col location_col}))
 
-(defn gen-shapes-triangle [shapes]
-  (remove nil? (flatten (map
-                         (fn [shape]
-                           (if (contains? shape :color)
-                             ( gen-vertex-triangle
-                              (shape/triangulate_c
-                               (fuzz-path! (:path shape)))
-                              (:color shape ))))
-                         shapes))))
+(partition 4 2 [1 2 3 4 5 6 7])
 
 
 (defn loadshapes [{:keys [context scene_buffer line_buffer] :as state} shapes]
-  (let [vertexesA (gen-shapes-triangle shapes)
-        vertexesB (gen-shapes-triangle shapes)
-        vertexesC (gen-shapes-triangle shapes)
+  (let [vertexesA (gen-shapes-triangle! shapes)
+        vertexesB (gen-shapes-triangle! shapes)
+        vertexesC (gen-shapes-triangle! shapes)
         vertexes (concat vertexesA vertexesB vertexesC)
         vertexcounts [ (count vertexesA) (count vertexesB) (count vertexesC) ]
         vertexstarts [ 0 (vertexcounts 0) (+ (vertexcounts 0 ) ( vertexcounts 1 ) ) ]
         
-        surfaces (filter #(= (% :id) "Surfaces") shapes)
+        surfaces (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) shapes)
         lines (flatten
                (map
                 (fn [shape]
-                    ( gen-vertex-triangle (:path shape) 0xFFFFFF))
+                  ( println "e" (partition 2 1 (:path shape)))
+                    (gen-vertex-triangle (partition 2 (flatten (partition 2 1 (:path shape)))) 0xFFFFFF))
                 surfaces))]
+
+    (println "lines" lines)
     
     (.bindBuffer context buffer-object/array-buffer scene_buffer)
     (.bufferData context
@@ -144,11 +150,11 @@
         (assoc :lines lines))))
 
 
-(defn drawshapes! [{:keys [context shader scene_buffer actor_buffer line_buffer location_pos location_col vertexes vertexcounts vertexstarts ] :as state} projection [tx ty] variation]
+(defn drawshapes! [{:keys [context shader scene_buffer actor_buffer location_pos location_col vertexes vertexcounts vertexstarts ] :as state} projection [tx ty] variation]
              
   (buffers/clear-color-buffer context 0.1 0.0 0 1)
 
-  ;; draw scene buffer
+  ;; draw shapes buffer
   
   (.bindBuffer context buffer-object/array-buffer scene_buffer)
   
@@ -204,11 +210,10 @@
                           :stride 32}]
             :uniforms [{:name "projection"
                         :type :mat4
-                        :values projection}]
-            )
+                        :values projection}])
   ;; return state
-  state
-  )
+  state)
+
 
 (defn drawlines! [ {:keys [context shader line_buffer location_pos location_col lines] :as state} projection ]
 
@@ -220,7 +225,7 @@
    context
    :count (/ (count lines) 8)
    :shader shader
-   :draw-mode draw-mode/line-strip               
+   :draw-mode draw-mode/lines
    :attributes [{:buffer line_buffer
                  :location location_pos
                  :components-per-vertex 4
@@ -235,9 +240,8 @@
                  :stride 32}]
    :uniforms [{:name "projection"
                :type :mat4
-               :values projection}]
+               :values projection}]))
 
-  ))
 
 (defn drawmasses! [{:keys [context shader mass_buffer location_pos location_col] :as state} projection masses]
      
@@ -249,7 +253,12 @@
   
   (.bufferData context
                buffer-object/array-buffer
-               (ta/float32 (vec (flatten (map (fn voxelize [actual] (concat (:trans actual) [0.0 1.0 1.0 1.0 1.0 1.0])) masses))))
+               (ta/float32
+                (vec
+                 (flatten
+                  (map
+                   (fn voxelize [{[tx ty] :trans}]
+                     [tx ty 0.0 1.0 1.0 1.0 1.0 1.0]) masses))))
                buffer-object/dynamic-draw)
   
   (buffers/draw!
@@ -262,8 +271,7 @@
                           :components-per-vertex 4
                           :type data-type/float
                           :offset 0
-                          :stride 32}
-                         {:buffer mass_buffer
+                          :stride 32}                        {:buffer mass_buffer
                           :location location_col
                           :components-per-vertex 4
                           :type data-type/float
@@ -271,8 +279,6 @@
                           :stride 32}]
             :uniforms [{:name "projection"
                         :type :mat4
-                        :values projection}]
-            )
+                        :values projection}])
   ;; return state
-  state
-  )
+  state)

@@ -37,9 +37,9 @@
 
   (let
       [initstate {:glstate (webgl/init)
-                  :level_file "level0.svg"
+                  :level_file "level1.svg"
                   :level_state "none"
-                  :keypresses {}
+                  :keypresses {}>
                   :trans [500.0 500.0]
                   :speed [0.0 0.0]
                   :masses [(mass/mass2 500.0 400.0)]}
@@ -86,14 +86,14 @@
                [sx sy] (:speed state)
                ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
                projection (math4/proj_ortho
-                           (- tx 500.0)
-                           (+ tx 500.0)
-                           (+ ty 500.0)
-                           (- ty 500.0)
-                           ;; (- tx (+ 150.0 (* ratio 50.0)))
-                           ;; (+ tx (+ 150.0 (* ratio 50.0)))
-                           ;; (+ ty (+ 150.0 (* ratio 50.0)))
-                           ;; (- ty (+ 150.0 (* ratio 50.0)))
+                           ;; (- tx 500.0)
+                           ;; (+ tx 500.0)
+                           ;; (+ ty 500.0)
+                           ;; (- ty 500.0)
+                           (- tx (+ 150.0 (* ratio 50.0)))
+                           (+ tx (+ 150.0 (* ratio 50.0)))
+                           (+ ty (+ 150.0 (* ratio 50.0)))
+                           (- ty (+ 150.0 (* ratio 50.0)))
                            -1.0 1.0)
                
                keyevent (poll! keychannel)
