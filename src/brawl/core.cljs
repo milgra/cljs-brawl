@@ -39,7 +39,7 @@
       [initstate {:glstate (webgl/init)
                   :level_file "level1.svg"
                   :level_state "none"
-                  :keypresses {}>
+                  :keypresses {}
                   :trans [500.0 500.0]
                   :speed [0.0 0.0]
                   :masses [(mass/mass2 500.0 400.0)]}
