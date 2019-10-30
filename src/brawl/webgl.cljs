@@ -243,8 +243,8 @@
                :values projection}]))
 
 
-(defn drawmasses! [{:keys [context shader mass_buffer location_pos location_col] :as state} projection masses]
-     
+(defn drawpoints! [{:keys [context shader mass_buffer location_pos location_col] :as state} projection points]
+
   ;; draw mass buffer
   
   (.bindBuffer context buffer-object/array-buffer mass_buffer)
@@ -257,13 +257,13 @@
                 (vec
                  (flatten
                   (map
-                   (fn voxelize [{[tx ty] :trans}]
-                     [tx ty 0.0 1.0 1.0 1.0 1.0 1.0]) masses))))
+                   (fn voxelize [[tx ty]]
+                     [tx ty 0.0 1.0 1.0 1.0 1.0 1.0]) points))))
                buffer-object/dynamic-draw)
   
   (buffers/draw!
    context
-   :count (count masses)
+   :count (count points)
    :shader shader
             :draw-mode draw-mode/points               
             :attributes [{:buffer mass_buffer

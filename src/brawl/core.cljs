@@ -11,7 +11,8 @@
             [brawl.mass :as mass]
             [brawl.math4 :as math4]
             [brawl.shape :as shape]
-            [brawl.webgl :as webgl])
+            [brawl.webgl :as webgl]
+            [brawl.actor :as actor])
   (:import [goog.events EventType]))
   
 
@@ -42,7 +43,8 @@
                   :keypresses {}
                   :trans [500.0 500.0]
                   :speed [0.0 0.0]
-                  :masses [(mass/mass2 500.0 400.0)]}
+                  :masses [(mass/mass2 500.0 400.0)]
+                  :actor (actor/init 500.0 400.0)}
 
        filechannel (chan)
        keychannel (chan)]
@@ -106,11 +108,11 @@
                newmasses (mass/update-masses masses surfaces 1.0)]
 
            ;; draw scene
-           
            (webgl/drawshapes! (:glstate state) projection (:trans state) variation)
            (webgl/drawlines! (:glstate state) projection )
-           (webgl/drawmasses! (:glstate state) projection newmasses)
-           
+           (webgl/drawpoints! (:glstate state) projection (map :trans newmasses))
+           (webgl/drawpoints! (:glstate state) projection (vals (:points (:actor state) ) ) )
+
            ;; (actors/update actor controlstate)
            
            ;; handle keypresses, modify main point trans
