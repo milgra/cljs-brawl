@@ -34,6 +34,11 @@
        masses))
 
 
+(defn set-gravity [{ [ bx by ] :basis :as mass } time]
+  (assoc mass :basis [bx (* (+ by 0.5) time )])
+  )
+
+
 (defn add-gravity
   "adds gravity vector to masspoints basises"
   [masses gravity time]

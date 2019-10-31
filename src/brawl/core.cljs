@@ -38,13 +38,13 @@
 
   (let
       [initstate {:glstate (webgl/init)
-                  :level_file "level1.svg"
+                  :level_file "level0.svg"
                   :level_state "none"
                   :keypresses {}
-                  :trans [500.0 500.0]
+                  :trans [500.0 300.0]
                   :speed [0.0 0.0]
-                  :masses [(mass/mass2 500.0 400.0)]
-                  :actor (actor/init 500.0 400.0)}
+                  :masses [(mass/mass2 500.0 300.0)]
+                  :actor (actor/init 480.0 300.0)}
 
        filechannel (chan)
        keychannel (chan)]
@@ -104,14 +104,16 @@
                
                surfaces (:surfaces state)
                masses (:masses state)
+
+               newactor (actor/newstate (:actor state) surfaces 1.0)
                
                newmasses (mass/update-masses masses surfaces 1.0)]
-
+           
            ;; draw scene
            (webgl/drawshapes! (:glstate state) projection (:trans state) variation)
            (webgl/drawlines! (:glstate state) projection )
            (webgl/drawpoints! (:glstate state) projection (map :trans newmasses))
-           (webgl/drawpoints! (:glstate state) projection (vals (:points (:actor state) ) ) )
+           (webgl/drawpoints! (:glstate state) projection (actor/getpoints newactor ) )
 
            ;; (actors/update actor controlstate)
            
@@ -137,6 +139,7 @@
              ;; return with updated state
              
              (-> state
+                 (assoc :actor newactor)
                  (assoc :masses newmasses)
                  (assoc :keypresses keycodes)
                  (assoc :speed [nsx nsy])

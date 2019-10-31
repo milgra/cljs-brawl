@@ -1,7 +1,8 @@
-(ns brawl.actor)
+(ns brawl.actor
+  (:require [brawl.mass :as mass]))
 
 (defn init [x y]
-  {:state "jump"
+  {:mode "jump"
 
    :points {:head [x y]
             :neck [x y]
@@ -20,4 +21,29 @@
             :ankle_b [x y]
             
             :base_a [x y]
-            :base_b [x y]}})
+            :base_b [x y]}
+
+   :masses {
+            :base_a (mass/mass2 x y)
+            :base_b (mass/mass2 x y)
+            }
+   })
+
+
+(defn newstate [{ :keys [ mode masses ] :as state } surfaces time]
+  (cond
+    (= mode "jump")
+    (let [new_base_a (mass/set-gravity (:base_a masses) time)
+          new_base_aa (mass/move-mass new_base_a surfaces time)
+          new_base_b (mass/set-gravity (:base_b masses) time)
+          new_base_bb (mass/move-mass new_base_b surfaces time)]
+    (-> state
+        (assoc-in [:masses :base_a] new_base_aa)
+        (assoc-in [:masses :base_b] new_base_bb)
+    ))))
+
+(defn getpoints [ { {base_a :base_a base_b :base_b } :masses }]
+
+  [ (:trans base_a ) (:trans base_b ) ]
+  
+  )
