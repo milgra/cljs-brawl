@@ -7,7 +7,6 @@
             [cljs.core.async :refer-macros [go]]
             [brawl.surface :as surface]
             [brawl.svg :as svg]
-            [brawl.physics :as physics]
             [brawl.mass :as mass]
             [brawl.math4 :as math4]
             [brawl.shape :as shape]

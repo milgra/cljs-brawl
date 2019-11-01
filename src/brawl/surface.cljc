@@ -1,5 +1,5 @@
 (ns brawl.surface
-  (:require [brawl.physics :as p]))
+  (:require [brawl.math2 :as math2]))
 
 
 (defn generate-from-pointlist
@@ -10,7 +10,7 @@
     (if (not-empty src)
       (concat res
        (reduce
-        (fn builder [res [x y]] (conj res (p/segment2 x y)))
+        (fn builder [res [x y]] (conj res (math2/segment2 x y)))
         []
         (partition 2 1 (:path (first src)))))
        (recur (rest src) res))))
@@ -23,7 +23,7 @@
         mbasis (:basis mass)]
     (reduce
      (fn checktouch [res {strans :trans sbasis :basis :as onesurface }]
-       (let [cross (p/cross_vec2
+       (let [cross (math2/cross_vec2
                     mtrans
                     mbasis
                     strans

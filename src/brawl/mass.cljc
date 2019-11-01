@@ -1,6 +1,6 @@
 (ns brawl.mass
   (:require [brawl.surface :as s]
-            [brawl.physics :as p]))
+            [brawl.math2 :as math2]))
 
 
 (defn mass2
@@ -21,7 +21,7 @@
   "check collision of mass basis with all surfaces, moves mass to next iteration point based on time"
   (let [touched (s/collect-colliding mass surfaces)
         [bx by :as newbasis] (if (not-empty touched)
-                               (let [[mx my] (p/scale_vec2 (p/mirror_vec2 ((first touched) :basis ) basis) elast) ]
+                               (let [[mx my] (math2/scale_vec2 (math2/mirror_vec2 ((first touched) :basis ) basis) elast) ]
                                  (if (and (< mx radius) (< my radius))
                                    [0.0 0.0]
                                    [mx my]
