@@ -43,7 +43,7 @@
         hand_b [(+ hipx 30.0) (- hipy 40.0)]
         elbow_a (math2/triangle_with_bases neck hand_a 30.0 1.0)
         elbow_b (math2/triangle_with_bases neck hand_b 30.0 1.0)]
-  (println "masses" (:masses state))
+
   (-> state
       (assoc-in [:masses :ankle_a :trans] ankle_a) 
       (assoc-in [:masses :ankle_b :trans] ankle_b) 
@@ -55,7 +55,7 @@
       (assoc-in [:masses :hand_a :trans] hand_a) 
       (assoc-in [:masses :hand_b :trans] hand_b) 
       (assoc-in [:masses :elbow_a :trans] elbow_a) 
-      (assoc-in [:masses :elbow_b :trans] elbow_b) )))
+      (assoc-in [:masses :elbow_b :trans] elbow_b))))
 
 
 (defn newstate [{ :keys [ mode masses speed ] :as state } surfaces time]
@@ -85,6 +85,40 @@
     ))
   
 
-
 (defn getpoints [{masses :masses}]
   (map :trans (vals masses )))
+
+
+(defn getlines [{{:keys [head neck hip elbow_a elbow_b hand_a hand_b knee_a knee_b ankle_a ankle_b]} :masses}]
+  [(:trans head) (:trans neck)
+   (:trans neck) (:trans hip)
+   (:trans hip) (:trans knee_a)
+   (:trans hip) (:trans knee_b)
+   (:trans knee_a ) (:trans ankle_a)
+   (:trans knee_b ) (:trans ankle_b)
+   (:trans neck ) (:trans elbow_a)
+   (:trans neck ) (:trans elbow_b)
+   (:trans elbow_a ) (:trans hand_a)
+   (:trans elbow_b ) (:trans hand_b)])
+
+
+(defn gen-tube-triangles [ points ]
+  (reduce
+   (fn [result [pa pb]]
+     (let [ab (math2/sub_vec2 pa pb)
+           n1 (math2/resize_vec2 (math2/rotate_90_cw ab) 10.0)
+           n2 (math2/resize_vec2 (math2/rotate_90_ccw ab) 10.0)]
+
+       (conj result
+             (math2/add_vec2 pa n1)
+             (math2/add_vec2 pa n2)
+             (math2/add_vec2 pb n1)
+             (math2/add_vec2 pa n2)
+             (math2/add_vec2 pb n2)
+             (math2/add_vec2 pb n1))))
+   []
+   (partition 2 1 points)))
+
+
+(defn get-skin-triangles [{{:keys [head neck hip elbow_a elbow_b hand_a hand_b knee_a knee_b ankle_a ankle_b]} :masses}]
+  (gen-tube-triangles [(:trans head) (:trans neck) (:trans hip) (:trans knee_a) (:trans ankle_a)]))

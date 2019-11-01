@@ -75,12 +75,18 @@
          (= (:level_state state) "loading")
          (let [shapes (poll! filechannel)]
            (if shapes
-             (-> state
-                 (assoc :glstate (webgl/loadshapes (:glstate state) shapes))
-                 (assoc :surfaces (surface/generate-from-pointlist (filter #(= (% :id) "Surfaces") shapes)))
-                 ;;shapes level ;; (filter #(not= (% :id) "Surfaces") level)
-                 (assoc :level_state "loaded"))
-             state))
+             (let [surfacepts (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) shapes )
+                   lines (partition 2 (flatten (map (fn [shape]
+                                (partition 2 (flatten (partition 2 1 (:path shape)))))
+                              surfacepts)))]
+ 
+               (-> state
+                   (assoc :glstate (webgl/loadshapes (:glstate state) shapes))
+                   (assoc :surfaces (surface/generate-from-pointlist surfacepts))
+                   (assoc :lines lines )
+                   (assoc :level_state "loaded")))
+               state))
+       
          
          (= (:level_state state) "loaded")
          (let [[tx ty] (:trans state)
@@ -107,12 +113,14 @@
                newactor (actor/newstate (:actor state) surfaces 1.0)
                
                newmasses (mass/update-masses masses surfaces 1.0)]
-
+           
            ;; draw scene
            (webgl/drawshapes! (:glstate state) projection (:trans state) variation)
-           (webgl/drawlines! (:glstate state) projection)
+           (webgl/drawtriangles! (:glstate state) projection (actor/get-skin-triangles newactor))
+           (webgl/drawlines! (:glstate state) projection (:lines state))
            (webgl/drawpoints! (:glstate state) projection (map :trans newmasses))
            (webgl/drawpoints! (:glstate state) projection (actor/getpoints newactor))
+           (webgl/drawlines! (:glstate state) projection (actor/getlines newactor))
 
            ;; (actors/update actor controlstate)
            

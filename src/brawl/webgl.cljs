@@ -120,17 +120,8 @@
         vertexesC (gen-shapes-triangle! shapes)
         vertexes (concat vertexesA vertexesB vertexesC)
         vertexcounts [ (count vertexesA) (count vertexesB) (count vertexesC) ]
-        vertexstarts [ 0 (vertexcounts 0) (+ (vertexcounts 0 ) ( vertexcounts 1 ) ) ]
-        
-        surfaces (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) shapes)
-        lines (flatten
-               (map
-                (fn [shape]
-                  ( println "e" (partition 2 1 (:path shape)))
-                    (gen-vertex-triangle (partition 2 (flatten (partition 2 1 (:path shape)))) 0xFFFFFF))
-                surfaces))]
+        vertexstarts [ 0 (vertexcounts 0) (+ (vertexcounts 0 ) ( vertexcounts 1 ) ) ]]
 
-    (println "lines" lines)
     
     (.bindBuffer context buffer-object/array-buffer scene_buffer)
     (.bufferData context
@@ -138,16 +129,10 @@
                  (ta/float32 vertexes)
                  buffer-object/static-draw)
 
-    (.bindBuffer context buffer-object/array-buffer line_buffer)
-    (.bufferData context
-                 buffer-object/array-buffer
-                 (ta/float32 lines)
-                 buffer-object/static-draw)
     (-> state
         (assoc :vertexes vertexes)
         (assoc :vertexcounts vertexcounts)
-        (assoc :vertexstarts vertexstarts)
-        (assoc :lines lines))))
+        (assoc :vertexstarts vertexstarts))))
 
 
 (defn drawshapes! [{:keys [context shader scene_buffer actor_buffer location_pos location_col vertexes vertexcounts vertexstarts ] :as state} projection [tx ty] variation]
@@ -180,50 +165,71 @@
                :type :mat4
                :values projection}])
   
-  ;; draw actor buffer
-  
-  (.bindBuffer context buffer-object/array-buffer actor_buffer)
-  
-  ;; load in new vertexdata
-  
-  (.bufferData context
-               buffer-object/array-buffer
-               (ta/float32 [tx ty 0.0 1.0 1.0 1.0 1.0 1.0])
-               buffer-object/dynamic-draw)
-  
-  (buffers/draw!
-   context
-   :count 1
-   :shader shader
-            :draw-mode draw-mode/points               
-            :attributes [{:buffer actor_buffer
-                          :location location_pos
-                          :components-per-vertex 4
-                          :type data-type/float
-                          :offset 0
-                          :stride 32}
-                         {:buffer actor_buffer
-                          :location location_col
-                          :components-per-vertex 4
-                          :type data-type/float
-                          :offset 16
-                          :stride 32}]
-            :uniforms [{:name "projection"
-                        :type :mat4
-                        :values projection}])
   ;; return state
   state)
 
 
-(defn drawlines! [ {:keys [context shader line_buffer location_pos location_col lines] :as state} projection ]
+(defn drawtriangles! [ {:keys [context shader location_pos location_col actor_buffer] } projection points ]
 
   ;; draw line buffer
     
-  (.bindBuffer context buffer-object/array-buffer line_buffer)
+  (.bindBuffer context buffer-object/array-buffer actor_buffer)
+    
+  ;; load in new vertexdata
+  
+  (.bufferData context
+               buffer-object/array-buffer
+               (ta/float32
+                (vec
+                 (flatten
+                  (map
+                   (fn voxelize [[tx ty]]
+                     [tx ty 0.0 1.0 0.0 0.0 0.0 1.0]) points))))
+               buffer-object/dynamic-draw)
   
   (buffers/draw!
    context
-   :count (/ (count lines) 8)
+   :count (count points)
+   :shader shader
+   :draw-mode draw-mode/triangles
+   :attributes [{:buffer actor_buffer
+                 :location location_pos
+                 :components-per-vertex 4
+                 :type data-type/float
+                 :offset 0
+                 :stride 32}
+                {:buffer actor_buffer
+                 :location location_col
+                 :components-per-vertex 4
+                 :type data-type/float
+                 :offset 16
+                 :stride 32}]
+   :uniforms [{:name "projection"
+               :type :mat4
+               :values projection}]))
+
+
+(defn drawlines! [ {:keys [context shader line_buffer location_pos location_col] :as state} projection lines ]
+  
+  ;; draw line buffer
+    
+  (.bindBuffer context buffer-object/array-buffer line_buffer)
+    
+  ;; load in new vertexdata
+  
+  (.bufferData context
+               buffer-object/array-buffer
+               (ta/float32
+                (vec
+                 (flatten
+                  (map
+                   (fn voxelize [[tx ty]]
+                     [tx ty 0.0 1.0 1.0 1.0 1.0 1.0]) lines))))
+               buffer-object/dynamic-draw)
+  
+  (buffers/draw!
+   context
+   :count (count lines)
    :shader shader
    :draw-mode draw-mode/lines
    :attributes [{:buffer line_buffer
