@@ -5,21 +5,27 @@
 
 (defn mass2
   "create basic structure"
-  [x y]
+  [x y r w e]
   {:trans [x y]
    :basis [0 0]
-   :weight 0
-   :radius 0
-   :elasticity 0
+   :weight w
+   :radius r
+   :elasticity e
    :segmentgroups []})
 
 
-(defn move-mass
+(defn move-mass [{[tx ty] :trans
+                  basis :basis
+                  radius :radius
+                  elast :elasticity :as mass} surfaces time]
   "check collision of mass basis with all surfaces, moves mass to next iteration point based on time"
-  [{[tx ty] :trans basis :basis :as mass} surfaces time]
   (let [touched (s/collect-colliding mass surfaces)
         [bx by :as newbasis] (if (not-empty touched)
-                               (p/mirror_vec2 ((first touched) :basis ) basis)
+                               (let [[mx my] (p/scale_vec2 (p/mirror_vec2 ((first touched) :basis ) basis) elast) ]
+                                 (if (and (< mx radius) (< my radius))
+                                   [0.0 0.0]
+                                   [mx my]
+                                 ))
                                basis)]
         (-> mass
             (assoc ,,, :trans [(+ tx (* bx time))(+ ty (* by time ))])
@@ -35,8 +41,7 @@
 
 
 (defn set-gravity [{ [ bx by ] :basis :as mass } time]
-  (assoc mass :basis [bx (* (+ by 0.5) time )])
-  )
+  (assoc mass :basis [bx (* (+ by 0.5) time )]))
 
 
 (defn add-gravity

@@ -78,3 +78,7 @@
         [vx vy :as projvec]
         [ (- px bx) (- py by)]]
     [(+ px vx) (+ py vy)]))
+
+
+(defn scale_vec2 [ [x y] ratio ]
+  [(* x ratio) (* y ratio)])

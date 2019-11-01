@@ -43,7 +43,7 @@
                   :keypresses {}
                   :trans [500.0 300.0]
                   :speed [0.0 0.0]
-                  :masses [(mass/mass2 500.0 300.0)]
+                  :masses [(mass/mass2 500.0 300.0 <1.0 1.0 1.0)]
                   :actor (actor/init 480.0 300.0)}
 
        filechannel (chan)
@@ -108,7 +108,7 @@
                newactor (actor/newstate (:actor state) surfaces 1.0)
                
                newmasses (mass/update-masses masses surfaces 1.0)]
-           
+
            ;; draw scene
            (webgl/drawshapes! (:glstate state) projection (:trans state) variation)
            (webgl/drawlines! (:glstate state) projection )
