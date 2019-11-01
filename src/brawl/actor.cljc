@@ -5,30 +5,46 @@
   {:mode "jump"
    :a_on_ground false
    :b_on_ground false
+   
    :speed [0.0 0.0]
 
-   :points {:head [x y]
-            :neck [x y]
-            :hip  [x y]
-            
-            :hand_a [(+ x 10.0) y]
-            :hand_b [(- x 10.0) y]
-            
-            :elbow_a [x y]
-            :elbow_b [x y]
-            
-            :knee_a [x y]
-            :knee_b [x y]
-            
-            :ankle_a [x y]
-            :ankle_b [x y]
-            
-            :base_a [x y]
-            :base_b [x y]}
-
    :masses {:base_a (mass/set-gravity (mass/mass2 (+ x 20.0) y 4.0 10.0 0.0) 1.0 )
-            :base_b (mass/set-gravity (mass/mass2 (- x 20.0) y 4.0 10.0 0.0) 1.0 )}
-   })
+            :base_b (mass/set-gravity (mass/mass2 (- x 20.0) y 4.0 10.0 0.0) 1.0 )
+
+            :head (mass/mass2 x y 4.0 1.0 1.0)
+            :neck (mass/mass2 x y 4.0 1.0 1.0)
+            :hip  (mass/mass2 x y 4.0 1.0 1.0)
+            
+            :hand_a (mass/mass2 x y 4.0 1.0 1.0)
+            :hand_b (mass/mass2 x y 4.0 1.0 1.0)
+            
+            :elbow_a (mass/mass2 x y 4.0 1.0 1.0)
+            :elbow_b (mass/mass2 x y 4.0 1.0 1.0)
+            
+            :knee_a (mass/mass2 x y 4.0 1.0 1.0)
+            :knee_b (mass/mass2 x y 4.0 1.0 1.0)
+            
+            :ankle_a (mass/mass2 x y 4.0 1.0 1.0)
+            :ankle_b (mass/mass2 x y 4.0 1.0 1.0)}})
+
+
+(defn updateskeleton [ {{{[txa tya] :trans} :base_a
+                         {[txb tyb] :trans} :base_b} :masses :as  state }]
+  (let [hipx (+ txa (/ (- txb txa) 2))
+        hipy (- (+ tya (/ (- tyb tya) 2)) 50.0)]
+  (-> state
+      (assoc-in [:masses :ankle_a :trans] [txa tya]) 
+      (assoc-in [:masses :ankle_b :trans] [txb tyb]) 
+      (assoc-in [:masses :knee_a :trans] [txa (- tya 20.0)]) 
+      (assoc-in [:masses :knee_b :trans] [txb (- tyb 20.0)]) 
+      (assoc-in [:masses :hip :trans] [hipx hipy])
+      (assoc-in [:masses :neck :trans] [hipx (- hipy 50.0)])
+      (assoc-in [:masses :head :trans] [hipx (- hipy 70.0)])
+      (assoc-in [:masses :hand_a :trans] [(+ hipx 40.0) (- hipy 50.0)]) 
+      (assoc-in [:masses :hand_b :trans] [(+ hipx 30.0) (- hipy 40.0)]) 
+      (assoc-in [:masses :elbow_a :trans] [(+ hipx 20.0) (- hipy 40.0)]) 
+      (assoc-in [:masses :elbow_b :trans] [(+ hipx 10.0) (- hipy 30.0)]) 
+      )))
 
 
 (defn newstate [{ :keys [ mode masses speed ] :as state } surfaces time]
@@ -51,14 +67,13 @@
         (assoc-in [:mode] newmode)
         (assoc-in [:a_on_ground] a_on_ground)
         (assoc-in [:b_on_ground] b_on_ground)
+        (updateskeleton)
         ))
     (= mode "walk")
     state
     ))
-
-
-(defn getpoints [ { {base_a :base_a base_b :base_b } :masses }]
-
-  [ (:trans base_a ) (:trans base_b ) ]
   
-  )
+
+
+(defn getpoints [{masses :masses}]
+  (map :trans (vals masses )))
