@@ -20,7 +20,7 @@
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-    (centered-cursor-mode neotree paredit rainbow-delimiters cider)))
+    (magit org centered-cursor-mode neotree paredit rainbow-delimiters cider)))
  '(show-paren-mode t))
 
 (custom-set-faces
@@ -39,18 +39,6 @@
 (desktop-save-mode 1)
 
 (add-hook 'cider-mode-hook #'eldoc-mode)
-
-(defun copy-from-osx ()
-  (shell-command-to-string "pbpaste"))
-
-(defun paste-to-osx (text &optional push)
-    (let ((process-connection-type nil))
-      (let ((proc (start-process "pbcopy" "*Messages*" "pbcopy")))
-        (process-send-string proc text)
-        (process-send-eof proc))))
-
-(setq interprogram-cut-function 'paste-to-osx)
-(setq interprogram-paste-function 'copy-from-osx)
 
 (global-set-key (kbd "C-c 0") 'neotree)
 (global-set-key (kbd "<backtab>") 'other-window)
