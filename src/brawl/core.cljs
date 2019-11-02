@@ -86,21 +86,24 @@
                    (assoc :lines lines )
                    (assoc :level_state "loaded")))
                state))
-       
-         
+
+
          (= (:level_state state) "loaded")
          (let [[tx ty] (:trans state)
                [sx sy] (:speed state)
                ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
+               r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
+               h 300.0
+               w (* h r)
                projection (math4/proj_ortho
                            ;; (- tx 500.0)
                            ;; (+ tx 500.0)
                            ;; (+ ty 500.0)
                            ;; (- ty 500.0)
-                           (- tx (+ 150.0 (* ratio 50.0)))
-                           (+ tx (+ 150.0 (* ratio 50.0)))
-                           (+ ty (+ 150.0 (* ratio 50.0)))
-                           (- ty (+ 150.0 (* ratio 50.0)))
+                           (- tx (+ w (* ratio 50.0)))
+                           (+ tx (+ w (* ratio 50.0)))
+                           (+ ty (+ h (* ratio 50.0)))
+                           (- ty (+ h (* ratio 50.0)))
                            -1.0 1.0)
                
                keyevent (poll! keychannel)
