@@ -10,15 +10,5 @@
     <canvas id="main"></canvas>
     <!-- KEEP THIS SC<RIPT TAG : IT LOADS YOUR APPLICATION CODE -->
     <script src="cljs-out/dev-main.js" type="text/javascript"></script>
-    <script type="text/javascript">
-      resize =function(event)
-      {
-	  canvas = document.getElementById("main");
-          if (canvas.width != window.innerWidth) canvas.width  = window.innerWidth;  
-	  if (canvas.height != window.innerHeight) canvas.height = window.innerHeight;
-      };
-      window.addEventListener('resize', resize);
-      resize( );
-    </script>
   </body>
 </html>

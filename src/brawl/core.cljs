@@ -46,7 +46,9 @@
                   :actor (actor/init 480.0 300.0)}
 
        filechannel (chan)
-       keychannel (chan)]
+       keychannel (chan)
+
+       canvas  (.getElementById js/document "main")]
 
     ;; key listeners
 
@@ -54,12 +56,22 @@
      js/document
      EventType.KEYDOWN
      (fn [event] (put! keychannel {:code (.-keyCode event) :value true})))
-    
+
     (events/listen
      js/document
      EventType.KEYUP
      (fn [event] (put! keychannel {:code (.-keyCode event) :value false})))
 
+    (events/listen
+     js/window
+     EventType.RESIZE
+     (fn [event]
+       (set! (.-width canvas) (.-innerWidth js/window))
+       (set! (.-height canvas) (.-innerHeight js/window))))
+
+    (set! (.-width canvas) (.-innerWidth js/window))
+    (set! (.-height canvas) (.-innerHeight js/window))
+    
     ;; runloop
     
     (animate
