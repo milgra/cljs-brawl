@@ -33,6 +33,12 @@
     ((loop state 0) 0 )))
 
 
+(defn resize-context! [ ]
+  (let [canvas (.getElementById js/document "main")]
+        (set! (.-width canvas) (.-innerWidth js/window))
+        (set! (.-height canvas) (.-innerHeight js/window))))
+
+
 (defn main []
 
   (let
@@ -46,9 +52,7 @@
                   :actor (actor/init 480.0 300.0)}
 
        filechannel (chan)
-       keychannel (chan)
-
-       canvas  (.getElementById js/document "main")]
+       keychannel (chan)]
 
     ;; key listeners
 
@@ -66,11 +70,9 @@
      js/window
      EventType.RESIZE
      (fn [event]
-       (set! (.-width canvas) (.-innerWidth js/window))
-       (set! (.-height canvas) (.-innerHeight js/window))))
+       (resize-context!)))
 
-    (set! (.-width canvas) (.-innerWidth js/window))
-    (set! (.-height canvas) (.-innerHeight js/window))
+    (resize-context!)
     
     ;; runloop
     
