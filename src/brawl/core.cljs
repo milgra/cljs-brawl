@@ -34,9 +34,9 @@
 
 
 (defn resize-context! [ ]
-  (let [canvas (.getElementById js/document "main")]
-        (set! (.-width canvas) (.-innerWidth js/window))
-        (set! (.-height canvas) (.-innerHeight js/window))))
+  (let [canvas (. js/document getElementById "main")]
+        (set! (. canvas -width) (. js/window -innerWidth))
+        (set! (. canvas -height) (. js/window -innerHeight))))
 
 
 (defn main []
