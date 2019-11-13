@@ -11,7 +11,8 @@
             [brawl.math4 :as math4]
             [brawl.shape :as shape]
             [brawl.webgl :as webgl]
-            [brawl.actor :as actor])
+            [brawl.actor :as actor]
+            [brawl.ui :as ui])
   (:import [goog.events EventType]))
   
 
@@ -22,6 +23,14 @@
           xmlstr (xml->clj (:body response) {:strict false})
           shapes (svg/psvg xmlstr "")]
       (put! channel shapes))))
+
+
+(defn load-image! [channel name]
+  (let [img (js/Image.)]
+    (set! (.-onload img)
+          (fn [a]
+            (put! channel img)))
+    (set! (.-src img) name)))
 
 
 (defn animate [state draw-fn]
@@ -45,6 +54,7 @@
       [initstate {:glstate (webgl/init)
                   :level_file "level0.svg"
                   :level_state "none"
+                  :font-file "font.png"
                   :keypresses {}
                   :trans [500.0 300.0]
                   :speed [0.0 0.0]
@@ -52,7 +62,10 @@
                   :actor (actor/init 480.0 300.0)}
 
        filechannel (chan)
-       keychannel (chan)]
+       keychannel (chan)
+       imagechannel (chan)
+       
+       ]
 
     ;; key listeners
 
@@ -73,6 +86,8 @@
        (resize-context!)))
 
     (resize-context!)
+
+    (load-image! imagechannel (:font-file initstate))
     
     ;; runloop
     
@@ -119,6 +134,8 @@
                            (+ ty (+ h (* ratio 50.0)))
                            (- ty (+ h (* ratio 50.0)))
                            -1.0 1.0)
+
+               image (poll! imagechannel)
                
                keyevent (poll! keychannel)
 
@@ -127,9 +144,11 @@
                surfaces (:surfaces state)
                masses (:masses state)
 
-               newactor (actor/newstate (:actor state) surfaces 1.0)
+               newactor (actor/newstate ( :actor state) surfaces 1.0)
                
                newmasses (mass/update-masses masses surfaces 1.0)]
+
+           (if image (webgl/loadtexture! (:glstate state) image))
            
            ;; draw scene
            (webgl/drawshapes! (:glstate state) projection (:trans state) variation)

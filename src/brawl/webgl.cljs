@@ -1,6 +1,7 @@
 (ns brawl.webgl
   (:require [cljs-webgl.context :as context]
             [cljs-webgl.shaders :as shaders]
+            [cljs-webgl.texture :as texture]
             [cljs-webgl.constants.draw-mode :as draw-mode]
             [cljs-webgl.constants.data-type :as data-type]
             [cljs-webgl.constants.buffer-object :as buffer-object]
@@ -43,6 +44,25 @@
    	}
    }")
 
+(def ui-vertex-source
+  "attribute highp vec4 position;
+   attribute highp vec2 texcoord;
+   varying highp vec2 texcoordv;
+   uniform mat4 projection;
+   void main ( )
+   {
+      gl_Position = projection * position;
+      texcoordv = texcoord;
+   }")
+
+(def ui-fragment-source
+  "varying highp vec2 texcoordv;
+   uniform sampler2D texture_main;
+   void main( )
+   {
+      gl_FragColor = texture2D( texture_main , texcoordv , 0.0 );
+   }")
+
 
 (defn fuzz-path! [ vertexes ]
   (vec (map (fn [[x y]] (list (+ x (+ -1.0 (rand 2.0))) (+ y (+ -1.0 (rand 2.0))))) vertexes)))
@@ -68,11 +88,22 @@
 
 (defn init []
   (let [context (context/get-context (.getElementById js/document "main"))
+
+        ui-shader (shaders/create-program
+                   context
+                   (shaders/create-shader context shader/vertex-shader ui-vertex-source)
+                   (shaders/create-shader context shader/fragment-shader ui-fragment-source))
         
         shader (shaders/create-program
                 context
                 (shaders/create-shader context shader/vertex-shader vertex-source)
                 (shaders/create-shader context shader/fragment-shader fragment-source))
+        
+        ui-buffer (buffers/create-buffer
+                   context
+                   (ta/float32 [500.0 500.0 0.0 1.0 1.0 1.0])
+                   buffer-object/array-buffer
+                   buffer-object/static-draw)
         
         scene_buffer (buffers/create-buffer
                       context
@@ -85,7 +116,7 @@
                       (ta/float32 [500.0 500.0 0.0 1.0 1.0 1.0 1.0 1.0])
                       buffer-object/array-buffer
                       buffer-object/dynamic-draw)
-     
+
         mass_buffer (buffers/create-buffer
                      context
                      (ta/float32 [500.0 500.0 0.0 1.0 1.0 1.0 1.0 1.0])
@@ -100,18 +131,29 @@
                      buffer-object/static-draw)
         
         location_pos (shaders/get-attrib-location context shader "position")
-        location_col (shaders/get-attrib-location context shader "color")]
+        location_col (shaders/get-attrib-location context shader "color")
+
+        ui-location-pos (shaders/get-attrib-location context shader "position")
+        ui-location-texcoord (shaders/get-attrib-location context shader "texcoord")]
 
     {:context context
+     :ui-shader ui-shader
      :shader shader
+     :ui-buffer ui-buffer
      :scene_buffer scene_buffer
      :actor_buffer actor_buffer
      :mass_buffer mass_buffer
      :line_buffer line_buffer
      :location_pos location_pos
-     :location_col location_col}))
+     :location_col location_col
+     :ui-location-pos ui-location-pos
+     :ui-location-texcoord ui-location-texcoord }))
 
-(partition 4 2 [1 2 3 4 5 6 7])
+
+(defn loadtexture! [ {:keys [context ui-buffer] :as state} image ]
+    (let [ tex (texture/create-texture context :image image)]
+    (println "tex" tex )
+    (assoc state :texture tex)))
 
 
 (defn loadshapes [{:keys [context scene_buffer line_buffer] :as state} shapes]
@@ -122,7 +164,6 @@
         vertexcounts [ (count vertexesA) (count vertexesB) (count vertexesC) ]
         vertexstarts [ 0 (vertexcounts 0) (+ (vertexcounts 0 ) ( vertexcounts 1 ) ) ]]
 
-    
     (.bindBuffer context buffer-object/array-buffer scene_buffer)
     (.bufferData context
                  buffer-object/array-buffer
@@ -133,6 +174,35 @@
         (assoc :vertexes vertexes)
         (assoc :vertexcounts vertexcounts)
         (assoc :vertexstarts vertexstarts))))
+
+
+(defn draw-ui-quads! [{:keys [context ui-shader ui-buffer ui-location-pos ui-location-texcoord] :as state } quads projection]
+
+  (buffers/draw!
+   context
+   :count (count quads)
+   :first 0
+   :shader ui-shader
+   :draw-mode draw-mode/triangles
+   :attributes [{:buffer ui-buffer
+                 :location ui-location-pos
+                 :components-per-vertex 4
+                 :type data-type/float
+                 :offset 0
+                 :stride 24}
+                {:buffer ui-buffer
+                 :location ui-location-texcoord
+                 :components-per-vertex 2
+                 :type data-type/float
+                 :offset 16
+                 :stride 24}]
+   :uniforms [{:name "projection"
+               :type :mat4
+               :values projection}])
+
+  ;; return state
+  state
+  )
 
 
 (defn drawshapes! [{:keys [context shader scene_buffer actor_buffer location_pos location_col vertexes vertexcounts vertexstarts ] :as state} projection [tx ty] variation]
