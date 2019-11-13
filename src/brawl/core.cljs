@@ -146,9 +146,16 @@
 
                newactor (actor/newstate ( :actor state) surfaces 1.0)
                
-               newmasses (mass/update-masses masses surfaces 1.0)]
+               newmasses (mass/update-masses masses surfaces 1.0)
 
-           (if image (webgl/loadtexture! (:glstate state) image))
+               newglstate (if image
+                            (webgl/loadtexture! (:glstate state) image)
+                            (:glstate state))
+
+               newstate (-> state
+                            (assoc :glstate newglstate)
+                            (assoc :actor newactor)
+                            (assoc :masses newmasses))]
            
            ;; draw scene
            (webgl/drawshapes! (:glstate state) projection (:trans state) variation)
@@ -158,6 +165,7 @@
            (webgl/drawpoints! (:glstate state) projection (actor/getpoints newactor))
            (webgl/drawlines! (:glstate state) projection (actor/getlines newactor))
 
+           (webgl/draw-ui-quads! (:glstate state) projection)
            ;; (actors/update actor controlstate)
            
            ;; handle keypresses, modify main point trans
@@ -180,10 +188,7 @@
                  nty (+ ty sy)]
              
              ;; return with updated state
-             
-             (-> state
-                 (assoc :actor newactor)
-                 (assoc :masses newmasses)
+             (-> newstate
                  (assoc :keypresses keycodes)
                  (assoc :speed [nsx nsy])
                  (assoc :trans [ntx nty]))
