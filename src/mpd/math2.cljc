@@ -112,3 +112,11 @@
 (defn dist-p2-p2-cubic [[ax ay][bx by]]
   "returns distance of two points based on x and y distances to avoid square root calculation"
   (+ (Math/abs (- bx ax)) (Math/abs (- by ay))))
+
+
+(defn rotate-90-cw [ [x y] ]
+  [y (- x)])
+
+
+(defn rotate-90-ccw [ [x y] ]
+  [(- y) x])
