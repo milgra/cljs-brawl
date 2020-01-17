@@ -61,6 +61,46 @@
    (fn [event] (resize-context!))))
 
 
+(defn draw-world! [state frame]
+  "draws background, actors, masses with projection"
+  (let [[tx ty] (:trans state)
+        [sx sy] (:speed state)
+        ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
+        r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
+        h 300.0
+        w (* h r)
+        projection (math4/proj_ortho
+                    (- tx (+ w (* ratio 50.0)))
+                    (+ tx (+ w (* ratio 50.0)))
+                    (+ ty (+ h (* ratio 50.0)))
+                    (- ty (+ h (* ratio 50.0)))
+                    -1.0 1.0)
+        
+        variation (Math/floor (mod (/ frame 20.0) 3.0 ))
+        glstate (state :glstate)
+        world (state :world)
+        actor ((world :actors) 0)]
+    
+    (webglo/clear! glstate)
+    (webglo/drawshapes! glstate projection (:trans state) variation)
+    (webglo/drawtriangles! glstate projection (actor/get-skin-triangles actor))
+    (webglo/drawlines! glstate projection (:surfacelines world))
+    (webglo/drawpoints! glstate projection (map :trans (:masses world)))
+    (webglo/drawpoints! glstate projection (actor/getpoints actor))
+    (webglo/drawlines! glstate projection (actor/getlines actor))))
+
+
+(defn update-world [world]
+  "updates phyisics and actors"
+  (let [surfaces (:surfaces world)
+        masses (:masses world)
+        newactor (actor/newstate (first (:actors world)) surfaces 1.0)
+        newmasses (mass/update-masses masses surfaces 1.0)]
+    (-> world
+        (assoc-in [:actors 0] newactor)
+        (assoc :masses newmasses))))
+
+
 (defn animate [state draw-fn]
   "main runloop, syncs animation to display refresh rate"
   (letfn [(loop [prestate frame]
@@ -89,7 +129,7 @@
               :level_file "level0.svg"
               :level_state "none"
               :texfile "font.png"
-              :keypresses {}
+              :keycodes {}
               :trans [500.0 300.0]
               :speed [0.0 0.0]}
        
@@ -130,58 +170,21 @@
                prestate))
 
          (= (:level_state prestate) "loaded")
-         (let [[tx ty] (:trans prestate)
-               [sx sy] (:speed prestate)
-               ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
-               r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
-               h 300.0
-               w (* h r)
-               projection (math4/proj_ortho
-                           (- tx (+ w (* ratio 50.0)))
-                           (+ tx (+ w (* ratio 50.0)))
-                           (+ ty (+ h (* ratio 50.0)))
-                           (- ty (+ h (* ratio 50.0)))
-                           -1.0 1.0)
-
-               teximage (poll! imgch)
+         (let [teximage (poll! imgch)
                keyevent (poll! keych)
                tchevent (poll! tchch)
 
-               variation (Math/floor (mod (/ frame 20.0) 3.0 ))
-
-               preworld (:world prestate)
-               surfaces (:surfaces preworld)
-               masses (:masses preworld)
-
-               newactor (actor/newstate (first (:actors preworld)) surfaces 1.0)
-               
-               newmasses (mass/update-masses masses surfaces 1.0)
-
-               newglstate (if teximage
-                            (webglo/loadtexture! (:glstate prestate) teximage)
-                            (:glstate prestate))
-
-               newstate (-> prestate
-                            (assoc :glstate newglstate)
-                            (assoc-in [:world :actors 0] newactor)
-                            (assoc-in [:world :masses] newmasses))]
+               newworld (update-world (:world prestate))
+               newstate (assoc prestate :world newworld)]
            
-           ;; draw scene
-           (webglo/drawshapes! (:glstate prestate) projection (:trans prestate) variation)
-           (webglo/drawtriangles! (:glstate prestate) projection (actor/get-skin-triangles newactor))
-           (webglo/drawlines! (:glstate prestate) projection (:surfacelines preworld))
-           (webglo/drawpoints! (:glstate prestate) projection (map :trans newmasses))
-           (webglo/drawpoints! (:glstate prestate) projection (actor/getpoints newactor))
-           (webglo/drawlines! (:glstate prestate) projection (actor/getlines newactor))
-
-           ;;(webglo/draw-ui-quads! (:glstate state) projection)
-           ;; (actors/update actor controlstate)
-           
-           ;; handle keypresses, modify main point trans
+           (draw-world! newstate frame)
            
            (let [keycodes (if keyevent
-                            (assoc (:keypresses prestate) (:code keyevent) (:value keyevent))
-                            (:keypresses prestate))
+                            (assoc (:keycodes prestate) (:code keyevent) (:value keyevent))
+                            (:keycodes prestate))
+
+                 [tx ty] (:trans prestate)
+                 [sx sy] (:speed prestate)
 
                  nsx (cond
                        (keycodes 37) (- sx 0.4)
@@ -198,7 +201,7 @@
              
              ;; return with updated state
              (-> newstate
-                 (assoc :keypresses keycodes)
+                 (assoc :keycodes keycodes)
                  (assoc :speed [nsx nsy])
                  (assoc :trans [ntx nty]))
              )))))))
