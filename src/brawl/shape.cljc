@@ -82,34 +82,33 @@
              ;; result container
              result []]
         (if (> (count indexes ) 2)
-          (do
-            ;; select three consecutive vertices in polygon
-            (let [remaining (count indexes)
-                  va ( if (<= remaining actual) 0 actual)
-                  vb ( if (<= remaining (inc va)) 0 (inc va))
-                  vc ( if (<= remaining (inc vb)) 0 (inc vb))]
-              ;; if we are looping polygon is irregular
-              (if (> ecounter -1 )
-                (if (triangulate_snips? points indexes va vb vc)
-                  ;; if snip is possible
-                  (let [pa (nth indexes va)
-                        pb (nth indexes vb)
-                        pc (nth indexes vc)]
-                    (recur
-                     ;; cut used indexes out
-                     (vec
-                      (concat
-                       (subvec indexes 0 vb)
-                       (subvec indexes (+ vb 1) (+ vb (- remaining vb)))))
-                     (dec (* 2 (dec remaining)))
-                     vb
-                     (conj result
-                           (nth points pa)
-                           (nth points pb)
-                           (nth points pc))))
-                  ;; if snip not possible
-                  (recur indexes (dec ecounter) vb result))
-                result)))
+          ;; select three consecutive vertices in polygon
+          (let [remaining (count indexes)
+                va ( if (<= remaining actual) 0 actual)
+                vb ( if (<= remaining (inc va)) 0 (inc va))
+                vc ( if (<= remaining (inc vb)) 0 (inc vb))]
+            ;; if we are looping polygon is irregular
+            (if (> ecounter -1 )
+              (if (triangulate_snips? points indexes va vb vc)
+                ;; if snip is possible
+                (let [pa (nth indexes va)
+                      pb (nth indexes vb)
+                      pc (nth indexes vc)]
+                  (recur
+                   ;; cut used indexes out
+                   (vec
+                    (concat
+                     (subvec indexes 0 vb)
+                     (subvec indexes (+ vb 1) (+ vb (- remaining vb)))))
+                   (dec (* 2 (dec remaining)))
+                   vb
+                   (conj result
+                         (nth points pa)
+                         (nth points pb)
+                         (nth points pc))))
+                ;; if snip not possible
+                (recur indexes (dec ecounter) vb result))
+              result))
           result)))))
 
 

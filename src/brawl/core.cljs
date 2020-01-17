@@ -6,11 +6,10 @@
             [cljs.core.async :refer [<! chan put! take! poll!]]
             [cljs.core.async :refer-macros [go]]
             [brawl.svg :as svg]
-            [brawl.math4 :as math4]
+            [gui.math4 :as math4]
             [brawl.shape :as shape]
-            [brawl.webglo :as webglo]
+            [brawl.webgl :as webgl]
             [brawl.actor :as actor]
-            [brawl.ui :as ui]
             [mpd.phys2 :as phys2]
             [mpd.math2 :as math2])
   (:import [goog.events EventType]))
@@ -81,13 +80,13 @@
         world (state :world)
         actor ((world :actors) 0)]
     
-    (webglo/clear! glstate)
-    (webglo/drawshapes! glstate projection (:trans state) variation)
-    (webglo/drawtriangles! glstate projection (actor/get-skin-triangles actor))
-    (webglo/drawlines! glstate projection (:surfacelines world))
-    (webglo/drawpoints! glstate projection (map :p (vals (:masses world))))
-    (webglo/drawpoints! glstate projection (actor/getpoints actor))
-    (webglo/drawlines! glstate projection (actor/getlines actor))))
+    (webgl/clear! glstate)
+    (webgl/drawshapes! glstate projection (:trans state) variation)
+    (webgl/drawtriangles! glstate projection (actor/get-skin-triangles actor))
+    (webgl/drawlines! glstate projection (:surfacelines world))
+    (webgl/drawpoints! glstate projection (map :p (vals (:masses world))))
+    (webgl/drawpoints! glstate projection (actor/getpoints actor))
+    (webgl/drawlines! glstate projection (actor/getlines actor))))
 
 
 (defn update-translation [state keyevent]           
@@ -158,7 +157,7 @@
               :surfacelines []}
 
        state {:world world
-              :glstate (webglo/init)
+              :glstate (webgl/init)
               :level_file "level0.svg"
               :level_state "none"
               :texfile "font.png"
@@ -193,7 +192,7 @@
                    lines (reduce (fn [result {t :t b :b}] (conj result t (math2/add-v2 t b))) [] surfaces)]
 
                (-> prestate
-                   (assoc :glstate (webglo/loadshapes (:glstate prestate) shapes))
+                   (assoc :glstate (webgl/loadshapes (:glstate prestate) shapes))
                    (assoc-in [:world :surfaces] surfaces)
                    (assoc-in [:world :surfacelines] lines)
                    (assoc :level_state "loaded")))
