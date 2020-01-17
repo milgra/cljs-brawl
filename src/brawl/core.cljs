@@ -10,13 +10,14 @@
             [brawl.mass :as mass]
             [brawl.math4 :as math4]
             [brawl.shape :as shape]
-            [brawl.webgl :as webgl]
+            [brawl.webglo :as webglo]
             [brawl.actor :as actor]
             [brawl.ui :as ui])
   (:import [goog.events EventType]))
   
 
 (defn load-level! [channel name]
+  "load level svg's"
   (go
     (let [response (<! (http/get name
                                  {:with-credentials? false}))
@@ -26,6 +27,7 @@
 
 
 (defn load-image! [channel name]
+  "load touchscreen button images"
   (let [img (js/Image.)]
     (set! (.-onload img)
           (fn [a]
@@ -33,147 +35,154 @@
     (set! (.-src img) name)))
 
 
-(defn animate [state draw-fn]
-  (letfn [(loop [oldstate frame]
-            (fn [time]
-              (let [newstate (draw-fn oldstate frame time)]
-              (.requestAnimationFrame js/window (loop newstate (inc frame))))
-              ))]
-    ((loop state 0) 0 )))
-
-
 (defn resize-context! [ ]
+  "resize canvas on window resize"
   (let [canvas (. js/document getElementById "main")]
         (set! (. canvas -width) (. js/window -innerWidth))
         (set! (. canvas -height) (. js/window -innerHeight))))
 
 
+(defn init-events! [keych tchch]
+  "start event listening"
+ 
+  (events/listen
+   js/document
+   EventType.KEYDOWN
+   (fn [event] (put! keych {:code (.-keyCode event) :value true})))
+  
+  (events/listen
+   js/document
+   EventType.KEYUP
+   (fn [event] (put! keych {:code (.-keyCode event) :value false})))
+  
+  (events/listen
+   js/window
+   EventType.RESIZE
+   (fn [event] (resize-context!))))
+
+
+(defn animate [state draw-fn]
+  "main runloop, syncs animation to display refresh rate"
+  (letfn [(loop [prestate frame]
+            (fn [time]
+              (let [newstate (if (> time 0)
+                               (draw-fn prestate frame time)
+                               prestate)]
+                (.requestAnimationFrame
+                 js/window
+                 (loop newstate (inc frame))))))]
+    ((loop state 0) 0 )))
+
+
 (defn main []
-
+  "entering point"
   (let
-      [initstate {:glstate (webgl/init)
-                  :level_file "level0.svg"
-                  :level_state "none"
-                  :font-file "font.png"
-                  :keypresses {}
-                  :trans [500.0 300.0]
-                  :speed [0.0 0.0]
-                  :masses [(mass/mass2 500.0 300.0 1.0 1.0 1.0)]
-                  :actor (actor/init 480.0 300.0)}
+      [world {:actors [(actor/init 480.0 300.0)]
+              :masses [(mass/mass2 500.0 300.0 1.0 1.0 1.0)]
+              :dguards []
+              :aguards []
+              :surfaces []
+              :surfacelines []}
 
-       filechannel (chan)
-       keychannel (chan)
-       imagechannel (chan)
+       state {:world world
+              :glstate (webglo/init)
+              :level_file "level0.svg"
+              :level_state "none"
+              :texfile "font.png"
+              :keypresses {}
+              :trans [500.0 300.0]
+              :speed [0.0 0.0]}
        
-       ]
-
-    ;; key listeners
-
-    (events/listen
-     js/document
-     EventType.KEYDOWN
-     (fn [event] (put! keychannel {:code (.-keyCode event) :value true})))
-
-    (events/listen
-     js/document
-     EventType.KEYUP
-     (fn [event] (put! keychannel {:code (.-keyCode event) :value false})))
-
-    (events/listen
-     js/window
-     EventType.RESIZE
-     (fn [event]
-       (resize-context!)))
+       svgch (chan) ;; level svg channel
+       imgch (chan) ;; texture image channel
+       tchch (chan) ;; touch channel
+       keych (chan)];; key press channel
 
     (resize-context!)
-
-    (load-image! imagechannel (:font-file initstate))
+    (init-events! keych tchch)
+    (load-image! imgch (:texfile state))
     
     ;; runloop
     
     (animate
-     initstate
-     (fn [state frame time]
+     state
+     (fn [prestate frame time]
        (cond 
          
-         (= (:level_state state) "none")
+         (= (:level_state prestate) "none")
          (do
-           (load-level! filechannel (:level_file state))
-           (assoc state :level_state "loading"))
+           (load-level! svgch (:level_file prestate))
+           (assoc prestate :level_state "loading"))
          
-         (= (:level_state state) "loading")
-         (let [shapes (poll! filechannel)]
+         (= (:level_state prestate) "loading")
+         (let [shapes (poll! svgch)]
            (if shapes
              (let [surfacepts (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) shapes )
                    lines (partition 2 (flatten (map (fn [shape]
                                 (partition 2 (flatten (partition 2 1 (:path shape)))))
                               surfacepts)))]
  
-               (-> state
-                   (assoc :glstate (webgl/loadshapes (:glstate state) shapes))
-                   (assoc :surfaces (surface/generate-from-pointlist surfacepts))
-                   (assoc :lines lines )
+               (-> prestate
+                   (assoc :glstate (webglo/loadshapes (:glstate prestate) shapes))
+                   (assoc-in [:world :surfaces] (surface/generate-from-pointlist surfacepts))
+                   (assoc-in [:world :surfacelines] lines )
                    (assoc :level_state "loaded")))
-               state))
+               prestate))
 
-
-         (= (:level_state state) "loaded")
-         (let [[tx ty] (:trans state)
-               [sx sy] (:speed state)
+         (= (:level_state prestate) "loaded")
+         (let [[tx ty] (:trans prestate)
+               [sx sy] (:speed prestate)
                ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
                r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
                h 300.0
                w (* h r)
                projection (math4/proj_ortho
-                           ;; (- tx 500.0)
-                           ;; (+ tx 500.0)
-                           ;; (+ ty 500.0)
-                           ;; (- ty 500.0)
                            (- tx (+ w (* ratio 50.0)))
                            (+ tx (+ w (* ratio 50.0)))
                            (+ ty (+ h (* ratio 50.0)))
                            (- ty (+ h (* ratio 50.0)))
                            -1.0 1.0)
 
-               image (poll! imagechannel)
-               
-               keyevent (poll! keychannel)
+               teximage (poll! imgch)
+               keyevent (poll! keych)
+               tchevent (poll! tchch)
 
-               variation (Math/floor (mod (/ time 500.0) 3.0 ))
-               
-               surfaces (:surfaces state)
-               masses (:masses state)
+               variation (Math/floor (mod (/ frame 20.0) 3.0 ))
 
-               newactor (actor/newstate ( :actor state) surfaces 1.0)
+               preworld (:world prestate)
+               surfaces (:surfaces preworld)
+               masses (:masses preworld)
+
+               newactor (actor/newstate (first (:actors preworld)) surfaces 1.0)
                
                newmasses (mass/update-masses masses surfaces 1.0)
 
-               newglstate (if image
-                            (webgl/loadtexture! (:glstate state) image)
-                            (:glstate state))
+               newglstate (if teximage
+                            (webglo/loadtexture! (:glstate prestate) teximage)
+                            (:glstate prestate))
 
-               newstate (-> state
+               newstate (-> prestate
                             (assoc :glstate newglstate)
-                            (assoc :actor newactor)
-                            (assoc :masses newmasses))]
+                            (assoc-in [:world :actors 0] newactor)
+                            (assoc-in [:world :masses] newmasses))]
            
            ;; draw scene
-           (webgl/drawshapes! (:glstate state) projection (:trans state) variation)
-           (webgl/drawtriangles! (:glstate state) projection (actor/get-skin-triangles newactor))
-           (webgl/drawlines! (:glstate state) projection (:lines state))
-           (webgl/drawpoints! (:glstate state) projection (map :trans newmasses))
-           (webgl/drawpoints! (:glstate state) projection (actor/getpoints newactor))
-           (webgl/drawlines! (:glstate state) projection (actor/getlines newactor))
+           (webglo/drawshapes! (:glstate prestate) projection (:trans prestate) variation)
+           (webglo/drawtriangles! (:glstate prestate) projection (actor/get-skin-triangles newactor))
+           (webglo/drawlines! (:glstate prestate) projection (:surfacelines preworld))
+           (webglo/drawpoints! (:glstate prestate) projection (map :trans newmasses))
+           (webglo/drawpoints! (:glstate prestate) projection (actor/getpoints newactor))
+           (webglo/drawlines! (:glstate prestate) projection (actor/getlines newactor))
 
-           (webgl/draw-ui-quads! (:glstate state) projection)
+           ;;(webglo/draw-ui-quads! (:glstate state) projection)
            ;; (actors/update actor controlstate)
            
            ;; handle keypresses, modify main point trans
            
            (let [keycodes (if keyevent
-                            (assoc (:keypresses state) (:code keyevent) (:value keyevent))
-                            (:keypresses state))
-                 
+                            (assoc (:keypresses prestate) (:code keyevent) (:value keyevent))
+                            (:keypresses prestate))
+
                  nsx (cond
                        (keycodes 37) (- sx 0.4)
                        (keycodes 39) (+ sx 0.4)
@@ -192,12 +201,6 @@
                  (assoc :keypresses keycodes)
                  (assoc :speed [nsx nsy])
                  (assoc :trans [ntx nty]))
-             )
-           )
-         )
-       )
-     )
-    )
-  )
+             )))))))
 
 (main)

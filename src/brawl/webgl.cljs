@@ -1,4 +1,4 @@
-(ns brawl.webgl
+(ns brawl.webglo
   (:require [cljs-webgl.context :as context]
             [cljs-webgl.shaders :as shaders]
             [cljs-webgl.texture :as texture]
