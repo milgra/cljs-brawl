@@ -2,6 +2,7 @@
   (:require
     [cljs-webgl.constants.texture-target :as texture-target]
     [cljs-webgl.constants.texture-parameter-name :as texture-parameter-name]
+    [cljs-webgl.constants.texture-wrap-mode :as wrap-mode]
     [cljs-webgl.constants.parameter-name :as parameter-name]
     [cljs-webgl.constants.webgl :as webgl]
     [cljs-webgl.constants.texture-filter :as texture-filter]
@@ -51,3 +52,26 @@
     (.bindTexture gl-context target nil)
 
     texture))
+
+(defn upload-texture
+  [gl-context texture bytes width height]
+
+  (.bindTexture gl-context texture-target/texture-2d texture)
+
+  (.texImage2D
+   gl-context
+   texture-target/texture-2d
+   0
+   pixel-format/rgba
+   width
+   height
+   0
+   pixel-format/rgba
+   data-type/unsigned-byte
+   bytes)
+  
+  (.texParameteri gl-context texture-target/texture-2d texture-parameter-name/texture-wrap-s wrap-mode/clamp-to-edge)
+  (.texParameteri gl-context texture-target/texture-2d texture-parameter-name/texture-wrap-t wrap-mode/clamp-to-edge)
+  (.texParameteri gl-context texture-target/texture-2d texture-parameter-name/texture-min-filter texture-filter/linear)
+  (.texParameteri gl-context texture-target/texture-2d texture-parameter-name/texture-mag-filter texture-filter/linear)
+)

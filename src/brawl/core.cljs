@@ -200,24 +200,4 @@
     )
   )
 
-;; template functions
-
-;;(println "AA This text is printed from src/brawl/core.cljs. Go ahead and edit it and see reloading in action.")
-
-(def app-state (atom {}))
-
-(defn multiply [a b] (* a b))
-
-(defn get-app-element []
-  (gdom/getElement "app"))
-
-;; specify reload hook with ^;after-load metadata
-(defn ^:after-load on-reload []
-  ;; optionally touch your app-state to force rerendering depending on
-  ;; your application
-  (swap! app-state update-in [:__figwheel_counter] inc)
-  (println "app-state" app-state)
-)
-
-;; start entry point, can we do this from project.clj?
 (main)

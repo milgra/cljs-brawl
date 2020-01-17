@@ -35,6 +35,11 @@
       (set! (.-numItems buffer) (quot (.-length data) item-size)))
     buffer))
 
+(defn upload-buffer
+  [gl-context buffer data target usage]
+  (.bindBuffer gl-context target buffer)
+  (.bufferData gl-context target data usage))
+
 (defn clear-color-buffer
   "Clears the color buffer with specified `red`, `green`, `blue` and `alpha` values.
 
