@@ -6,12 +6,15 @@
             [cljs.core.async :refer [<! chan put! take! poll!]]
             [cljs.core.async :refer-macros [go]]
             [brawl.svg :as svg]
+            [gui.webgl :as uiwebgl]
+            [gui.ui :as ui]
             [gui.math4 :as math4]
             [brawl.shape :as shape]
             [brawl.webgl :as webgl]
             [brawl.actor :as actor]
             [mpd.phys2 :as phys2]
-            [mpd.math2 :as math2])
+            [mpd.math2 :as math2]
+            [brawl.layouts :as layouts])
   (:import [goog.events EventType]))
   
 
@@ -156,8 +159,17 @@
               :surfaces []
               :surfacelines []}
 
+       glstate (webgl/init)
+       uistate (uiwebgl/init)
+       
+       views (ui/gen-from-desc
+              layouts/hud
+              (get-in uistate [:tempcanvas]))
+
        state {:world world
-              :glstate (webgl/init)
+              :glstate glstate
+              :uistate uistate
+              :views views
               :level_file "level0.svg"
               :level_state "none"
               :texfile "font.png"
@@ -203,11 +215,14 @@
                keyevent (poll! keych)
                tchevent (poll! tchch)
 
+               ;;newui (update-ui (:views prestate))
+               
                newworld (update-world (:world prestate))
                newstate (-> (assoc prestate :world newworld)
                             (update-translation keyevent))]
            
            (draw-world! newstate frame)
+           ;;(draw-ui! newstate frame)
 
            newstate))))))
 
