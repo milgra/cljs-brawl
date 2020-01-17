@@ -90,6 +90,33 @@
     (webglo/drawlines! glstate projection (actor/getlines actor))))
 
 
+(defn update-translation [state keyevent]           
+  (let [keycodes (if keyevent
+                   (assoc (:keycodes state) (:code keyevent) (:value keyevent))
+                   (:keycodes state))
+        
+        [tx ty] (:trans state)
+        [sx sy] (:speed state)
+        
+        nsx (cond
+              (keycodes 37) (- sx 0.4)
+              (keycodes 39) (+ sx 0.4)
+              "default" (* sx 0.9))
+        
+        nsy (cond
+              (keycodes 38) (- sy 0.4)
+              (keycodes 40) (+ sy 0.4)
+              "default" (* sy 0.9))
+        
+        ntx (+ tx sx)
+        nty (+ ty sy)]
+    
+    (-> state
+        (assoc :keycodes keycodes)
+        (assoc :speed [nsx nsy])
+        (assoc :trans [ntx nty]))))
+
+
 (defn update-world [world]
   "updates phyisics and actors"
   (let [surfaces (:surfaces world)
@@ -175,35 +202,11 @@
                tchevent (poll! tchch)
 
                newworld (update-world (:world prestate))
-               newstate (assoc prestate :world newworld)]
+               newstate (-> (assoc prestate :world newworld)
+                            (update-translation keyevent))]
            
            (draw-world! newstate frame)
-           
-           (let [keycodes (if keyevent
-                            (assoc (:keycodes prestate) (:code keyevent) (:value keyevent))
-                            (:keycodes prestate))
 
-                 [tx ty] (:trans prestate)
-                 [sx sy] (:speed prestate)
-
-                 nsx (cond
-                       (keycodes 37) (- sx 0.4)
-                       (keycodes 39) (+ sx 0.4)
-                       "default" (* sx 0.9))
-                 
-                 nsy (cond
-                       (keycodes 38) (- sy 0.4)
-                       (keycodes 40) (+ sy 0.4)
-                       "default" (* sy 0.9))
-                 
-                 ntx (+ tx sx)
-                 nty (+ ty sy)]
-             
-             ;; return with updated state
-             (-> newstate
-                 (assoc :keycodes keycodes)
-                 (assoc :speed [nsx nsy])
-                 (assoc :trans [ntx nty]))
-             )))))))
+           newstate))))))
 
 (main)
