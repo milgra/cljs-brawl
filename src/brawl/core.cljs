@@ -92,6 +92,27 @@
     (webgl/drawlines! glstate projection (actor/getlines actor))))
 
 
+(defn draw-ui! [state frame]
+  (let [projection (math4/proj_ortho
+                    0
+                    (.-innerWidth js/window)
+                    (.-innerHeight js/window)
+                    0
+                    -10.0
+                    10.0)
+        
+        uistate (state :uistate)
+        views (state :views)
+        viewids (ui/collect-visible-ids
+                 views
+                 ((views :baseview) :sv)
+                 "")
+        newstate (uiwebgl/draw! uistate 
+                                projection
+                                (map views viewids))]
+    newstate))
+  
+
 (defn update-translation [state keyevent]           
   (let [keycodes (if keyevent
                    (assoc (:keycodes state) (:code keyevent) (:value keyevent))
@@ -134,6 +155,16 @@
     (-> world
         (assoc-in [:actors 0] newactor)
         (assoc :masses newmasses))))
+
+
+(defn update-ui [views]
+  (ui/align
+   views
+   ((views :baseview) :sv)
+   0
+   0
+   (. js/window -innerWidth)
+   (. js/window -innerHeight)))
 
 
 (defn animate [state draw-fn]
@@ -215,14 +246,15 @@
                keyevent (poll! keych)
                tchevent (poll! tchch)
 
-               ;;newui (update-ui (:views prestate))
+               newviews (update-ui (:views prestate))
                
                newworld (update-world (:world prestate))
                newstate (-> (assoc prestate :world newworld)
+                            (assoc :views newviews)
                             (update-translation keyevent))]
            
            (draw-world! newstate frame)
-           ;;(draw-ui! newstate frame)
+           (draw-ui! newstate frame)
 
            newstate))))))
 

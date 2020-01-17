@@ -140,6 +140,15 @@
         (recur (rest remviews) newtmap)))))
 
 
+(defn clear! [{context :context :as state}]
+  (buffers/clear-color-buffer
+   context
+   0.1
+   0.1
+   0.4
+   1.0))
+
+
 (defn draw! [{:keys [context
                      tempcanvas
                      textures
@@ -184,14 +193,6 @@
      (arrays/float32 vertexes)
      buffer-object/array-buffer
      buffer-object/dynamic-draw)
-
-    ;; clear canvas
-    (buffers/clear-color-buffer
-     context
-     0.1
-     0.1
-     0.4
-     1.0)
 
     ;; draw vertexes
     (buffers/draw!
