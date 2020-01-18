@@ -9,6 +9,8 @@
    
    :speed [0.0 0.0]
 
+   :facing 1.0
+
    :bases  {:base_a (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
             :base_b (phys2/mass2 (- x 20.0) y 4.0 10.0 0.0)}
 
@@ -26,7 +28,38 @@
             :knee_b (phys2/mass2 x y 4.0 1.0 1.0)
             
             :ankle_a (phys2/mass2 x y 4.0 1.0 1.0)
-            :ankle_b (phys2/mass2 x y 4.0 1.0 1.0)}})
+            :ankle_b (phys2/mass2 x y 4.0 1.0 1.0)}
+
+   :metrics {;; lengths
+             :headl 20.0
+             :bodyl 50.0
+             :arml 50.0
+             :legl 60.0
+             ;; widths
+             :headw 40.0
+             :neckw 4.0
+             :armw 4.0
+             :bodyw 6.0
+             :hipw 6.0
+             :legw 6.0
+             ;; speed
+             :walks 0.6
+             :runs 0.4
+             :punchs 7.0
+             :kicks 0.2
+             ;; powers
+             :maxp 100.0
+             :hitp 30.0
+             :kickp 30.0
+             ;; health level xp todo on level step ability to pick up bodies
+             :maxh 100.0
+             :maxl 10
+             ;; color
+             :col 0xFF0000FF
+             :cola 0xAA0000FF
+             :colb 0x00AA00FF
+             :colc 0x0000AAFF
+             :cold 0xAA00AAFF}})
 
 
 (defn triangle_with_bases [va vb side dir]
@@ -129,5 +162,37 @@
    (partition 2 1 points)))
 
 
-(defn get-skin-triangles [{{:keys [head neck hip elbow_a elbow_b hand_a hand_b knee_a knee_b ankle_a ankle_b]} :masses}]
-  (gen-tube-triangles [(:p head) (:p neck) (:p hip) (:p knee_a) (:p ankle_a)]))
+(defn gen-foot-triangles [pa pb size facing]
+  (let [ab (math2/sub-v2 pb pa)
+        abbig (math2/add-v2 pa (math2/scale-v2 ab 1.2))
+        leftp (if (= facing 1)
+                (math2/add-v2 abbig (math2/resize-v2 (math2/rotate-90-cw ab) 10.0))
+                (math2/add-v2 abbig (math2/resize-v2 (math2/rotate-90-cw ab) 20.0)))
+        rightp (if (= facing 1)
+                (math2/add-v2 abbig (math2/resize-v2 (math2/rotate-90-ccw ab) 20.0))
+                (math2/add-v2 abbig (math2/resize-v2 (math2/rotate-90-ccw ab) 10.0)))
+        topp (if (= facing 1)
+                (math2/add-v2 leftp (math2/resize-v2 ab -18.0))
+                (math2/add-v2 rightp (math2/resize-v2 ab -18.0)))]
+    [topp leftp rightp]))
+
+
+(defn get-skin-triangles [{{:keys [head neck hip elbow_a elbow_b hand_a hand_b knee_a knee_b ankle_a ankle_b facing]} :masses}]
+
+  ;; foot
+
+  (concat []
+          (gen-foot-triangles (knee_a :p) (ankle_a :p) 5.0 facing)
+          (gen-foot-triangles (knee_b :p) (ankle_b :p) 5.0 facing)))
+  
+  ;; leg a
+  ;; leg b
+
+  ;; arm a
+  ;; arm b
+
+  ;; neck to hip
+
+  ;; head
+  
+  ;;(gen-tube-triangles [(:p head) (:p neck) (:p hip) (:p knee_a) (:p ankle_a)]))

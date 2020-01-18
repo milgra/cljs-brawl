@@ -93,23 +93,11 @@
 
 
 (defn draw-ui! [state frame]
-  (let [projection (math4/proj_ortho
-                    0
-                    (.-innerWidth js/window)
-                    (.-innerHeight js/window)
-                    0
-                    -10.0
-                    10.0)
-        
+  (let [projection (math4/proj_ortho 0 (.-innerWidth js/window) (.-innerHeight js/window) 0 -10.0 10.0)
         uistate (state :uistate)
         views (state :views)
-        viewids (ui/collect-visible-ids
-                 views
-                 ((views :baseview) :sv)
-                 "")
-        newstate (uiwebgl/draw! uistate 
-                                projection
-                                (map views viewids))]
+        viewids (ui/collect-visible-ids views ((views :baseview) :sv) "")
+        newstate (uiwebgl/draw! uistate projection (map views viewids))]
     newstate))
   
 
@@ -183,15 +171,15 @@
 (defn main []
   "entering point"
   (let
-      [world {:actors [(actor/init 480.0 300.0)]
+      [glstate (webgl/init)
+       uistate (uiwebgl/init)
+
+       world {:actors [(actor/init 480.0 300.0)]
               :masses {:0 (phys2/mass2 500.0 300.0 1.0 1.0 0.9)}
               :dguards []
               :aguards []
               :surfaces []
               :surfacelines []}
-
-       glstate (webgl/init)
-       uistate (uiwebgl/init)
        
        views (ui/gen-from-desc
               layouts/hud
@@ -254,7 +242,7 @@
                             (update-translation keyevent))]
            
            (draw-world! newstate frame)
-           (draw-ui! newstate frame)
+           ;;(draw-ui! newstate frame)
 
            newstate))))))
 
