@@ -9,6 +9,8 @@
    
    :speed [0.0 0.0]
 
+   :state "walk"
+
    :facing 1.0
 
    :bases  {:base_a (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
@@ -59,7 +61,20 @@
              :cola 0xAA0000FF
              :colb 0x00AA00FF
              :colc 0x0000AAFF
-             :cold 0xAA00AAFF}})
+             :cold 0xAA00AAFF}
+
+   :walk {:is_moving false
+          :wants_to_jump false
+          :vertical_direction 0
+          :maxspeed 0
+          :prevspeed 0
+          :steplength 0
+          :squatsize 0
+          :breathangle 0
+          :sight {}
+          :activebase nil
+          :passivebase nil }
+   })
 
 
 (defn triangle_with_bases [va vb side dir]
@@ -103,29 +118,56 @@
       (assoc-in [:masses :elbow_b :p] elbow_b))))
 
 
-(defn newstate [{:keys [mode bases masses speed] :as state } surfaces time]
-  (cond
-    (= mode "jump")
-    (let [newbases (-> bases
-                       (phys2/add-gravity [0.0 0.5])
-                       (phys2/move-masses surfaces))
-          a_on_ground (every? #(= % 0.0) (:d (:base_a newbases)))
-          b_on_ground (every? #(= % 0.0) (:d (:base_b newbases)))
-          newmode (cond
-                    (and a_on_ground b_on_ground) "walk"
-                    (< (speed 0) -15) "dead"
-                    :else "jump")]
-      
-      (-> state
-          (assoc :bases newbases)
-          (assoc-in [:mode] newmode)
-          (assoc-in [:a_on_ground] a_on_ground)
-          (assoc-in [:b_on_ground] b_on_ground)
-          (updateskeleton)))
-    (= mode "walk")
-    state
-    ))
-  
+(defn newjumpstate [{:keys [mode bases masses speed walk facing] :as state}
+                    {:keys [left right up down] :as control}
+                    surfaces
+                    time]
+  (let [newbases (-> bases
+                     (phys2/add-gravity [0.0 0.5])
+                     (phys2/move-masses surfaces))
+        a_on_ground (every? #(= % 0.0) (:d (:base_a newbases)))
+        b_on_ground (every? #(= % 0.0) (:d (:base_b newbases)))
+        newmode (cond
+                  (and a_on_ground b_on_ground) "walk"
+                  (< (speed 0) -15) "dead"
+                  :else "jump")]
+    
+    (-> state
+        (assoc :bases newbases)
+        (assoc-in [:mode] newmode)
+        (assoc-in [:a_on_ground] a_on_ground)
+        (assoc-in [:b_on_ground] b_on_ground))))
+
+
+(defn newwalkstate [{:keys [mode bases masses speed walk facing] :as state}
+                    {:keys [left right up down] :as control  }
+                    surfaces
+                    time]
+  (let [maxspeed 10.0
+        [sx sy] speed
+        nsx (cond-> sx
+              right (+ (* 0.3 time))
+              left (- (* 0.3 time))
+              (not (and left right)) (* 0.99))
+        nnsx (cond
+               (< nsx -10.0) -10.0
+               (> nsx 10.0 ) 10.0
+               :default nsx)
+        newfacing (cond
+                    (and (> nnsx 0.0 ) right) 1
+                    (and (< nnsx 0.0 ) left ) 0)]
+    (-> state
+        (assoc :speed [nnsx sy])
+          (assoc :facing newfacing))))
+
+
+(defn newstate [{mode :mode :as state} control surfaces time]
+  (let [newstate (cond-> state
+                   (= mode "jump") (newjumpstate control surfaces time)
+                   (= mode "walk") (newwalkstate control surfaces time)
+                   :default identity)]
+    (updateskeleton newstate)))
+    
 
 (defn getpoints [{masses :masses bases :bases}]
   (concat (map :p (vals masses)) (map :p (vals bases))))
@@ -185,7 +227,7 @@
                      nlea nlsb pb
                      nrea nrsb pb))))))
 
-
+;; TODO when on ground, lay on ground surface
 (defn gen-foot-triangles [pa pb size facing]
   (let [ab (math2/sub-v2 pb pa)
         abbig (math2/add-v2 pa (math2/scale-v2 ab 1.2))
@@ -216,7 +258,9 @@
       [nlsa nrsa nose nlsa nose nlea nose nrea nlea])))
 
 
-(defn get-skin-triangles [{{:keys [head neck hip elbow_a elbow_b hand_a hand_b knee_a knee_b ankle_a ankle_b facing]} :masses}]
+(defn get-skin-triangles
+  [{{:keys [head neck hip elbow_a elbow_b hand_a hand_b knee_a knee_b ankle_a ankle_b facing]} :masses
+    {:keys [headw neckw bodyw hipw legw]} :metrics }]
 
   ;; foot
 
@@ -225,11 +269,12 @@
           (gen-foot-triangles (knee_a :p) (ankle_a :p) 5.0 facing)
           (gen-foot-triangles (knee_b :p) (ankle_b :p) 5.0 facing)
           ;; legs
-          (gen-tube-triangles [(:p neck) (:p hip) (:p knee_a) (:p ankle_a)] [10.0 10.0 10.0 10.0])
-          (gen-tube-triangles [(:p neck) (:p hip) (:p knee_b) (:p ankle_b)] [10.0 10.0 10.0 10.0])
+          (gen-tube-triangles [(:p neck) (:p hip) (:p knee_a) (:p ankle_a)] [1.0 hipw legw legw])
+          (gen-tube-triangles [(:p neck) (:p hip) (:p knee_b) (:p ankle_b)] [6.0 hipw legw legw])
           ;; arms
           (gen-tube-triangles [(:p neck) (:p elbow_a) (:p hand_a)] [5.0 5.0 5.0])
           (gen-tube-triangles [(:p neck) (:p elbow_b) (:p hand_b)] [5.0 5.0 5.0])
+          ;; body
+          (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [neckw neckw hipw])
           ;; head
-          (gen-head-triangles (:p head) (:p neck) facing))
-          )
+          (gen-head-triangles (:p head) (:p neck) facing)))

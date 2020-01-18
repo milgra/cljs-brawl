@@ -130,7 +130,11 @@
 
 (defn update-world [world]
   "updates phyisics and actors"
-  (let [newactor (actor/newstate (first (:actors world)) (:surfaces world) 1.0)
+  (let [newactor (actor/newstate
+                  (first (:actors world))
+                  {:left false :right true :up false :down false }
+                  (:surfaces world)
+                  1.0)
         ;;newmasses (mass/update-masses masses surfaces 1.0)
         newmasses (-> (:masses world)
                       (phys2/add-gravity [0.0 0.2])
