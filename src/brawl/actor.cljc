@@ -144,22 +144,46 @@
    (:p elbow_b ) (:p hand_b)])
 
 
-(defn gen-tube-triangles [ points ]
-  (reduce
-   (fn [result [pa pb]]
-     (let [ab (math2/sub-v2 pa pb)
-           n1 (math2/resize-v2 (math2/rotate-90-cw ab) 10.0)
-           n2 (math2/resize-v2 (math2/rotate-90-ccw ab) 10.0)]
+(defn gen-tube-triangles [ points sizes]
 
-       (conj result
-             (math2/add-v2 pa n1)
-             (math2/add-v2 pa n2)
-             (math2/add-v2 pb n1)
-             (math2/add-v2 pa n2)
-             (math2/add-v2 pb n2)
-             (math2/add-v2 pb n1))))
-   []
-   (partition 2 1 points)))
+  (loop [rempts points
+         remszs sizes
+         result []]
+    (if (= 2 (count rempts))
+      ;; close tube
+      (let [pa (nth rempts 0)
+            pb (nth rempts 1)
+            sa (nth remszs 0)
+            sb (nth remszs 1)
+            ab (math2/sub-v2 pb pa)
+            nlsa (math2/add-v2 pa (math2/resize-v2( math2/rotate-90-ccw ab) sa))
+            nrsa (math2/add-v2 pa (math2/resize-v2( math2/rotate-90-cw ab) sa))
+            nlea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-ccw ab) sb))
+            nrea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-cw ab) sb))]
+        (conj result
+              nlsa nrsa nrea
+              nlsa nrea nlea))
+      ;; add rect and joint triangle
+      (let [pa (nth rempts 0)
+            pb (nth rempts 1)
+            pc (nth rempts 2)
+            sa (nth remszs 0)
+            sb (nth remszs 1)
+            ab (math2/sub-v2 pb pa)
+            bc (math2/sub-v2 pc pb)
+            nlsa (math2/add-v2 pa (math2/resize-v2( math2/rotate-90-ccw ab) sa))
+            nrsa (math2/add-v2 pa (math2/resize-v2( math2/rotate-90-cw ab) sa))
+            nlea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-ccw ab) sb))
+            nrea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-cw ab) sb))
+            nlsb (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-ccw bc) sb))
+            nrsb (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-cw bc) sb))]
+        (recur (rest rempts)
+               (rest remszs)
+               (conj result
+                     nlsa nrsa nrea
+                     nlsa nrea nlea
+                     nlea nlsb pb
+                     nrea nrsb pb))))))
 
 
 (defn gen-foot-triangles [pa pb size facing]
@@ -177,22 +201,35 @@
     [topp leftp rightp]))
 
 
+(defn gen-head-triangles [pa pb facing]
+  (let [ab (math2/sub-v2 pb pa)
+        nlsa (math2/add-v2 pa (math2/resize-v2( math2/rotate-90-ccw ab) 10.0))
+        nrsa (math2/add-v2 pa (math2/resize-v2( math2/rotate-90-cw ab) 10.0))
+        nlea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-ccw ab) 11.0))
+        nrea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-cw ab) 11.0))
+        ab23 (math2/add-v2 pa (math2/scale-v2 ab 0.66))
+        nose (if (= 1 facing)
+               (math2/add-v2 ab23 (math2/resize-v2 (math2/rotate-90-ccw ab) 15.0))
+               (math2/add-v2 ab23 (math2/resize-v2 (math2/rotate-90-cw ab) 15.0)))]
+    (if (= 1 facing)
+      [nlsa nrsa nrea nlsa nrea nose nose nlea nrea]
+      [nlsa nrsa nose nlsa nose nlea nose nrea nlea])))
+
+
 (defn get-skin-triangles [{{:keys [head neck hip elbow_a elbow_b hand_a hand_b knee_a knee_b ankle_a ankle_b facing]} :masses}]
 
   ;; foot
 
   (concat []
+          ;; feet
           (gen-foot-triangles (knee_a :p) (ankle_a :p) 5.0 facing)
-          (gen-foot-triangles (knee_b :p) (ankle_b :p) 5.0 facing)))
-  
-  ;; leg a
-  ;; leg b
-
-  ;; arm a
-  ;; arm b
-
-  ;; neck to hip
-
-  ;; head
-  
-  ;;(gen-tube-triangles [(:p head) (:p neck) (:p hip) (:p knee_a) (:p ankle_a)]))
+          (gen-foot-triangles (knee_b :p) (ankle_b :p) 5.0 facing)
+          ;; legs
+          (gen-tube-triangles [(:p neck) (:p hip) (:p knee_a) (:p ankle_a)] [10.0 10.0 10.0 10.0])
+          (gen-tube-triangles [(:p neck) (:p hip) (:p knee_b) (:p ankle_b)] [10.0 10.0 10.0 10.0])
+          ;; arms
+          (gen-tube-triangles [(:p neck) (:p elbow_a) (:p hand_a)] [5.0 5.0 5.0])
+          (gen-tube-triangles [(:p neck) (:p elbow_b) (:p hand_b)] [5.0 5.0 5.0])
+          ;; head
+          (gen-head-triangles (:p head) (:p neck) facing))
+          )
