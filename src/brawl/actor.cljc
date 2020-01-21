@@ -143,7 +143,10 @@
                     {:keys [left right up down] :as control  }
                     surfaces
                     time]
-  (let [maxspeed 10.0
+  (let [{:keys [is_moving wants_to_jump vertical_direction maxspeed prevspeed
+                steplength squatsize breathangle sight activebase passivebase]} walk
+
+        maxspeed 10.0
         [sx sy] speed
         nsx (cond-> sx
               right (+ (* 0.3 time))
@@ -156,10 +159,28 @@
         newfacing (cond
                     (and (> nnsx 0.0 ) right) 1
                     (and (< nnsx 0.0 ) left ) 0)]
-    (-> state
-        (assoc :speed [nnsx sy])
-          (assoc :facing newfacing))))
 
+    (if (and (not is_moving) (> (Math/abs sx) 0.1 ))
+      ;; set new targets for bases
+      (let [{[bax bay] :d} (bases :base_a)
+            {[bbx bby] :d} (bases :base_b)
+            nabase (if (or (and (< bax bbx) (>= nnsx 0.0)) (and (> bax bbx) (< nnsx 0.0))) :base_a :base_b)
+            npbase (if (or (and (< bax bbx) (>= nnsx 0.0)) (and (> bax bbx) (< nnsx 0.0))) :base_b :base_a)
+            stepsize (+ (* (/ nnsx (Math/abs nnsx)) 40.0) (* nnsx 8.0))
+            {[npbx npby] :d} (bases npbase)
+            {[nabx naby] :d} (bases nabase)
+            strans [(+ npbx stepsize) npby]
+            sbupper [(- stepsize) (/ (Math/abs stepsize) 2.0)]
+            sblower [(- stepsize) (-(/ (Math/abs stepsize) 2.0))]
+            collidedu (map second (sort-by first < (phys2/get-colliding-surfaces strans sbupper 10.0 surfaces)))
+            collidedl (map second (sort-by first < (phys2/get-colliding-surfaces strans sblower 10.0 surfaces)))
+            ]
+        (println "collu colld" collidedu collidedl)
+        state)
+      (-> state
+          (assoc :speed [nnsx sy])
+          (assoc :facing newfacing)))))
+  
 
 (defn newstate [{mode :mode :as state} control surfaces time]
   (let [newstate (cond-> state

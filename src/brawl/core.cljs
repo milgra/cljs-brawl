@@ -128,20 +128,20 @@
         (assoc :trans [ntx nty]))))
 
 
-(defn update-world [world]
+(defn update-world [{:keys [actors surfaces masses] :as world} keycodes]
   "updates phyisics and actors"
   (let [newactor (actor/newstate
-                  (first (:actors world))
-                  {:left false :right true :up false :down false }
-                  (:surfaces world)
+                  (first actors)
+                  {:left (keycodes 37) :right (keycodes 39) :up false :down false }
+                  surfaces
                   1.0)
         ;;newmasses (mass/update-masses masses surfaces 1.0)
-        newmasses (-> (:masses world)
+        newmasses (-> masses
                       (phys2/add-gravity [0.0 0.2])
                       ;;(phys2/timescale delta)
                       ;;(phys2/keep-angles (:aguards state))
                       ;;(phys2/keep-distances (:dguards state))
-                      (phys2/move-masses (:surfaces world))
+                      (phys2/move-masses surfaces)
                       ;;(phys2/timescale (/ 1.0 delta)))
                       )]
     (-> world
@@ -240,7 +240,7 @@
 
                newviews (update-ui (:views prestate))
                
-               newworld (update-world (:world prestate))
+               newworld (update-world (:world prestate) (:keycodes prestate))
                newstate (-> (assoc prestate :world newworld)
                             (assoc :views newviews)
                             (update-translation keyevent))]
