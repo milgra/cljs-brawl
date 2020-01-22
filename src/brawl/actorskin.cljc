@@ -1,6 +1,5 @@
 (ns brawl.actorskin
-  (:require [mpd.math2 :as math2]
-            [mpd.phys2 :as phys2]))
+  (:use [mpd.math2 :only [resize-v2 scale-v2 rotate-90-cw rotate-90-ccw add-v2 sub-v2]]))
 
 
 (defn getpoints [{masses :masses bases :bases}]
@@ -31,11 +30,11 @@
             pb (nth rempts 1)
             sa (nth remszs 0)
             sb (nth remszs 1)
-            ab (math2/sub-v2 pb pa)
-            nlsa (math2/add-v2 pa (math2/resize-v2( math2/rotate-90-ccw ab) sa))
-            nrsa (math2/add-v2 pa (math2/resize-v2( math2/rotate-90-cw ab) sa))
-            nlea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-ccw ab) sb))
-            nrea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-cw ab) sb))]
+            ab (sub-v2 pb pa)
+            nlsa (add-v2 pa (resize-v2( rotate-90-ccw ab) sa))
+            nrsa (add-v2 pa (resize-v2( rotate-90-cw ab) sa))
+            nlea (add-v2 pb (resize-v2( rotate-90-ccw ab) sb))
+            nrea (add-v2 pb (resize-v2( rotate-90-cw ab) sb))]
         (conj result
               nlsa nrsa nrea
               nlsa nrea nlea))
@@ -45,14 +44,14 @@
             pc (nth rempts 2)
             sa (nth remszs 0)
             sb (nth remszs 1)
-            ab (math2/sub-v2 pb pa)
-            bc (math2/sub-v2 pc pb)
-            nlsa (math2/add-v2 pa (math2/resize-v2( math2/rotate-90-ccw ab) sa))
-            nrsa (math2/add-v2 pa (math2/resize-v2( math2/rotate-90-cw ab) sa))
-            nlea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-ccw ab) sb))
-            nrea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-cw ab) sb))
-            nlsb (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-ccw bc) sb))
-            nrsb (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-cw bc) sb))]
+            ab (sub-v2 pb pa)
+            bc (sub-v2 pc pb)
+            nlsa (add-v2 pa (resize-v2( rotate-90-ccw ab) sa))
+            nrsa (add-v2 pa (resize-v2( rotate-90-cw ab) sa))
+            nlea (add-v2 pb (resize-v2( rotate-90-ccw ab) sb))
+            nrea (add-v2 pb (resize-v2( rotate-90-cw ab) sb))
+            nlsb (add-v2 pb (resize-v2( rotate-90-ccw bc) sb))
+            nrsb (add-v2 pb (resize-v2( rotate-90-cw bc) sb))]
         (recur (rest rempts)
                (rest remszs)
                (conj result
@@ -63,30 +62,30 @@
 
 
 (defn gen-foot-triangles [pa pb size facing]
-  (let [ab (math2/resize-v2 (math2/sub-v2 pb pa) 20.0)
-        abbig pb ;;(math2/add-v2 pb (math2/scale-v2 ab 1.2))
+  (let [ab (resize-v2 (sub-v2 pb pa) 20.0)
+        abbig pb ;;(add-v2 pb (scale-v2 ab 1.2))
         leftp (if (= facing -1)
-                (math2/add-v2 abbig (math2/resize-v2 (math2/rotate-90-cw ab) -1.0))
-                (math2/add-v2 abbig (math2/resize-v2 (math2/rotate-90-cw ab) 20.0)))
+                (add-v2 abbig (resize-v2 (rotate-90-cw ab) -1.0))
+                (add-v2 abbig (resize-v2 (rotate-90-cw ab) 20.0)))
         rightp (if (= facing -1)
-                (math2/add-v2 abbig (math2/resize-v2 (math2/rotate-90-ccw ab) 20.0))
-                (math2/add-v2 abbig (math2/resize-v2 (math2/rotate-90-ccw ab) -1.0)))
+                (add-v2 abbig (resize-v2 (rotate-90-ccw ab) 20.0))
+                (add-v2 abbig (resize-v2 (rotate-90-ccw ab) -1.0)))
         topp (if (= facing -1)
-                (math2/add-v2 leftp (math2/resize-v2 ab -10.0))
-                (math2/add-v2 rightp (math2/resize-v2 ab -10.0)))]
+                (add-v2 leftp (resize-v2 ab -10.0))
+                (add-v2 rightp (resize-v2 ab -10.0)))]
     [topp leftp rightp]))
 
 
 (defn gen-head-triangles [pa pb facing]
-  (let [ab (math2/sub-v2 pb pa)
-        nlsa (math2/add-v2 pa (math2/resize-v2( math2/rotate-90-ccw ab) 10.0))
-        nrsa (math2/add-v2 pa (math2/resize-v2( math2/rotate-90-cw ab) 10.0))
-        nlea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-ccw ab) 11.0))
-        nrea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-cw ab) 11.0))
-        ab23 (math2/add-v2 pa (math2/scale-v2 ab 0.66))
+  (let [ab (sub-v2 pb pa)
+        nlsa (add-v2 pa (resize-v2( rotate-90-ccw ab) 10.0))
+        nrsa (add-v2 pa (resize-v2( rotate-90-cw ab) 10.0))
+        nlea (add-v2 pb (resize-v2( rotate-90-ccw ab) 11.0))
+        nrea (add-v2 pb (resize-v2( rotate-90-cw ab) 11.0))
+        ab23 (add-v2 pa (scale-v2 ab 0.66))
         nose (if (= -1 facing)
-               (math2/add-v2 ab23 (math2/resize-v2 (math2/rotate-90-ccw ab) 15.0))
-               (math2/add-v2 ab23 (math2/resize-v2 (math2/rotate-90-cw ab) 15.0)))]
+               (add-v2 ab23 (resize-v2 (rotate-90-ccw ab) 15.0))
+               (add-v2 ab23 (resize-v2 (rotate-90-cw ab) 15.0)))]
     (if (= -1 facing)
       [nlsa nrsa nrea nlsa nrea nose nose nlea nrea]
       [nlsa nrsa nose nlsa nose nlea nose nrea nlea])))
@@ -101,13 +100,13 @@
   (concat []
           ;; feet
           (if (and (= passivebase :base_a) (not= passivesurf nil))
-            (gen-foot-triangles (math2/add-v2 (ankle_a :p) (math2/rotate-90-cw (passivesurf :b)))
+            (gen-foot-triangles (add-v2 (ankle_a :p) (rotate-90-cw (passivesurf :b)))
                                 (ankle_a :p)
                                 5.0
                                 facing) 
             (gen-foot-triangles (knee_a :p) (ankle_a :p) 5.0 facing))
           (if (and (= passivebase :base_b) (not= passivesurf nil))
-            (gen-foot-triangles (math2/add-v2 (ankle_b :p) (math2/rotate-90-cw (passivesurf :b)))
+            (gen-foot-triangles (add-v2 (ankle_b :p) (rotate-90-cw (passivesurf :b)))
                                 (ankle_b :p)
                                 5.0
                                 facing)
