@@ -5,12 +5,9 @@
 (defn init [x y]
   {:mode "jump"
    :a_on_ground false
-   :b_on_ground false
-   
+   :b_on_ground false   
    :speed [0.0 0.0]
-
    :state "walk"
-
    :facing 1.0
 
    :bases  {:base_a (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
@@ -138,6 +135,50 @@
         (assoc-in [:b_on_ground] b_on_ground))))
 
 
+(defn changefoot [{:keys [bases walk] :as state} surfaces sx]
+  "swap activa and passive foot bases, set new target coordinate for active base"
+  (let [{[bax bay] :p} (bases :base_a)
+        {[bbx bby] :p} (bases :base_b)
+        nabase (if (or (and (< bax bbx) (>= sx 0.0)) (and (> bax bbx) (< sx 0.0))) :base_a :base_b)
+        npbase (if (or (and (< bax bbx) (>= sx 0.0)) (and (> bax bbx) (< sx 0.0))) :base_b :base_a)
+        stepsize (+ (* (/ sx (Math/abs sx)) 40.0) (* sx 8.0))
+        {[npbx npby] :p} (bases npbase)
+        {[nabx naby] :p} (bases nabase)
+        strans [(+ npbx stepsize) npby]
+        sbupper [(- stepsize) (/ (Math/abs stepsize) 2.0)]
+        sblower [(- stepsize) (-(/ (Math/abs stepsize) 2.0))]
+        collided ;;(if (= (walk :vertical_direction) 1)
+        (sort-by first < (concat
+                          (phys2/get-colliding-surfaces strans sbupper 10.0 surfaces)
+                          (phys2/get-colliding-surfaces strans sblower 10.0 surfaces)))
+        surf (first collided)
+        final_point (if surf
+                      (nth surf 2)
+                      strans)]
+    ;;(println "st su sl coll surf" strans sbupper sblower collided surf)
+    (assoc state :walk (-> walk
+                           (assoc :activebase nabase)
+                           (assoc :passivebase npbase)
+                           (assoc :final_point final_point)
+                           (assoc :is_moving true)))))
+
+
+(defn movefoot [{:keys [bases walk] :as state} surfaces sx facing time]
+
+  (let [stepv (math2/sub-v2 (walk :final_point) ((bases (walk :activebase)) :p))
+        stepvl (math2/length-v2 stepv)
+        nstepv (math2/resize-v2 stepv (* (Math/abs sx) time ))
+        ntarget (math2/add-v2 ((bases (walk :activebase)) :p) nstepv)
+        newbases (assoc-in bases [(walk :activebase) :p] ntarget)
+        is_moving (if (< stepvl (* (Math/abs sx) time)) false true)
+        ]
+    (-> state
+        (assoc :walk (assoc walk :is_moving is_moving))
+        (assoc :bases newbases)
+        (assoc-in [:speed 0] sx)
+        (assoc :facing facing))))
+
+
 (defn newwalkstate [{:keys [mode bases masses speed walk facing] :as state}
                     {:keys [left right up down] :as control  }
                     surfaces
@@ -160,44 +201,10 @@
 
     (if (and (not is_moving) (> (Math/abs nnsx) 0.1 ))
       ;; set new targets for bases
-      (let [{[bax bay] :p} (bases :base_a)
-            {[bbx bby] :p} (bases :base_b)
-            nabase (if (or (and (< bax bbx) (>= nnsx 0.0)) (and (> bax bbx) (< nnsx 0.0))) :base_a :base_b)
-            npbase (if (or (and (< bax bbx) (>= nnsx 0.0)) (and (> bax bbx) (< nnsx 0.0))) :base_b :base_a)
-            stepsize (+ (* (/ nnsx (Math/abs nnsx)) 40.0) (* nnsx 8.0))
-            {[npbx npby] :p} (bases npbase)
-            {[nabx naby] :p} (bases nabase)
-            strans [(+ npbx stepsize) npby]
-            sbupper [(- stepsize) (/ (Math/abs stepsize) 2.0)]
-            sblower [(- stepsize) (-(/ (Math/abs stepsize) 2.0))]
-            collided (if (= vertical_direction 1)
-                       (map second (sort-by first < (phys2/get-colliding-surfaces strans sbupper 10.0 surfaces)))
-                       (map second (sort-by first < (phys2/get-colliding-surfaces strans sblower 10.0 surfaces))))
-            surf (first collided)
-            final_point (if surf
-                          (nth surf 2)
-                          strans)]
-        (println "st su sl coll" strans sbupper sblower collided)
-        (assoc state :walk (-> walk
-                               (assoc :activebase nabase)
-                               (assoc :passivebase npbase)
-                               (assoc :final_point final_point)
-                               (assoc :is_moving true))))
-
+      (changefoot state surfaces nnsx)
       ;; move bases
       (if (and is_moving (> (Math/abs nnsx) 0.01))
-        (let [stepv (math2/sub-v2 final_point ((bases activebase) :p))
-              stepvl (math2/length-v2 stepv)
-              nstepv (math2/resize-v2 stepv (* (Math/abs nnsx) time ))
-              ntarget (math2/add-v2 ((bases activebase) :p) nstepv)
-              newbases (assoc-in bases [activebase :p] ntarget)
-              is_moving (if (< stepvl (* (Math/abs nnsx) time)) false true)
-              ]
-          (-> state
-              (assoc :walk (assoc walk :is_moving is_moving))
-              (assoc :bases newbases)
-              (assoc :speed [nnsx sy])
-              (assoc :facing newfacing)))
+        (movefoot state surfaces nnsx newfacing time)
         state))))
 
 
@@ -207,114 +214,3 @@
                    (= mode "walk") (newwalkstate control surfaces time)
                    :default identity)]
     (updateskeleton newstate)))
-    
-
-(defn getpoints [{masses :masses bases :bases}]
-  (concat (map :p (vals masses)) (map :p (vals bases))))
-
-
-(defn getlines [{{:keys [head neck hip elbow_a elbow_b hand_a hand_b knee_a knee_b ankle_a ankle_b]} :masses}]
-  [(:p head) (:p neck)
-   (:p neck) (:p hip)
-   (:p hip) (:p knee_a)
-   (:p hip) (:p knee_b)
-   (:p knee_a ) (:p ankle_a)
-   (:p knee_b ) (:p ankle_b)
-   (:p neck ) (:p elbow_a)
-   (:p neck ) (:p elbow_b)
-   (:p elbow_a ) (:p hand_a)
-   (:p elbow_b ) (:p hand_b)])
-
-
-(defn gen-tube-triangles [ points sizes]
-
-  (loop [rempts points
-         remszs sizes
-         result []]
-    (if (= 2 (count rempts))
-      ;; close tube
-      (let [pa (nth rempts 0)
-            pb (nth rempts 1)
-            sa (nth remszs 0)
-            sb (nth remszs 1)
-            ab (math2/sub-v2 pb pa)
-            nlsa (math2/add-v2 pa (math2/resize-v2( math2/rotate-90-ccw ab) sa))
-            nrsa (math2/add-v2 pa (math2/resize-v2( math2/rotate-90-cw ab) sa))
-            nlea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-ccw ab) sb))
-            nrea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-cw ab) sb))]
-        (conj result
-              nlsa nrsa nrea
-              nlsa nrea nlea))
-      ;; add rect and joint triangle
-      (let [pa (nth rempts 0)
-            pb (nth rempts 1)
-            pc (nth rempts 2)
-            sa (nth remszs 0)
-            sb (nth remszs 1)
-            ab (math2/sub-v2 pb pa)
-            bc (math2/sub-v2 pc pb)
-            nlsa (math2/add-v2 pa (math2/resize-v2( math2/rotate-90-ccw ab) sa))
-            nrsa (math2/add-v2 pa (math2/resize-v2( math2/rotate-90-cw ab) sa))
-            nlea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-ccw ab) sb))
-            nrea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-cw ab) sb))
-            nlsb (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-ccw bc) sb))
-            nrsb (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-cw bc) sb))]
-        (recur (rest rempts)
-               (rest remszs)
-               (conj result
-                     nlsa nrsa nrea
-                     nlsa nrea nlea
-                     nlea nlsb pb
-                     nrea nrsb pb))))))
-
-;; TODO when on ground, lay on ground surface
-(defn gen-foot-triangles [pa pb size facing]
-  (let [ab (math2/sub-v2 pb pa)
-        abbig (math2/add-v2 pa (math2/scale-v2 ab 1.2))
-        leftp (if (= facing 1)
-                (math2/add-v2 abbig (math2/resize-v2 (math2/rotate-90-cw ab) 10.0))
-                (math2/add-v2 abbig (math2/resize-v2 (math2/rotate-90-cw ab) 20.0)))
-        rightp (if (= facing 1)
-                (math2/add-v2 abbig (math2/resize-v2 (math2/rotate-90-ccw ab) 20.0))
-                (math2/add-v2 abbig (math2/resize-v2 (math2/rotate-90-ccw ab) 10.0)))
-        topp (if (= facing 1)
-                (math2/add-v2 leftp (math2/resize-v2 ab -18.0))
-                (math2/add-v2 rightp (math2/resize-v2 ab -18.0)))]
-    [topp leftp rightp]))
-
-
-(defn gen-head-triangles [pa pb facing]
-  (let [ab (math2/sub-v2 pb pa)
-        nlsa (math2/add-v2 pa (math2/resize-v2( math2/rotate-90-ccw ab) 10.0))
-        nrsa (math2/add-v2 pa (math2/resize-v2( math2/rotate-90-cw ab) 10.0))
-        nlea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-ccw ab) 11.0))
-        nrea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-cw ab) 11.0))
-        ab23 (math2/add-v2 pa (math2/scale-v2 ab 0.66))
-        nose (if (= 1 facing)
-               (math2/add-v2 ab23 (math2/resize-v2 (math2/rotate-90-ccw ab) 15.0))
-               (math2/add-v2 ab23 (math2/resize-v2 (math2/rotate-90-cw ab) 15.0)))]
-    (if (= 1 facing)
-      [nlsa nrsa nrea nlsa nrea nose nose nlea nrea]
-      [nlsa nrsa nose nlsa nose nlea nose nrea nlea])))
-
-
-(defn get-skin-triangles
-  [{{:keys [head neck hip elbow_a elbow_b hand_a hand_b knee_a knee_b ankle_a ankle_b facing]} :masses
-    {:keys [headw neckw bodyw hipw legw]} :metrics }]
-
-  ;; foot
-
-  (concat []
-          ;; feet
-          (gen-foot-triangles (knee_a :p) (ankle_a :p) 5.0 facing)
-          (gen-foot-triangles (knee_b :p) (ankle_b :p) 5.0 facing)
-          ;; legs
-          (gen-tube-triangles [(:p neck) (:p hip) (:p knee_a) (:p ankle_a)] [1.0 hipw legw legw])
-          (gen-tube-triangles [(:p neck) (:p hip) (:p knee_b) (:p ankle_b)] [6.0 hipw legw legw])
-          ;; arms
-          (gen-tube-triangles [(:p neck) (:p elbow_a) (:p hand_a)] [5.0 5.0 5.0])
-          (gen-tube-triangles [(:p neck) (:p elbow_b) (:p hand_b)] [5.0 5.0 5.0])
-          ;; body
-          (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [neckw neckw hipw])
-          ;; head
-          (gen-head-triangles (:p head) (:p neck) facing)))

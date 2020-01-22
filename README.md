@@ -4,6 +4,5 @@
 
 ## Todo
 
-* actor skin rendering
-* actor walking
 * actor hit
+* datomic server side for high scores

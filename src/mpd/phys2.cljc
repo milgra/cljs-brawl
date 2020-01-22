@@ -84,7 +84,7 @@
            end (math2/add-v2 pos dir)
            dst (math2/dist-p2-v2 end (:t surface) (:b surface))]
        (if (not= isp nil)
-         (conj result [(math2/dist-p2-p2-cubic pos isp) surface])
+         (conj result [(math2/dist-p2-p2-cubic pos isp) surface isp])
          (if (< dst radius)
            (conj result [dst surface isp])
            result))))

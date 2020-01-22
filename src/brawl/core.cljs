@@ -12,6 +12,7 @@
             [brawl.shape :as shape]
             [brawl.webgl :as webgl]
             [brawl.actor :as actor]
+            [brawl.actorskin :as actorskin]
             [mpd.phys2 :as phys2]
             [mpd.math2 :as math2]
             [brawl.layouts :as layouts])
@@ -87,11 +88,11 @@
     
     (webgl/clear! glstate)
     (webgl/drawshapes! glstate projection (:trans state) variation)
-    (webgl/drawtriangles! glstate projection (actor/get-skin-triangles actor))
+    (webgl/drawtriangles! glstate projection (actorskin/get-skin-triangles actor))
     (webgl/drawlines! glstate projection (:surfacelines world))
     (webgl/drawpoints! glstate projection (map :p (vals (:masses world))))
-    (webgl/drawpoints! glstate projection (actor/getpoints actor))
-    (webgl/drawlines! glstate projection (actor/getlines actor))))
+    (webgl/drawpoints! glstate projection (actorskin/getpoints actor))
+    (webgl/drawlines! glstate projection (actorskin/getlines actor))))
 
 
 (defn draw-ui! [state frame]
