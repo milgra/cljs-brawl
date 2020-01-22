@@ -88,19 +88,19 @@
 
 (defn updateskeleton [ {{{[txa tya] :p} :base_a
                          {[txb tyb] :p} :base_b} :bases :as  state }]
-  (let [ankle_a [txa tya]
+  (let [facing (state :facing)
+        ankle_a [txa tya]
         ankle_b [txb tyb]
         hipx (+ txa (/ (- txb txa) 2))
         hipy (- (+ tya (/ (- tyb tya) 2)) 50.0)
         neck [hipx (- hipy 50.0)]
         head [hipx (- hipy 70.0)]
-        knee_a (triangle_with_bases ankle_a [hipx hipy] 30.0 1.0)
-        knee_b (triangle_with_bases ankle_b [hipx hipy] 30.0 1.0)
-        hand_a [(+ hipx 40.0) (- hipy 50.0)]
-        hand_b [(+ hipx 30.0) (- hipy 40.0)]
-        elbow_a (triangle_with_bases neck hand_a 30.0 1.0)
-        elbow_b (triangle_with_bases neck hand_b 30.0 1.0)]
-
+        knee_a (triangle_with_bases ankle_a [hipx hipy] 30.0 facing)
+        knee_b (triangle_with_bases ankle_b [hipx hipy] 30.0 facing)
+        hand_a [(+ hipx (* facing 40.0)) (- hipy 50.0)]
+        hand_b [(+ hipx (* facing 30.0)) (- hipy 40.0)]
+        elbow_a (triangle_with_bases neck hand_a 30.0 facing)
+        elbow_b (triangle_with_bases neck hand_b 30.0 facing)]
   (-> state
       (assoc-in [:masses :ankle_a :p] ankle_a) 
       (assoc-in [:masses :ankle_b :p] ankle_b) 
@@ -185,11 +185,11 @@
                     time]
   (let [{:keys [is_moving wants_to_jump vertical_direction maxspeed prevspeed
                 steplength squatsize breathangle final_point activebase passivebase]} walk
-        maxspeed 10.0
+        maxspeed 20.0
         [sx sy] speed
         nsx (cond-> sx
-              right (+ (* 0.3 time))
-              left (- (* 0.3 time))
+              right (+ (* 0.4 time))
+              left (- (* 0.4 time))
               (not (and left right)) (* 0.9))
         nnsx (cond
                (< nsx -10.0) -10.0
@@ -197,7 +197,7 @@
                :default nsx)
         newfacing (cond
                     (and (> nnsx 0.0 ) right) 1
-                    (and (< nnsx 0.0 ) left ) 0)]
+                    (and (<= nnsx 0.0 ) left ) -1)]
 
     (if (and (not is_moving) (> (Math/abs nnsx) 0.1 ))
       ;; set new targets for bases

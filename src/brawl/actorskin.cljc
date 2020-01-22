@@ -65,13 +65,13 @@
 (defn gen-foot-triangles [pa pb size facing]
   (let [ab (math2/sub-v2 pb pa)
         abbig (math2/add-v2 pa (math2/scale-v2 ab 1.2))
-        leftp (if (= facing 1)
+        leftp (if (= facing -1)
                 (math2/add-v2 abbig (math2/resize-v2 (math2/rotate-90-cw ab) 10.0))
                 (math2/add-v2 abbig (math2/resize-v2 (math2/rotate-90-cw ab) 20.0)))
-        rightp (if (= facing 1)
+        rightp (if (= facing -1)
                 (math2/add-v2 abbig (math2/resize-v2 (math2/rotate-90-ccw ab) 20.0))
                 (math2/add-v2 abbig (math2/resize-v2 (math2/rotate-90-ccw ab) 10.0)))
-        topp (if (= facing 1)
+        topp (if (= facing -1)
                 (math2/add-v2 leftp (math2/resize-v2 ab -18.0))
                 (math2/add-v2 rightp (math2/resize-v2 ab -18.0)))]
     [topp leftp rightp]))
@@ -84,19 +84,18 @@
         nlea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-ccw ab) 11.0))
         nrea (math2/add-v2 pb (math2/resize-v2( math2/rotate-90-cw ab) 11.0))
         ab23 (math2/add-v2 pa (math2/scale-v2 ab 0.66))
-        nose (if (= 1 facing)
+        nose (if (= -1 facing)
                (math2/add-v2 ab23 (math2/resize-v2 (math2/rotate-90-ccw ab) 15.0))
                (math2/add-v2 ab23 (math2/resize-v2 (math2/rotate-90-cw ab) 15.0)))]
-    (if (= 1 facing)
+    (if (= -1 facing)
       [nlsa nrsa nrea nlsa nrea nose nose nlea nrea]
       [nlsa nrsa nose nlsa nose nlea nose nrea nlea])))
 
 
 (defn get-skin-triangles
-  [{{:keys [head neck hip elbow_a elbow_b hand_a hand_b knee_a knee_b ankle_a ankle_b facing]} :masses
-    {:keys [headw neckw bodyw hipw legw]} :metrics }]
-
-  ;; foot
+  [{{:keys [head neck hip elbow_a elbow_b hand_a hand_b knee_a knee_b ankle_a ankle_b]} :masses
+    {:keys [headw neckw bodyw hipw legw]} :metrics
+    facing :facing}]
 
   (concat []
           ;; feet
