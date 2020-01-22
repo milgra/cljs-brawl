@@ -71,9 +71,9 @@
           :steplength 0
           :squatsize 0
           :breathangle 0
-          :sight {}
-          :activebase nil
-          :passivebase nil }
+          :final_point [0 0]
+          :activebase :base_a
+          :passivebase :base_b }
    })
 
 
@@ -131,7 +131,6 @@
                   (and a_on_ground b_on_ground) "walk"
                   (< (speed 0) -15) "dead"
                   :else "jump")]
-    
     (-> state
         (assoc :bases newbases)
         (assoc-in [:mode] newmode)
@@ -144,14 +143,13 @@
                     surfaces
                     time]
   (let [{:keys [is_moving wants_to_jump vertical_direction maxspeed prevspeed
-                steplength squatsize breathangle sight activebase passivebase]} walk
-
+                steplength squatsize breathangle final_point activebase passivebase]} walk
         maxspeed 10.0
         [sx sy] speed
         nsx (cond-> sx
               right (+ (* 0.3 time))
               left (- (* 0.3 time))
-              (not (and left right)) (* 0.99))
+              (not (and left right)) (* 0.9))
         nnsx (cond
                (< nsx -10.0) -10.0
                (> nsx 10.0 ) 10.0
@@ -160,27 +158,48 @@
                     (and (> nnsx 0.0 ) right) 1
                     (and (< nnsx 0.0 ) left ) 0)]
 
-    (if (and (not is_moving) (> (Math/abs sx) 0.1 ))
+    (if (and (not is_moving) (> (Math/abs nnsx) 0.1 ))
       ;; set new targets for bases
-      (let [{[bax bay] :d} (bases :base_a)
-            {[bbx bby] :d} (bases :base_b)
+      (let [{[bax bay] :p} (bases :base_a)
+            {[bbx bby] :p} (bases :base_b)
             nabase (if (or (and (< bax bbx) (>= nnsx 0.0)) (and (> bax bbx) (< nnsx 0.0))) :base_a :base_b)
             npbase (if (or (and (< bax bbx) (>= nnsx 0.0)) (and (> bax bbx) (< nnsx 0.0))) :base_b :base_a)
             stepsize (+ (* (/ nnsx (Math/abs nnsx)) 40.0) (* nnsx 8.0))
-            {[npbx npby] :d} (bases npbase)
-            {[nabx naby] :d} (bases nabase)
+            {[npbx npby] :p} (bases npbase)
+            {[nabx naby] :p} (bases nabase)
             strans [(+ npbx stepsize) npby]
             sbupper [(- stepsize) (/ (Math/abs stepsize) 2.0)]
             sblower [(- stepsize) (-(/ (Math/abs stepsize) 2.0))]
-            collidedu (map second (sort-by first < (phys2/get-colliding-surfaces strans sbupper 10.0 surfaces)))
-            collidedl (map second (sort-by first < (phys2/get-colliding-surfaces strans sblower 10.0 surfaces)))
-            ]
-        (println "collu colld" collidedu collidedl)
-        state)
-      (-> state
-          (assoc :speed [nnsx sy])
-          (assoc :facing newfacing)))))
-  
+            collided (if (= vertical_direction 1)
+                       (map second (sort-by first < (phys2/get-colliding-surfaces strans sbupper 10.0 surfaces)))
+                       (map second (sort-by first < (phys2/get-colliding-surfaces strans sblower 10.0 surfaces))))
+            surf (first collided)
+            final_point (if surf
+                          (nth surf 2)
+                          strans)]
+        (println "st su sl coll" strans sbupper sblower collided)
+        (assoc state :walk (-> walk
+                               (assoc :activebase nabase)
+                               (assoc :passivebase npbase)
+                               (assoc :final_point final_point)
+                               (assoc :is_moving true))))
+
+      ;; move bases
+      (if (and is_moving (> (Math/abs nnsx) 0.01))
+        (let [stepv (math2/sub-v2 final_point ((bases activebase) :p))
+              stepvl (math2/length-v2 stepv)
+              nstepv (math2/resize-v2 stepv (* (Math/abs nnsx) time ))
+              ntarget (math2/add-v2 ((bases activebase) :p) nstepv)
+              newbases (assoc-in bases [activebase :p] ntarget)
+              is_moving (if (< stepvl (* (Math/abs nnsx) time)) false true)
+              ]
+          (-> state
+              (assoc :walk (assoc walk :is_moving is_moving))
+              (assoc :bases newbases)
+              (assoc :speed [nnsx sy])
+              (assoc :facing newfacing)))
+        state))))
+
 
 (defn newstate [{mode :mode :as state} control surfaces time]
   (let [newstate (cond-> state

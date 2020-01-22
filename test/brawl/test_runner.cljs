@@ -3,7 +3,6 @@
   (:require
     ;; require all the namespaces that you want to test
    [brawl.core-test]
-   [brawl.mass-test]
     [figwheel.main.testing :refer [run-tests-async]]))
 
 (defn -main [& args]

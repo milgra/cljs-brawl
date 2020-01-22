@@ -86,7 +86,7 @@
        (if (not= isp nil)
          (conj result [(math2/dist-p2-p2-cubic pos isp) surface])
          (if (< dst radius)
-           (conj result [dst surface])
+           (conj result [dst surface isp])
            result))))
      []
      surfaces))

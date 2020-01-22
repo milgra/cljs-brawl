@@ -65,7 +65,12 @@
 
 (defn draw-world! [state frame]
   "draws background, actors, masses with projection"
-  (let [[tx ty] (:trans state)
+  (let [
+        glstate (state :glstate)
+        world (state :world)
+        actor ((world :actors) 0)
+        head ((get-in actor [:masses :head]) :p)
+        [tx ty] head
         [sx sy] (:speed state)
         ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
         r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
@@ -78,10 +83,7 @@
                     (- ty (+ h (* ratio 50.0)))
                     -1.0 1.0)
         
-        variation (Math/floor (mod (/ frame 20.0) 3.0 ))
-        glstate (state :glstate)
-        world (state :world)
-        actor ((world :actors) 0)]
+        variation (Math/floor (mod (/ frame 20.0) 3.0 ))]
     
     (webgl/clear! glstate)
     (webgl/drawshapes! glstate projection (:trans state) variation)
