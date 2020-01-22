@@ -70,8 +70,9 @@
           :breathangle 0
           :final_point [0 0]
           :activebase :base_a
-          :passivebase :base_b }
-   })
+          :passivebase :base_b
+          :activesurf nil
+          :passivesurf nil}})
 
 
 (defn triangle_with_bases [va vb side dir]
@@ -154,11 +155,18 @@
         surf (first collided)
         final_point (if surf
                       (nth surf 2)
-                      strans)]
+                      strans)
+        newpassivesurf (walk :activesurf)
+        newactivesurf (if surf
+                        (nth surf 1)
+                        nil)
+        ]
     ;;(println "st su sl coll surf" strans sbupper sblower collided surf)
     (assoc state :walk (-> walk
                            (assoc :activebase nabase)
                            (assoc :passivebase npbase)
+                           (assoc :activesurf newactivesurf)
+                           (assoc :passivesurf newpassivesurf)
                            (assoc :final_point final_point)
                            (assoc :is_moving true)))))
 
