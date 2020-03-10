@@ -2,6 +2,10 @@
 
 ## Mass Brawl Simulator
 
+run :
+
+```shadow-cljs watch app```
+
 ## Todo
 
 * full walking state

@@ -154,7 +154,7 @@
                           (phys2/get-colliding-surfaces strans sblower 10.0 surfaces)))
         surf (first collided)
         final_point (if surf
-                      (nth surf 2)
+                      (nth surf 1)
                       strans)
         newpassivesurf (walk :activesurf)
         newactivesurf (if surf
@@ -172,8 +172,7 @@
 
 
 (defn movefoot [{:keys [bases walk] :as state} surfaces sx facing time]
-
-  (let [stepv (math2/sub-v2 (walk :final_point) ((bases (walk :activebase)) :p))
+  (let [stepv (math2/sub-v2 ((walk :final_point) :b) ((bases (walk :activebase)) :p))
         stepvl (math2/length-v2 stepv)
         nstepv (math2/resize-v2 stepv (* (Math/abs sx) time ))
         ntarget (math2/add-v2 ((bases (walk :activebase)) :p) nstepv)
@@ -206,15 +205,16 @@
         newfacing (cond
                     (and (> nnsx 0.0 ) right) 1
                     (and (<= nnsx 0.0 ) left ) -1)]
-
-    (if (and (not is_moving) (> (Math/abs nnsx) 0.1 ))
+    
+    (cond-> state
+      (and (not is_moving) (> (Math/abs nnsx) 0.1 ))
       ;; set new targets for bases
-      (changefoot state surfaces nnsx)
+      (changefoot surfaces nnsx)
       ;; move bases
-      (if (and is_moving (> (Math/abs nnsx) 0.01))
-        (movefoot state surfaces nnsx newfacing time)
-        state))))
-
+      (and is_moving (> (Math/abs nnsx) 0.01))
+      (movefoot surfaces nnsx newfacing time)
+      )))
+  
 
 (defn newstate [{mode :mode :as state} control surfaces time]
   (let [newstate (cond-> state
