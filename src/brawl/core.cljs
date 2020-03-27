@@ -64,10 +64,44 @@
    (fn [event] (resize-context!))))
 
 
+(defn draw-ui! [state frame]
+  (let [projection (math4/proj_ortho 0 (.-innerWidth js/window) (.-innerHeight js/window) 0 -10.0 10.0)
+        gui (state :gui)
+        views (state :views)
+        viewids (ui/collect-visible-ids views ((views :baseview) :sv) "")
+        newstate (uiwebgl/draw! gui projection (map views viewids))]
+    newstate))
+
+  
+(defn update-ui [views]
+  (ui/align views ((views :baseview) :sv) 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
+  
+
+(defn update-translation [state keyevent]           
+  (let [keycodes (if keyevent
+                   (assoc (:keycodes state) (:code keyevent) (:value keyevent))
+                   (:keycodes state))
+        [tx ty] (:trans state)
+        [sx sy] (:speed state)
+        nsx (cond
+              (keycodes 37) (- sx 0.4)
+              (keycodes 39) (+ sx 0.4)
+              "default" (* sx 0.9))
+        nsy (cond
+              (keycodes 38) (- sy 0.4)
+              (keycodes 40) (+ sy 0.4)
+              "default" (* sy 0.9))
+        ntx (+ tx sx)
+        nty (+ ty sy)]  
+    (-> state
+        (assoc :keycodes keycodes)
+        (assoc :speed [nsx nsy])
+        (assoc :trans [ntx nty]))))
+
+
 (defn draw-world! [state frame]
   "draws background, actors, masses with projection"
-  (let [
-        glstate (state :glstate)
+  (let [gfx (state :gfx)
         world (state :world)
         actor ((world :actors) 0)
         head ((get-in actor [:masses :head]) :p)
@@ -79,87 +113,44 @@
         w (* h r)
         projection (math4/proj_ortho
                     (- tx (+ w (* ratio 50.0)))
-                    (+ tx (+ w (* ratio 50.0)))
-                    (+ ty (+ h (* ratio 50.0)))
-                    (- ty (+ h (* ratio 50.0)))
-                    -1.0 1.0)
+                      (+ tx (+ w (* ratio 50.0)))
+                      (+ ty (+ h (* ratio 50.0)))
+                      (- ty (+ h (* ratio 50.0)))
+                      -1.0 1.0)
         
         variation (Math/floor (mod (/ frame 20.0) 3.0 ))]
-    
-    (webgl/clear! glstate)
-    (webgl/drawshapes! glstate projection (:trans state) variation)
-    (webgl/drawtriangles! glstate projection (actorskin/get-skin-triangles actor))
-    (webgl/drawlines! glstate projection (:surfacelines world))
-    (webgl/drawpoints! glstate projection (map :p (vals (:masses world))))
-    (webgl/drawpoints! glstate projection (actorskin/getpoints actor))
-    (webgl/drawlines! glstate projection (actorskin/getlines actor))))
+    (webgl/clear! gfx)
+    (webgl/drawshapes! gfx projection (:trans state) variation)
+    (webgl/drawtriangles! gfx projection (actorskin/get-skin-triangles actor))
+    (webgl/drawlines! gfx projection (:surfacelines world))
+    (webgl/drawpoints! gfx projection (map :p (vals (:masses world))))
+    (webgl/drawpoints! gfx projection (actorskin/getpoints actor))
+    (webgl/drawlines! gfx projection (actorskin/getlines actor))))
 
 
-(defn draw-ui! [state frame]
-  (let [projection (math4/proj_ortho 0 (.-innerWidth js/window) (.-innerHeight js/window) 0 -10.0 10.0)
-        uistate (state :uistate)
-        views (state :views)
-        viewids (ui/collect-visible-ids views ((views :baseview) :sv) "")
-        newstate (uiwebgl/draw! uistate projection (map views viewids))]
-    newstate))
-  
-
-(defn update-translation [state keyevent]           
-  (let [keycodes (if keyevent
-                   (assoc (:keycodes state) (:code keyevent) (:value keyevent))
-                   (:keycodes state))
-        
-        [tx ty] (:trans state)
-        [sx sy] (:speed state)
-        
-        nsx (cond
-              (keycodes 37) (- sx 0.4)
-              (keycodes 39) (+ sx 0.4)
-              "default" (* sx 0.9))
-        
-        nsy (cond
-              (keycodes 38) (- sy 0.4)
-              (keycodes 40) (+ sy 0.4)
-              "default" (* sy 0.9))
-        
-        ntx (+ tx sx)
-        nty (+ ty sy)]
-    
-    (-> state
-        (assoc :keycodes keycodes)
-        (assoc :speed [nsx nsy])
-        (assoc :trans [ntx nty]))))
-
-
-(defn update-world [{:keys [actors surfaces masses] :as world} keycodes]
+(defn update-world [{:keys [actors surfaces masses setup] :as world} keycodes svglevel]
   "updates phyisics and actors"
-  (let [newactor (actor/newstate
-                  (first actors)
-                  {:left (keycodes 37) :right (keycodes 39) :up false :down false }
-                  surfaces
-                  1.0)
-        ;;newmasses (mass/update-masses masses surfaces 1.0)
-        newmasses (-> masses
-                      (phys2/add-gravity [0.0 0.2])
-                      ;;(phys2/timescale delta)
-                      ;;(phys2/keep-angles (:aguards state))
-                      ;;(phys2/keep-distances (:dguards state))
-                      (phys2/move-masses surfaces)
-                      ;;(phys2/timescale (/ 1.0 delta)))
-                      )]
-    (-> world
-        (assoc-in [:actors 0] newactor)
-        (assoc :masses newmasses))))
-
-
-(defn update-ui [views]
-  (ui/align
-   views
-   ((views :baseview) :sv)
-   0
-   0
-   (. js/window -innerWidth)
-   (. js/window -innerHeight)))
+  (cond
+    setup ; create new state
+    (let [newactor (actor/newstate (first actors) {:left (keycodes 37) :right (keycodes 39) :up false :down false } surfaces 1.0)
+          newmasses (-> masses
+                        (phys2/add-gravity [0.0 0.2])
+                        ;;(phys2/keep-angles (:aguards state))
+                        ;;(phys2/keep-distances (:dguards state))
+                        (phys2/move-masses surfaces))]
+      (-> world
+          (assoc-in [:actors 0] newactor)
+          (assoc :masses newmasses)))
+    svglevel ; load new level
+    (let [points (map :path (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) svglevel ))
+          surfaces (phys2/surfaces-from-pointlist points)
+          lines (reduce (fn [result {t :t b :b}] (conj result t (math2/add-v2 t b))) [] surfaces)]       
+      (-> world
+          (assoc :setup true)
+          (assoc :surfaces surfaces)
+          (assoc :surfacelines lines)))
+    :else ; return unchanged
+    world))
 
 
 (defn animate [state draw-fn]
@@ -177,80 +168,49 @@
 
 (defn main []
   "entering point"
-  (let
-      [glstate (webgl/init)
-       uistate (uiwebgl/init)
-
-       world {:actors [(actor/init 480.0 300.0)]
-              :masses {:0 (phys2/mass2 500.0 300.0 1.0 1.0 0.9)}
-              :dguards []
-              :aguards []
-              :surfaces []
-              :surfacelines []}
-       
-       views (ui/gen-from-desc
-              layouts/hud
-              (get-in uistate [:tempcanvas]))
-
-       state {:world world
-              :glstate glstate
-              :uistate uistate
-              :views views
-              :level_file "level0.svg"
-              :level_state "none"
-              :texfile "font.png"
-              :keycodes {}
-              :trans [500.0 300.0]
-              :speed [0.0 0.0]}
-       
-       svgch (chan) ;; level svg channel
-       imgch (chan) ;; texture image channel
-       tchch (chan) ;; touch channel
-       keych (chan)];; key press channel
-
+  (let [gfx (webgl/init)
+        gui (uiwebgl/init)
+        views (ui/gen-from-desc layouts/hud (get-in gui [:tempcanvas]))
+        world {:setup false
+               :actors [(actor/init 480.0 300.0)]
+               :masses {:0 (phys2/mass2 500.0 300.0 1.0 1.0 0.9)}
+               :dguards []
+               :aguards []
+               :surfaces []
+               :surfacelines []}
+        state {:gfx gfx
+               :gui gui
+               :world world
+               :views views
+               :level_file "level0.svg"
+               :texfile "font.png"
+               :keycodes {}
+               :trans [500.0 300.0]
+               :speed [0.0 0.0]}
+        svgch (chan) ;; level svg channel
+        imgch (chan) ;; texture image channel
+        tchch (chan) ;; touch channel
+        keych (chan)];; key press channel
+    
     (resize-context!)
     (init-events! keych tchch)
     (load-image! imgch (:texfile state))
+    (load-level! svgch (:level_file state))
     
-    (animate
-     state
-     (fn [prestate frame time]
-       (cond 
-         
-         (= (:level_state prestate) "none")
-         (do
-           (load-level! svgch (:level_file prestate))
-           (assoc prestate :level_state "loading"))
-         
-         (= (:level_state prestate) "loading")
-         (let [shapes (poll! svgch)]
-           (if shapes
-             (let [points (map :path (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) shapes ))
-                   surfaces (phys2/surfaces-from-pointlist points)
-                   lines (reduce (fn [result {t :t b :b}] (conj result t (math2/add-v2 t b))) [] surfaces)]
-
-               (-> prestate
-                   (assoc :glstate (webgl/loadshapes (:glstate prestate) shapes))
-                   (assoc-in [:world :surfaces] surfaces)
-                   (assoc-in [:world :surfacelines] lines)
-                   (assoc :level_state "loaded")))
-               prestate))
-
-         (= (:level_state prestate) "loaded")
-         (let [teximage (poll! imgch)
+    (animate state (fn [prestate frame time]
+         (let [svglevel (poll! svgch)
+               teximage (poll! imgch)
                keyevent (poll! keych)
                tchevent (poll! tchch)
-
-               newviews (update-ui (:views prestate))
-               
-               newworld (update-world (:world prestate) (:keycodes prestate))
-               newstate (-> (assoc prestate :world newworld)
-                            (assoc :views newviews)
-                            (update-translation keyevent))]
-           
-           (draw-world! newstate frame)
+               newviews (update-ui (:views prestate))      
+               newworld (update-world (:world prestate) (:keycodes prestate) svglevel)
+               newstate (cond-> prestate
+                          svglevel (assoc :gfx (webgl/loadshapes (:gfx prestate) svglevel))
+                          true (assoc :world newworld)
+                          true (assoc :views newviews)
+                          true (update-translation keyevent))]
+           (if (:setup newworld) (draw-world! newstate frame))
            ;;(draw-ui! newstate frame)
-
-           newstate))))))
+           newstate)))))
 
 (main)
