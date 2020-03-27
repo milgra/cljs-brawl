@@ -198,6 +198,7 @@
     (load-level! svgch (:level_file state))
     
     (animate state (fn [prestate frame time]
+       (if (= (mod frame 5) 0 ) ; frame skipping for development
          (let [svglevel (poll! svgch)
                teximage (poll! imgch)
                keyevent (poll! keych)
@@ -211,6 +212,7 @@
                           true (update-translation keyevent))]
            (if (:setup newworld) (draw-world! newstate frame))
            ;;(draw-ui! newstate frame)
-           newstate)))))
+           newstate)
+         prestate)))))
 
 (main)
