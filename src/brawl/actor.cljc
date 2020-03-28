@@ -142,7 +142,7 @@
                  [sx sy] :speed :as state}
                 surfaces
                 time]
-  (if (and (walk :is_moving) (> (Math/abs sx) 0.01))
+  (if (> (Math/abs sx) 0.1)
     (let [activekw (get-in walk [:foot-order :active])
           activept ((bases activekw) :p)
 
@@ -155,18 +155,24 @@
           newbases (assoc-in bases [activekw :p] ntarget)
           is_moving (if (< stepvl (* (Math/abs sx) time)) false true)
           dostep! (not is_moving)]
-      (println "movefoot active" activept "final" (walk :final_point))
-
+      (println "is moving" is_moving "dostep!" dostep!)
       (-> state
           (assoc :walk (-> walk
                            (assoc :is_moving is_moving)
                            (assoc :dostep! dostep!)))
           (assoc :bases newbases)))
-    state))
-
+    (-> state
+        (assoc :walk (-> walk
+                         (assoc :is_moving false)
+                         (assoc :dostep! true))))
+    ))
 
 (defn get-step-triangle [[x y] speed]
-  (let [stepsize (+ (* (/ speed (Math/abs speed ) 40.0 ) ) (* speed 8.0))
+  (println "getstep" speed)
+  (let [stepsize (cond
+                   (and (> speed -1.0) (<  speed 0.0)) -10.0
+                   (and (< speed  1.0) (>= speed 0.0))  10.0
+                   :else (+ (* (/ speed (Math/abs speed ) 40.0 ) ) (* speed 8.0)))
         A [(+ x stepsize) y]
         B [(- stepsize) (/ (Math/abs stepsize) 2.0)]
         C [(- stepsize) (-(/ (Math/abs stepsize) 2.0))]]
@@ -184,7 +190,7 @@
 (defn stepfoot [{bases :bases
                  [sx sy] :speed
                  {dostep! :dostep! :as walk} :walk :as state} surfaces]
-  (if (and dostep! (> (Math/abs sx) 0.0))
+  (if (and dostep! (> (Math/abs sx) 0.1))
     (let [foot-order (get-foot-order bases sx)
           step-triangle (get-step-triangle (:p (bases (:passive foot-order))) sx)
           collided (sort-by first < (concat
@@ -210,7 +216,7 @@
     state))
 
 
-(defn updatespeed [{[sx sy] :speed :as state}
+(defn updatespeed [{[sx sy] :speed facing :facing :as state}
                    {:keys [left right up down]}
                    time]
   (let [nsx (cond-> sx
@@ -219,7 +225,8 @@
               :else (* 0.9))
         dir (cond
               (and (> nsx 0.0 ) right) 1
-              (and (<= nsx 0.0 ) left ) -1)]
+              (and (< nsx 0.0 ) left ) -1
+              :else facing)]
     (-> state
         (assoc :speed [nsx sy])
         (assoc :facing dir)))) ; TODO replace facing with dir
