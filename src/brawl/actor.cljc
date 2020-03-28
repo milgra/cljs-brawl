@@ -4,11 +4,10 @@
 
 (defn init [x y]
   {:mode "jump"
-   :a_on_ground false
-   :b_on_ground false   
-   :speed [0.0 0.0]
    :state "walk"
+   :speed [0.0 0.0]
    :facing 1.0
+   :foot-on-ground {:a false :b false}
 
    :bases  {:base_a (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
             :base_b (phys2/mass2 (- x 20.0) y 4.0 10.0 0.0)}
@@ -60,8 +59,12 @@
              :colc 0x0000AAFF
              :cold 0xAA00AAFF}
 
-   :walk {:is_moving false  ; remove later
-          :dostep! true ; force step at start
+   :walk {:dostep! true ; force step at start
+          :final_point [0 0]
+          :foot-order {:active :base_a :passive :base_b}
+          :foot-surfaces {:active nil :passive nil}
+          
+          :is_moving false  ; remove later
           :wants_to_jump false
           :vertical_direction 0
           :maxspeed 0
@@ -69,9 +72,7 @@
           :steplength 0
           :squatsize 0
           :breathangle 0
-          :final_point [0 0]
-          :activebase :base_a
-          :passivebase :base_b
+
           :activesurf nil
           :passivesurf nil}})
 
@@ -134,21 +135,28 @@
     (-> state
         (assoc :bases newbases)
         (assoc :mode newmode)
-        (assoc :a_on_ground a_on_ground)
-        (assoc :b_on_ground b_on_ground))))
+        (assoc :foot-on-ground {:a a_on_ground :b b_on_ground}))))
 
 
-(defn movefoot [{:keys [bases walk facing] [sx sy] :speed :as state} surfaces time]
-  (println "movefoot is_moving" (walk :is_moving) sx sy (walk :final_point)  ((bases (walk :activebase)) :p))
+(defn movefoot [{:keys [bases walk facing]
+                 [sx sy] :speed :as state}
+                surfaces
+                time]
   (if (and (walk :is_moving) (> (Math/abs sx) 0.01))
-    (let [stepv (math2/sub-v2 (walk :final_point) ((bases (walk :activebase)) :p))
+    (let [activekw (get-in walk [:foot-order :active])
+          activept ((bases activekw) :p)
+
+          stepv (math2/sub-v2 (walk :final_point) activept)
           stepvl (math2/length-v2 stepv)
+
           nstepv (math2/resize-v2 stepv (* (Math/abs sx) time ))
-          ntarget (math2/add-v2 ((bases (walk :activebase)) :p) nstepv)
-          newbases (assoc-in bases [(walk :activebase) :p] ntarget)
+          ntarget (math2/add-v2 activept nstepv)
+
+          newbases (assoc-in bases [activekw :p] ntarget)
           is_moving (if (< stepvl (* (Math/abs sx) time)) false true)
           dostep! (not is_moving)]
-      (println "is_moving" is_moving stepvl (* (Math/abs sx) time))
+      (println "movefoot active" activept "final" (walk :final_point))
+
       (-> state
           (assoc :walk (-> walk
                            (assoc :is_moving is_moving)
@@ -157,42 +165,47 @@
     state))
 
 
-(defn stepfoot [{:keys [bases speed] {dostep! :dostep! :as walk} :walk  :as state} surfaces]
-  (println "stepfoot dostep!" dostep!) 
-  (if dostep!
-    (let [[sx sy] speed
-          {[bax bay] :p} (bases :base_a)
-          {[bbx bby] :p} (bases :base_b)
-          nabase (if (or (and (< bax bbx) (>= sx 0.0)) (and (> bax bbx) (< sx 0.0))) :base_a :base_b)
-          npbase (if (or (and (< bax bbx) (>= sx 0.0)) (and (> bax bbx) (< sx 0.0))) :base_b :base_a)
-          stepsize (+ 40.0 (* sx 8.0))
-          {[npbx npby] :p} (bases npbase)
-          {[nabx naby] :p} (bases nabase)
-          strans [(+ npbx stepsize) npby]
-          sbupper [(- stepsize) (/ (Math/abs stepsize) 2.0)]
-          sblower [(- stepsize) (-(/ (Math/abs stepsize) 2.0))]
-          collided ;;(if (= (walk :vertical_direction) 1)
-          (sort-by first < (concat
-                            (phys2/get-colliding-surfaces strans sbupper 10.0 surfaces)
-                            (phys2/get-colliding-surfaces strans sblower 10.0 surfaces)))
+(defn get-step-triangle [[x y] speed]
+  (let [stepsize (+ (* (/ speed (Math/abs speed ) 40.0 ) ) (* speed 8.0))
+        A [(+ x stepsize) y]
+        B [(- stepsize) (/ (Math/abs stepsize) 2.0)]
+        C [(- stepsize) (-(/ (Math/abs stepsize) 2.0))]]
+    {:A A :B B :C C }))
+
+
+(defn get-foot-order [bases speed ]
+  (let [{[bax bay] :p} (bases :base_a)
+        {[bbx bby] :p} (bases :base_b)]
+    (if (or (and (< bax bbx) (>= speed 0.0)) (and (> bax bbx) (< speed 0.0)))
+      {:active :base_a :passive :base_b}
+      {:active :base_b :passive :base_a})))
+
+
+(defn stepfoot [{bases :bases
+                 [sx sy] :speed
+                 {dostep! :dostep! :as walk} :walk :as state} surfaces]
+  (if (and dostep! (> (Math/abs sx) 0.0))
+    (let [foot-order (get-foot-order bases sx)
+          step-triangle (get-step-triangle (:p (bases (:passive foot-order))) sx)
+          collided (sort-by first < (concat
+                                     (phys2/get-colliding-surfaces (:A step-triangle) (:B step-triangle) 10.0 surfaces)
+                                     (phys2/get-colliding-surfaces (:A step-triangle) (:C step-triangle) 10.0 surfaces)))
           surf (first collided)
           final_point (if surf
-                        (:t (nth surf 1))
-                        strans)
+                        (nth surf 1)
+                        (:A step-triangle))
           newpassivesurf (walk :activesurf)
           newactivesurf (if surf
                           (nth surf 1)
                           nil)]
-      (println "sx sy" sx sy "surf" surf "final point" npbx npby stepsize)
+      (println "stepfoot foor-order" foot-order "step-triangle" step-triangle "collided" collided)
       ;;(println "st su sl coll surf" strans sbupper sblower collided surf)
       (assoc state :walk
              (-> walk
                  (assoc :dostep! false)
                  (assoc :is_moving true)
-                 (assoc :activebase nabase)
-                 (assoc :passivebase npbase)
-                 (assoc :activesurf newactivesurf)
-                 (assoc :passivesurf newpassivesurf)
+                 (assoc :foot-order foot-order)
+                 (assoc :foot-surfaces {:active newactivesurf :passive newpassivesurf})
                  (assoc :final_point final_point))))
     state))
 

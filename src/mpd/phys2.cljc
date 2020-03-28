@@ -84,9 +84,9 @@
            end (math2/add-v2 pos dir)
            dst (math2/dist-p2-v2 end (:t surface) (:b surface))]
        (if (not= isp nil)
-         (conj result [(math2/dist-p2-p2-cubic pos isp) surface])
+         (conj result [(math2/dist-p2-p2-cubic pos isp) isp surface])
          (if (< dst radius)
-           (conj result [dst surface])
+           (conj result [dst isp surface])
            result))))
      []
      surfaces))
@@ -189,7 +189,7 @@
       (-> mass
           (assoc :p ppos)
           (assoc :d fdir))          
-      (let [segments (map second (sort-by first < (get-colliding-surfaces ppos pdir r surfaces)))
+      (let [segments (map #(nth % 2) (sort-by first < (get-colliding-surfaces ppos pdir r surfaces)))
             {strans :t sbasis :b :as segment} (first segments)]
         (if segment
           (let [newpos (move-mass-back strans sbasis ppos pdir (* 1.5 r))
