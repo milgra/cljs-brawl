@@ -5,7 +5,7 @@
  :dependencies [[binaryage/devtools "0.9.7"]
                 [reagent "0.8.0-alpha2"]
                 [org.clojure/data.xml "0.2.0-alpha6"]
-                [cider/cider-nrepl "0.24.0"]
+                [cider/cider-nrepl "0.25.0-SNAPSHOT"]
                 [cljs-http "0.1.46"]]
 
  ;; set an nrepl port for connection to a REPL.
