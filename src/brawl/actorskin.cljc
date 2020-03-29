@@ -6,7 +6,7 @@
   (concat (map :p (vals masses)) (map :p (vals bases))))
 
 
-(defn getlines [{{:keys [head neck hip elbow_a elbow_b hand_a hand_b knee_a knee_b ankle_a ankle_b]} :masses}]
+(defn getlines [{{:keys [head neck hip elbow_a elbow_b hand_a hand_b knee_a knee_b ankle_a ankle_b]} :masses step-zone :step-zone}]
   [(:p head) (:p neck)
    (:p neck) (:p hip)
    (:p hip) (:p knee_a)
@@ -16,8 +16,13 @@
    (:p neck ) (:p elbow_a)
    (:p neck ) (:p elbow_b)
    (:p elbow_a ) (:p hand_a)
-   (:p elbow_b ) (:p hand_b)])
-
+   (:p elbow_b ) (:p hand_b)
+   
+   (:A step-zone) (:B step-zone)
+   (:A step-zone) (:C step-zone)
+   
+   ])
+  
 
 (defn gen-tube-triangles [ points sizes]
 

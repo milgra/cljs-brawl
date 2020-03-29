@@ -30,6 +30,8 @@
             :ankle_a (phys2/mass2 x y 4.0 1.0 1.0)
             :ankle_b (phys2/mass2 x y 4.0 1.0 1.0)}
 
+   :step-zone [x y]
+   
    :metrics {;; lengths
              :headl 20.0
              :bodyl 50.0
@@ -176,7 +178,7 @@
                          (assoc :dostep! true))))))
 
 
-(defn get-step-triangle [[x y] speed]
+(defn get-step-zone [[x y] speed]
   (let [stepsize (cond
                    (and (> speed -1.0) (<  speed 0.0)) -10.0
                    (and (< speed  1.0) (>= speed 0.0))  10.0
@@ -200,28 +202,29 @@
                  {dostep! :dostep! :as walk} :walk :as state} surfaces]
   (if (and dostep! (> (Math/abs sx) 0.1))
     (let [foot-order (get-foot-order bases sx)
-          step-triangle (get-step-triangle (:p (bases (:passive foot-order))) sx)
+          step-zone (get-step-zone (:p (bases (:passive foot-order))) sx)
           collided (sort-by first < (concat
-                                     (phys2/get-colliding-surfaces (:A step-triangle) (:B step-triangle) 10.0 surfaces)
-                                     (phys2/get-colliding-surfaces (:A step-triangle) (:C step-triangle) 10.0 surfaces)))
+                                     (phys2/get-colliding-surfaces (:A step-zone) (:B step-zone) 10.0 surfaces)
+                                     (phys2/get-colliding-surfaces (:A step-zone) (:C step-zone) 10.0 surfaces)))
           surf (first collided)
           final_point (if surf
                         (nth surf 1)
-                        (:A step-triangle))
+                        (:A step-zone))
           newpassivesurf (walk :activesurf)
           newactivesurf (if surf
                           (nth surf 1)
                           nil)]
       ; (println "stepfoot foor-order" foot-order "step-triangle" step-triangle "collided" collided)
 
-      (assoc state :walk
-             (-> walk
-                 (assoc :dostep! false)
-                 (assoc :is_moving true)
-                 (assoc :foot-order foot-order)
-                 (assoc :foot-surfaces {:active newactivesurf :passive newpassivesurf})
-                 (assoc :final_point final_point))))
-    state))
+      (-> state
+          (assoc :step-zone step-zone)
+          (assoc :walk (-> walk
+                           (assoc :dostep! false)
+                           (assoc :is_moving true)
+                           (assoc :foot-order foot-order)
+                           (assoc :foot-surfaces {:active newactivesurf :passive newpassivesurf})
+                           (assoc :final_point final_point)))))
+      state))
 
 
 (defn update-speed [{[sx sy] :speed facing :facing :as state}
