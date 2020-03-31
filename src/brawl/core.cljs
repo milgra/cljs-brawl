@@ -132,7 +132,10 @@
   "updates phyisics and actors"
   (cond
     setup ; create new state
-    (let [newactor (actor/update-actor (first actors) {:left (keycodes 37) :right (keycodes 39) :up false :down false } surfaces 1.0)
+    (let [newactor (actor/update-actor (first actors) {:left (keycodes 37)
+                                                       :right (keycodes 39)
+                                                       :up false
+                                                       :down (keycodes 40)} surfaces 1.0)
           newmasses (-> masses
                         (phys2/add-gravity [0.0 0.2])
                         ;;(phys2/keep-angles (:aguards state))

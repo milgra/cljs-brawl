@@ -98,12 +98,12 @@
 
 
 (defn update-skeleton [ {{{[txa tya] :p} :base_a
-                         {[txb tyb] :p} :base_b} :bases :as  state }]
+                          {[txb tyb] :p} :base_b} :bases
+                         {{[hipx hipy] :p} :hip} :masses
+                         :as  state }]
   (let [facing (state :facing)
         ankle_a [txa tya]
         ankle_b [txb tyb]
-        hipx (+ txa (/ (- txb txa) 2))
-        hipy (- (+ tya (/ (- tyb tya) 2)) 50.0)
         neck [hipx (- hipy 50.0)]
         head [hipx (- hipy 70.0)]
         knee_a (triangle_with_bases ankle_a [hipx hipy] 30.0 facing)
@@ -112,12 +112,11 @@
         hand_b [(+ hipx (* facing 30.0)) (- hipy 40.0)]
         elbow_a (triangle_with_bases neck hand_a 30.0 facing)
         elbow_b (triangle_with_bases neck hand_b 30.0 facing)]
-  (-> state
+    (-> state
       (assoc-in [:masses :ankle_a :p] ankle_a) 
       (assoc-in [:masses :ankle_b :p] ankle_b) 
       (assoc-in [:masses :knee_a :p] knee_a ) 
       (assoc-in [:masses :knee_b :p] knee_b ) 
-      (assoc-in [:masses :hip :p] [hipx hipy])
       (assoc-in [:masses :neck :p] neck)
       (assoc-in [:masses :head :p] head)
       (assoc-in [:masses :hand_a :p] hand_a) 
@@ -149,7 +148,7 @@
         (assoc :jump {assoc jump :foot-on-ground {:a a_on_ground :b b_on_ground}}))))
 
 
-(defn movefoot [{:keys [bases walk]
+(defn move-foot [{:keys [bases walk]
                  [sx sy] :speed :as state}
                 surfaces
                 time]
@@ -178,6 +177,19 @@
                          (assoc :dostep! true))))))
 
 
+(defn move-hip [{{{[ax ay] :p} :base_a
+                  {[bx by] :p} :base_b} :bases
+                 {{[hx hy] :p} :hip} :masses :as  state}
+                {:keys [down]}]
+  (let [x (+ ax (/ (- bx ax) 2))
+        t (- (+ ay (/ (- by ay) 2)) 50.0)
+        b (- (+ ay (/ (- by ay) 2)) 20.0)
+        y (if down
+               (+ hy (/ (- b hy) 3))
+               (+ hy (/ (- t hy) 3)))]
+    (assoc-in state [:masses :hip :p]  [x y])))
+
+
 (defn get-step-zone [[x y] speed]
   (let [stepsize (cond
                    (and (> speed -1.0) (<  speed 0.0)) -10.0
@@ -197,7 +209,7 @@
       {:active :base_b :passive :base_a})))
 
 
-(defn stepfoot [{bases :bases
+(defn step-foot [{bases :bases
                  [sx sy] :speed
                  {dostep! :dostep! :as walk} :walk :as state} surfaces]
   (if (and dostep! (> (Math/abs sx) 0.1))
@@ -217,7 +229,9 @@
       ; (println "stepfoot foor-order" foot-order "step-triangle" step-triangle "collided" collided)
 
       (-> state
-          (assoc :step-zone step-zone)
+          (assoc :step-zone {:A (:A step-zone)
+                             :B (math2/add-v2 (:A step-zone)(:B step-zone))
+                             :C (math2/add-v2 (:A step-zone)(:C step-zone))})
           (assoc :walk (-> walk
                            (assoc :dostep! false)
                            (assoc :is_moving true)
@@ -230,10 +244,14 @@
 (defn update-speed [{[sx sy] :speed facing :facing :as state}
                    {:keys [left right up down]}
                    time]
-  (let [nsx (cond-> sx
-              right (max (+ (* 0.4 time)) 10.0)
-              left  (min (- (* 0.4 time)) -10.0)
-              :else (* 0.9))
+  (let [nsx (cond
+              right (if (and (> sx -2.0) (< sx 0.0))
+                      0
+                      (max sx (+ (* 0.4 time)) 10.0))
+              left (if (and (< sx 2.0) (> sx 0.0))
+                     0
+                     (min sx (- (* 0.4 time)) -10.0))
+              :else (* sx 0.9))
         dir (cond
               (and (> nsx 0.0 ) right) 1
               (and (< nsx 0.0 ) left ) -1
@@ -246,8 +264,9 @@
 (defn update-walk [state control surfaces time]
   (-> state
       (update-speed control time)
-      (stepfoot surfaces)
-      (movefoot surfaces time)))
+      (step-foot surfaces)
+      (move-foot surfaces time)
+      (move-hip control)))
 
 
 (defn update-actor [{mode :mode update-fn :update-fn :as state} control surfaces time]
