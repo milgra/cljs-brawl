@@ -86,7 +86,7 @@
 
 (defn update-mode
   "if next mode is set, switch to that mode"
-  [{:keys [next] {ba :foot_a bb :foot_b} :masses :as state}]
+  [{:keys [next speed] {ba :foot_a bb :foot_b} :masses :as state}]
   (cond
     (= next nil) state
     (= next "walk")
@@ -94,8 +94,10 @@
       ; reset walk state
       (println "switching to walk mode")
       (-> state
-          (assoc :jump-state 0)
+          (update-in [:masses :hip :p] math2/add-v2 [0 25]) ; squat when reaching ground
+          (assoc :jump-state 0) ; reset jump state
           (assoc :next nil)
+          (assoc :foot-target nil) ; reset stepping
           (assoc :update-fn update-walk)))
     (= next "jump")
     (do
@@ -104,10 +106,19 @@
       (-> state
           (assoc-in [:masses :foot_a :p] (math2/add-v2 (:p ba) [0 -5]))
           (assoc-in [:masses :foot_b :p] (math2/add-v2 (:p bb) [0 -5]))
-          (assoc-in [:masses :foot_a :d] [2 -5])
-          (assoc-in [:masses :foot_b :d] [2 -5])          
+          (assoc-in [:masses :foot_a :d] [(/ speed 2) -10])
+          (assoc-in [:masses :foot_b :d] [(/ speed 2) -10])          
           (assoc :next nil)
           (assoc :update-fn update-jump)))))
+
+
+(defn move-hip-jump
+  "move hip points, handle jumping"
+  [{:keys [next jump-state] {{[hx hy] :p} :hip {[ax ay] :p} :foot_a {[bx by] :p} :foot_b } :masses :as state}
+   {:keys [down up]}]
+  (let [x (+ ax (/ (- bx ax) 2))
+        y (+ ay (/ (- by ay) 2))]
+    (assoc-in state [:masses :hip :p] [x (- y 50)])))
 
 
 (defn update-idle [state] state)
@@ -123,19 +134,21 @@
         newbases (-> bases
                     (phys2/add-gravity [0.0 0.5])
                     (phys2/move-masses surfaces))
-        ground (every? #(= % 0.0) (flatten (map :d (vals newbases))))
+        ground (every? #(and (= % 0.0)) (flatten (map :d (vals newbases))))
         next (cond
                ground "walk"
                (< speed -15) "idle"
                :else nil)
         result (cond-> state
-                 true (assoc :next next)
+                 next (assoc :next next)
                  true (assoc-in [:masses :foot_a] (:foot_a newbases))
-                 true (assoc-in [:masses :foot_b] (:foot_b newbases)))]
+                 true (assoc-in [:masses :foot_b] (:foot_b newbases))
+                 true (move-hip-jump control))]
+    (println "newbases" newbases)
     result))
 
 
-(defn move-hip
+(defn move-hip-walk
   "move hip points, handle jumping"
   [{:keys [next jump-state] {{[hx hy] :p} :hip {[ax ay] :p} :foot_a {[bx by] :p} :foot_b } :masses :as state}
    {:keys [down up]}]
@@ -256,7 +269,7 @@
   (-> state
       (update-speed control time)
       (move-feet surfaces time)
-      (move-hip control)))
+      (move-hip-walk control)))
 
 
 (defn update-actor [{mode :mode update-fn :update-fn :as state} control surfaces time]
