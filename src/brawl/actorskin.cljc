@@ -1,18 +1,17 @@
 (ns brawl.actorskin
   (:use [mpd.math2 :only [resize-v2 scale-v2 rotate-90-cw rotate-90-ccw add-v2 sub-v2]]))
 
+(defn getpoints [{masses :masses}]
+  (concat (map :p (vals masses))))
 
-(defn getpoints [{masses :masses bases :bases}]
-  (concat (map :p (vals masses)) (map :p (vals bases))))
 
-
-(defn getlines [{{:keys [head neck hip elbow_a elbow_b hand_a hand_b knee_a knee_b base_a base_b]} :masses step-zone :step-zone}]
+(defn getlines [{{:keys [head neck hip elbow_a elbow_b hand_a hand_b knee_a knee_b foot_a foot_b]} :masses step-zone :step-zone}]
   [(:p head) (:p neck)
    (:p neck) (:p hip)
    (:p hip) (:p knee_a)
    (:p hip) (:p knee_b)
-   (:p knee_a ) (:p base_a)
-   (:p knee_b ) (:p base_b)
+   (:p knee_a ) (:p foot_a)
+   (:p knee_b ) (:p foot_b)
    (:p neck ) (:p elbow_a)
    (:p neck ) (:p elbow_b)
    (:p elbow_a ) (:p hand_a)
@@ -97,28 +96,28 @@
 
 
 (defn get-skin-triangles
-  [{{:keys [head neck hip elbow_a elbow_b hand_a hand_b knee_a knee_b base_a base_b]} :masses
+  [{{:keys [head neck hip elbow_a elbow_b hand_a hand_b knee_a knee_b foot_a foot_b]} :masses
     {:keys [headw neckw bodyw hipw legw]} :metrics
     {:keys [activebase passivebase activesurf passivesurf]} :walk
     facing :facing}]
 
   (concat []
           ;; feet
-          (if (and (= passivebase :base_a) (not= passivesurf nil))
-            (gen-foot-triangles (add-v2 (base_a :p) (rotate-90-cw (passivesurf :b)))
-                                (base_a :p)
+          (if (and (= passivebase :foot_a) (not= passivesurf nil))
+            (gen-foot-triangles (add-v2 (foot_a :p) (rotate-90-cw (passivesurf :b)))
+                                (foot_a :p)
                                 5.0
                                 facing) 
-            (gen-foot-triangles (knee_a :p) (base_a :p) 5.0 facing))
-          (if (and (= passivebase :base_b) (not= passivesurf nil))
-            (gen-foot-triangles (add-v2 (base_b :p) (rotate-90-cw (passivesurf :b)))
-                                (base_b :p)
+            (gen-foot-triangles (knee_a :p) (foot_a :p) 5.0 facing))
+          (if (and (= passivebase :foot_b) (not= passivesurf nil))
+            (gen-foot-triangles (add-v2 (foot_b :p) (rotate-90-cw (passivesurf :b)))
+                                (foot_b :p)
                                 5.0
                                 facing)
-            (gen-foot-triangles (knee_b :p) (base_b :p) 5.0 facing))
+            (gen-foot-triangles (knee_b :p) (foot_b :p) 5.0 facing))
           ;; legs
-          (gen-tube-triangles [(:p neck) (:p hip) (:p knee_a) (:p base_a)] [1.0 hipw legw legw])
-          (gen-tube-triangles [(:p neck) (:p hip) (:p knee_b) (:p base_b)] [6.0 hipw legw legw])
+          (gen-tube-triangles [(:p neck) (:p hip) (:p knee_a) (:p foot_a)] [1.0 hipw legw legw])
+          (gen-tube-triangles [(:p neck) (:p hip) (:p knee_b) (:p foot_b)] [6.0 hipw legw legw])
           ;; arms
           (gen-tube-triangles [(:p neck) (:p elbow_a) (:p hand_a)] [5.0 5.0 5.0])
           (gen-tube-triangles [(:p neck) (:p elbow_b) (:p hand_b)] [5.0 5.0 5.0])
