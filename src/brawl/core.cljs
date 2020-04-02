@@ -134,7 +134,7 @@
     setup ; create new state
     (let [newactor (actor/update-actor (first actors) {:left (keycodes 37)
                                                        :right (keycodes 39)
-                                                       :up false
+                                                       :up (keycodes 38)
                                                        :down (keycodes 40)} surfaces 1.0)
           newmasses (-> masses
                         (phys2/add-gravity [0.0 0.2])
