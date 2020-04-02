@@ -18,8 +18,6 @@
    :foot-target nil
    :foot-surfaces {:active nil :passive nil}
    :jump-state 0
-   :activesurf nil
-   :passivesurf nil   
    ; command collector
    :commands []
 
@@ -61,9 +59,11 @@
       (math2/add-v2 a ab2))))
 
 
-(defn update-skeleton [ {{{[hipx hipy] :p} :hip
-                          {[txa tya :as foot_a] :p} :foot_a
-                          {[txb tyb :as foot_b] :p} :foot_b} :masses :as state} ]
+(defn update-skeleton
+  "update all points"
+  [{{{[hipx hipy] :p} :hip
+                         {[txa tya :as foot_a] :p} :foot_a
+                         {[txb tyb :as foot_b] :p} :foot_b} :masses :as state} ]
   (let [facing (state :facing)
         neck [hipx (- hipy 50.0)]
         head [hipx (- hipy 70.0)]
@@ -84,7 +84,9 @@
       (assoc-in [:masses :elbow_b :p] elbow_b))))
 
 
-(defn update-mode [{:keys [next] {ba :foot_a bb :foot_b} :masses :as state}]
+(defn update-mode
+  "if next mode is set, switch to that mode"
+  [{:keys [next] {ba :foot_a bb :foot_b} :masses :as state}]
   (cond
     (= next nil) state
     (= next "walk")
@@ -117,24 +119,26 @@
    {:keys [left right up down] :as control}
    surfaces
    time]
-  (let [newfeet (-> (select-keys masses [:foot_a :foot_b])
+  (let [bases (select-keys masses [:foot_a :foot_b])
+        newbases (-> bases
                     (phys2/add-gravity [0.0 0.5])
                     (phys2/move-masses surfaces))
-        a_on_ground (every? #(= % 0.0) (get-in newfeet [:foot_a :d]))
-        b_on_ground (every? #(= % 0.0) (get-in newfeet [:foot_b :d]))
+        ground (every? #(= % 0.0) (flatten (map :d (vals newbases))))
         next (cond
-               (and a_on_ground b_on_ground) "walk"
+               ground "walk"
                (< speed -15) "idle"
                :else nil)
         result (cond-> state
                  next (assoc :next next)
-                 true (assoc-in [:masses :foot_a] (:foot_a newfeet))
-                 true (assoc-in [:masses :foot_b] (:foot_b newfeet)))]
+                 true (assoc-in [:masses :foot_a] (:foot_a newbases))
+                 true (assoc-in [:masses :foot_b] (:foot_b newbases)))]
     result))
 
 
-(defn move-hip [{:keys [next jump-state] {{[hx hy] :p} :hip {[ax ay] :p} :foot_a {[bx by] :p} :foot_b } :masses :as state}
-                {:keys [down up]}]
+(defn move-hip
+  "move hip points, handle jumping"
+  [{:keys [next jump-state] {{[hx hy] :p} :hip {[ax ay] :p} :foot_a {[bx by] :p} :foot_b } :masses :as state}
+   {:keys [down up]}]
   (let [x (+ ax (/ (- bx ax) 2))
         y (+ ay (/ (- by ay) 2))
         t (- y 50.0)
@@ -155,7 +159,9 @@
         (assoc :jump-state s))))
 
 
-(defn get-step-zone [[x y] speed]
+(defn get-step-zone
+  "gets foot collision triangle"
+  [[x y] speed]
   (let [size (cond
                (and (> speed -1.0) (<  speed 0.0)) -10.0
                (and (< speed  1.0) (>= speed 0.0))  10.0
@@ -166,7 +172,9 @@
     {:A A :B B :C C}))
 
 
-(defn get-foot-order [masses speed]
+(defn get-foot-order
+  "based on direction decides active and passive foot"
+  [masses speed]
   (let [{[bax bay] :p} (masses :foot_a)
         {[bbx bby] :p} (masses :foot_b)]
     (if (or (and (< bax bbx) (>= speed 0.0)) (and (> bax bbx) (< speed 0.0)))
@@ -176,7 +184,7 @@
 
 (defn step-feet
   "puts a triangle from the passive foot on the surfaces, collision ponit is the new foot target for the active foot"
-  [{ :keys [masses speed activesurf] :as state} surfaces]
+  [{ :keys [masses speed foot-surfaces] :as state} surfaces]
   ; speed must not be 0
   (let [foot-order (get-foot-order masses speed)
         step-zone (get-step-zone (:p (masses (:passive foot-order))) speed)
@@ -185,7 +193,7 @@
                                    (phys2/get-colliding-surfaces (:A step-zone) (:C step-zone) 10.0 surfaces)))
         surf (first collided)
         foot-target (if surf (nth surf 1) (:A step-zone))
-        newpassivesurf activesurf
+        newpassivesurf (:active foot-surfaces)
         newactivesurf (if surf (nth surf 1) nil)]
     (-> state
         (assoc :step-zone {:A (:A step-zone)
@@ -242,13 +250,16 @@
         (assoc :facing dir)))) ; TODO replace facing with dir
 
 
-(defn update-walk [state control surfaces time]
+(defn update-walk
+  "update walk state"
+  [state control surfaces time]
   (-> state
       (update-speed control time)
       (move-feet surfaces time)))
 
 
 (defn update-actor [{mode :mode update-fn :update-fn :as state} control surfaces time]
+  "update actor state"
   (-> state
       (update-fn control surfaces time)
       (move-hip control)
