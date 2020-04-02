@@ -115,7 +115,7 @@
 
 (defn update-jump
   "jump state update, update foot masses in the world, check if they reached ground" 
-  [{:keys [masses jump speed] :as state}
+  [{:keys [masses speed] :as state}
    {:keys [left right up down] :as control}
    surfaces
    time]
@@ -129,7 +129,7 @@
                (< speed -15) "idle"
                :else nil)
         result (cond-> state
-                 next (assoc :next next)
+                 true (assoc :next next)
                  true (assoc-in [:masses :foot_a] (:foot_a newbases))
                  true (assoc-in [:masses :foot_b] (:foot_b newbases)))]
     result))
@@ -154,7 +154,7 @@
             :else jump-state)
         nnext (if (= s 2) "jump" next)]
     (-> state
-        (assoc :next next)
+        (assoc :next nnext)
         (assoc-in [:masses :hip :p]  [x (+ hy d)])
         (assoc :jump-state s))))
 
@@ -255,13 +255,13 @@
   [state control surfaces time]
   (-> state
       (update-speed control time)
-      (move-feet surfaces time)))
+      (move-feet surfaces time)
+      (move-hip control)))
 
 
 (defn update-actor [{mode :mode update-fn :update-fn :as state} control surfaces time]
   "update actor state"
   (-> state
       (update-fn control surfaces time)
-      (move-hip control)
       (update-skeleton)
       (update-mode)))
