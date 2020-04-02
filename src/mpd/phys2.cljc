@@ -208,9 +208,9 @@
 (defn move-masses [masses surfaces]
   "check collisions and move masses to new positions considering collisions"
   (reduce
-   (fn [result [mid mass]]
+   (fn [result [id mass]]
      (let [newmass (move-mass mass surfaces)]
-       (assoc result mid newmass)))
+       (assoc result id newmass)))
    masses
    masses))
 

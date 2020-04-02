@@ -22,9 +22,6 @@
    :passivesurf nil   
    ; command collector
    :commands []
-   ; points
-   :bases  {:base_a (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
-            :base_b (phys2/mass2 (- x 20.0) y 4.0 10.0 0.0)}
 
    :masses {:head (phys2/mass2 x y 4.0 1.0 1.0)
             :neck (phys2/mass2 x y 4.0 1.0 1.0)
@@ -38,42 +35,18 @@
             
             :knee_a (phys2/mass2 x y 4.0 1.0 1.0)
             :knee_b (phys2/mass2 x y 4.0 1.0 1.0)
-            
-            :ankle_a (phys2/mass2 x y 4.0 1.0 1.0)
-            :ankle_b (phys2/mass2 x y 4.0 1.0 1.0)}
+
+            :base_a (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
+            :base_b (phys2/mass2 (- x 20.0) y 4.0 10.0 0.0)}
    ; debug
    :step-zone [x y]
    
-   :metrics {;; lengths
-             :headl 20.0
-             :bodyl 50.0
-             :arml 50.0
-             :legl 60.0
-             ;; widths
-             :headw 40.0
-             :neckw 4.0
-             :armw 4.0
-             :bodyw 6.0
-             :hipw 6.0
-             :legw 6.0
-             ;; speed
-             :walks 0.6
-             :runs 0.4
-             :punchs 7.0
-             :kicks 0.2
-             ;; powers
-             :maxp 100.0
-             :hitp 30.0
-             :kickp 30.0
-             ;; health level xp todo on level step ability to pick up bodies
-             :maxh 100.0
-             :maxl 10
-             ;; color
-             :col 0xFF0000FF
-             :cola 0xAA0000FF
-             :colb 0x00AA00FF
-             :colc 0x0000AAFF
-             :cold 0xAA00AAFF}})
+   :metrics {:headl 20.0 :bodyl 50.0 :arml 50.0  :legl 60.0 ; lengths
+             :headw 40.0 :neckw 4.0  :armw 4.0   :bodyw 6.0 :hipw 6.0 :legw 6.0 ; widths
+             :walks 0.6  :runs 0.4   :punchs 7.0 :kicks 0.2 ; speed
+             :maxp 100.0 :hitp 30.0  :kickp 30.0 ; power
+             :maxh 100.0 :maxl 10 ; max health and level
+             :col 0xFF0000FF :cola 0xAA0000FF :colb 0x00AA00FF :colc 0x0000AAFF :cold 0xAA00AAFF}}) ; colors
 
 
 (defn triangle_with_bases
@@ -88,24 +61,19 @@
       (math2/add-v2 a ab2))))
 
 
-(defn update-skeleton [ {{{[txa tya] :p} :base_a
-                          {[txb tyb] :p} :base_b} :bases
-                         {{[hipx hipy] :p} :hip} :masses
-                         :as  state }]
+(defn update-skeleton [ {{{[hipx hipy] :p} :hip
+                          {[txa tya :as base_a] :p} :base_a
+                          {[txb tyb :as base_b] :p} :base_b} :masses :as state} ]
   (let [facing (state :facing)
-        ankle_a [txa tya]
-        ankle_b [txb tyb]
         neck [hipx (- hipy 50.0)]
         head [hipx (- hipy 70.0)]
-        knee_a (triangle_with_bases ankle_a [hipx hipy] 30.0 facing)
-        knee_b (triangle_with_bases ankle_b [hipx hipy] 30.0 facing)
+        knee_a (triangle_with_bases base_a [hipx hipy] 30.0 facing)
+        knee_b (triangle_with_bases base_b [hipx hipy] 30.0 facing)
         hand_a [(+ hipx (* facing 40.0)) (- hipy 50.0)]
         hand_b [(+ hipx (* facing 30.0)) (- hipy 40.0)]
         elbow_a (triangle_with_bases neck hand_a 30.0 facing)
         elbow_b (triangle_with_bases neck hand_b 30.0 facing)]
     (-> state
-      (assoc-in [:masses :ankle_a :p] ankle_a) 
-      (assoc-in [:masses :ankle_b :p] ankle_b) 
       (assoc-in [:masses :knee_a :p] knee_a ) 
       (assoc-in [:masses :knee_b :p] knee_b ) 
       (assoc-in [:masses :neck :p] neck)
@@ -116,7 +84,7 @@
       (assoc-in [:masses :elbow_b :p] elbow_b))))
 
 
-(defn update-mode [{:keys [next] {ba :base_a bb :base_b } :bases  :as state}]
+(defn update-mode [{:keys [next] {ba :base_a bb :base_b} :masses :as state}]
   (cond
     (= next nil) state
     (= next "walk")
@@ -132,10 +100,10 @@
       ; reset jump state
       (println "switching to jump mode")
       (-> state
-          (assoc-in [:bases :base_a :p] (math2/add-v2 (:p ba) [0 -5]))
-          (assoc-in [:bases :base_b :p] (math2/add-v2 (:p bb) [0 -5]))
-          (assoc-in [:bases :base_a :d] [2 -5])
-          (assoc-in [:bases :base_b :d] [2 -5])          
+          (assoc-in [:masses :base_a :p] (math2/add-v2 (:p ba) [0 -5]))
+          (assoc-in [:masses :base_b :p] (math2/add-v2 (:p bb) [0 -5]))
+          (assoc-in [:masses :base_a :d] [2 -5])
+          (assoc-in [:masses :base_b :d] [2 -5])          
           (assoc :next nil)
           (assoc :update-fn update-jump)))))
 
@@ -145,29 +113,27 @@
 
 (defn update-jump
   "jump state update, update base masses in the world, check if they reached ground" 
-  [{:keys [bases jump speed] :as state}
+  [{:keys [masses jump speed] :as state}
    {:keys [left right up down] :as control}
    surfaces
    time]
-  (let [newbases (-> bases
+  (let [newbases (-> (select-keys masses [:base_a :base_b])
                      (phys2/add-gravity [0.0 0.5])
                      (phys2/move-masses surfaces))
-        a_on_ground (every? #(= % 0.0) (:d (:base_a newbases)))
-        b_on_ground (every? #(= % 0.0) (:d (:base_b newbases)))
+        a_on_ground (every? #(= % 0.0) (get-in newbases [:base_a :d]))
+        b_on_ground (every? #(= % 0.0) (get-in newbases [:base_b :d]))
         next (cond
                (and a_on_ground b_on_ground) "walk"
                (< speed -15) "idle"
                :else nil)
         result (cond-> state
                  next (assoc :next next)
-                 true (assoc :bases newbases))]
+                 true (assoc-in [:masses :base_a] (:base_a newbases))
+                 true (assoc-in [:masses :base_b] (:base_b newbases)))]
     result))
 
 
-(defn move-hip [{{{[ax ay] :p} :base_a {[bx by] :p} :base_b} :bases
-                 {{[hx hy] :p} :hip} :masses
-                 next :next
-                 jump-state :jump-state :as state}
+(defn move-hip [{:keys [next jump-state] {{[hx hy] :p} :hip {[ax ay] :p} :base_a {[bx by] :p} :base_b } :masses :as state}
                 {:keys [down up]}]
   (let [x (+ ax (/ (- bx ax) 2))
         y (+ ay (/ (- by ay) 2))
@@ -197,12 +163,12 @@
         A [(+ x size) y]
         B [(- size) (/ (Math/abs size) 2.0)]
         C [(- size) (-(/ (Math/abs size) 2.0))]]
-    {:A A :B B :C C }))
+    {:A A :B B :C C}))
 
 
-(defn get-foot-order [bases speed ]
-  (let [{[bax bay] :p} (bases :base_a)
-        {[bbx bby] :p} (bases :base_b)]
+(defn get-foot-order [masses speed]
+  (let [{[bax bay] :p} (masses :base_a)
+        {[bbx bby] :p} (masses :base_b)]
     (if (or (and (< bax bbx) (>= speed 0.0)) (and (> bax bbx) (< speed 0.0)))
       {:active :base_a :passive :base_b}
       {:active :base_b :passive :base_a})))
@@ -210,10 +176,10 @@
 
 (defn step-feet
   "puts a triangle from the passive foot on the surfaces, collision ponit is the new foot target for the active foot"
-  [{ :keys [bases speed activesurf] :as state} surfaces]
+  [{ :keys [masses speed activesurf] :as state} surfaces]
   ; speed must not be 0
-  (let [foot-order (get-foot-order bases speed)
-        step-zone (get-step-zone (:p (bases (:passive foot-order))) speed)
+  (let [foot-order (get-foot-order masses speed)
+        step-zone (get-step-zone (:p (masses (:passive foot-order))) speed)
         collided (sort-by first < (concat
                                    (phys2/get-colliding-surfaces (:A step-zone) (:B step-zone) 10.0 surfaces)
                                    (phys2/get-colliding-surfaces (:A step-zone) (:C step-zone) 10.0 surfaces)))
@@ -232,31 +198,34 @@
 
 
 (defn move-feet
-  "move feet"
-  [{:keys [bases speed foot-order foot-target] :as state}
+  "move active foot towards target point"
+  [{:keys [masses speed foot-order foot-target] :as state}
    surfaces
    time]
   (if (> (Math/abs speed) 0.1)
     (if foot-target
       (let [akw (:active foot-order)
-            apt (:p (bases akw))
+            apt (:p (masses akw))
             stepv (math2/sub-v2 foot-target apt)
             stepvl (math2/length-v2 stepv)
             currl (* (Math/abs speed) time)
             currv (math2/resize-v2 stepv currl)
             currp (math2/add-v2 apt currv)
-            nbases (assoc-in bases [akw :p] currp)
+            nbases (assoc-in masses [akw :p] currp)
             step? (if (< stepvl currl) true false)]
         (cond-> state
-          true (assoc :bases nbases)
+          true (assoc-in [:masses :base_a] (:base_a nbases))
+          true (assoc-in [:masses :base_b] (:base_b nbases))
           step? (step-feet surfaces))) ; step if foot target is close
       (step-feet state surfaces)) ; step if no foot target
     (assoc state :foot-target nil))) ; stay still if no speed
 
 
-(defn update-speed [{:keys [speed facing] :as state}
-                    {:keys [left right up down]}
-                    time]
+(defn update-speed
+  "update speed based on pressed buttons"
+  [{:keys [speed facing] :as state}
+   {:keys [left right up down]}
+   time]
   (let [nsx (cond
               right (if (and (> speed -2.0) (< speed 0.0))
                       0
