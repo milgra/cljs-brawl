@@ -8,8 +8,7 @@ run :
 
 ## Todo
 
-* full walking state
-* running
-* jumping
+* jump ending should be when both foot is close to a surface
+* full skin & random sizes and colors
 * actor hit
 * datomic server side for high scores

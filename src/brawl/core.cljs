@@ -124,8 +124,9 @@
     (webgl/drawtriangles! gfx projection (actorskin/get-skin-triangles actor))
     (webgl/drawlines! gfx projection (:surfacelines world))
     (webgl/drawpoints! gfx projection (map :p (vals (:masses world))))
-    (webgl/drawpoints! gfx projection (actorskin/getpoints actor))
-    (webgl/drawlines! gfx projection (actorskin/getlines actor))))
+    ;(webgl/drawpoints! gfx projection (actorskin/getpoints actor))
+    ;(webgl/drawlines! gfx projection (actorskin/getlines actor))
+    ))
 
 
 (defn update-world [{:keys [actors surfaces masses setup] :as world} keycodes svglevel]

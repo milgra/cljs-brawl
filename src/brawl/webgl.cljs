@@ -13,14 +13,14 @@
             [brawl.shape :as shape]))
   
 (def vertex-source
-  "attribute highp vec4 position;
+  "attribute highp vec2 position;
    attribute highp vec4 color;
+   varying highp vec2 positionv;
    varying highp vec4 colorv;
-   varying highp vec4 positionv;
    uniform mat4 projection;
    void main ( )
    {
-	gl_Position = projection * position;
+	gl_Position = projection * vec4(position,0.0,1.0);
 	gl_PointSize = 8.0;
 	colorv = color;
 	positionv = position;
@@ -28,7 +28,7 @@
 
 (def fragment-source
   "varying highp vec4 colorv;
-   varying highp vec4 positionv;
+   varying highp vec2 positionv;
    void main( )
    {
 	gl_FragColor = colorv;
@@ -55,7 +55,7 @@
   (let [r ( / (bit-shift-right (bit-and color 0xFF0000) 16) 255.0 )
         g ( / (bit-shift-right (bit-and color 0x00FF00) 8) 255.0 )
         b ( / (bit-and color 0x0000FF) 255.0 ) ]
-      (map (fn [[x y]] [ x y 0.0 1.0 r g b 1.0] ) vertexes )))
+      (map (fn [[x y]] [ x y r g b 1.0] ) vertexes )))
 
 
 (defn gen-shapes-triangle! [shapes]
@@ -79,26 +79,26 @@
         
         scene_buffer (buffers/create-buffer
                       context
-                      (ta/float32 [500.0 500.0 0.0 1.0 1.0 1.0 1.0 1.0])
+                      (ta/float32 [500.0 500.0 1.0 1.0 1.0 1.0])
                       buffer-object/array-buffer
                       buffer-object/static-draw)
         
         actor_buffer (buffers/create-buffer
                       context
-                      (ta/float32 [500.0 500.0 0.0 1.0 1.0 1.0 1.0 1.0])
+                      (ta/float32 [500.0 500.0 1.0 1.0 1.0 1.0])
                       buffer-object/array-buffer
                       buffer-object/dynamic-draw)
 
         mass_buffer (buffers/create-buffer
                      context
-                     (ta/float32 [500.0 500.0 0.0 1.0 1.0 1.0 1.0 1.0])
+                     (ta/float32 [500.0 500.0 1.0 1.0 1.0 1.0])
                      buffer-object/array-buffer
                      buffer-object/dynamic-draw)
 
         line_buffer (buffers/create-buffer
                      context
-                     (ta/float32 [500.0 500.0 0.0 1.0 1.0 1.0 1.0 1.0
-                                  500.0 500.0 0.0 1.0 1.0 1.0 1.0 1.0])
+                     (ta/float32 [500.0 500.0 1.0 1.0 1.0 1.0
+                                  500.0 500.0 1.0 1.0 1.0 1.0])
                      buffer-object/array-buffer
                      buffer-object/static-draw)
         
@@ -142,25 +142,25 @@
 (defn drawshapes! [{:keys [context shader scene_buffer actor_buffer location_pos location_col vertexes vertexcounts vertexstarts ] :as state} projection [tx ty] variation]
 
   (.bindBuffer context buffer-object/array-buffer scene_buffer)
-  
+
   (buffers/draw!
    context
-   :count (int (/ (vertexcounts variation) 8))
-   :first (int (/ (vertexstarts variation) 8))
+   :count (int (/ (vertexcounts variation) 6))
+   :first (int (/ (vertexstarts variation) 6))
    :shader shader
    :draw-mode draw-mode/triangles               
    :attributes [{:buffer scene_buffer
                  :location location_pos
-                 :components-per-vertex 4
+                 :components-per-vertex 2
                  :type data-type/float
                  :offset 0
-                 :stride 32}
+                 :stride 24}
                 {:buffer scene_buffer
                  :location location_col
                  :components-per-vertex 4
                  :type data-type/float
-                 :offset 16
-                 :stride 32}]
+                 :offset 8
+                 :stride 24}]
    :uniforms [{:name "projection"
                :type :mat4
                :values projection}])
@@ -178,8 +178,8 @@
                 (vec
                  (flatten
                   (map
-                   (fn voxelize [[tx ty]]
-                     [tx ty 0.0 1.0 0.0 0.0 0.0 1.0]) points))))
+                   (fn voxelize [[tx ty r g b a]]
+                     [tx ty r g b a]) points))))
                buffer-object/dynamic-draw)
   
   (buffers/draw!
@@ -189,16 +189,16 @@
    :draw-mode draw-mode/triangles
    :attributes [{:buffer actor_buffer
                  :location location_pos
-                 :components-per-vertex 4
+                 :components-per-vertex 2
                  :type data-type/float
                  :offset 0
-                 :stride 32}
+                 :stride 24}
                 {:buffer actor_buffer
                  :location location_col
                  :components-per-vertex 4
                  :type data-type/float
-                 :offset 16
-                 :stride 32}]
+                 :offset 8
+                 :stride 24}]
    :uniforms [{:name "projection"
                :type :mat4
                :values projection}])
@@ -217,7 +217,7 @@
                  (flatten
                   (map
                    (fn voxelize [[tx ty]]
-                     [tx ty 0.0 1.0 1.0 1.0 1.0 1.0]) lines))))
+                     [tx ty 1.0 1.0 1.0 1.0]) lines))))
                buffer-object/dynamic-draw)
   
   (buffers/draw!
@@ -227,16 +227,16 @@
    :draw-mode draw-mode/lines
    :attributes [{:buffer line_buffer
                  :location location_pos
-                 :components-per-vertex 4
+                 :components-per-vertex 2
                  :type data-type/float
                  :offset 0
-                 :stride 32}
+                 :stride 24}
                 {:buffer line_buffer
                  :location location_col
                  :components-per-vertex 4
                  :type data-type/float
-                 :offset 16
-                 :stride 32}]
+                 :offset 8
+                 :stride 24}]
    :uniforms [{:name "projection"
                :type :mat4
                :values projection}])
@@ -255,7 +255,7 @@
                  (flatten
                   (map
                    (fn voxelize [[tx ty]]
-                     [tx ty 0.0 1.0 1.0 1.0 1.0 1.0]) points))))
+                     [tx ty 1.0 1.0 1.0 1.0]) points))))
                buffer-object/dynamic-draw)
   
   (buffers/draw!
@@ -265,15 +265,15 @@
             :draw-mode draw-mode/points               
             :attributes [{:buffer mass_buffer
                           :location location_pos
-                          :components-per-vertex 4
+                          :components-per-vertex 2
                           :type data-type/float
                           :offset 0
-                          :stride 32}                        {:buffer mass_buffer
+                          :stride 24}                        {:buffer mass_buffer
                           :location location_col
                           :components-per-vertex 4
                           :type data-type/float
-                          :offset 16
-                          :stride 32}]
+                          :offset 8
+                          :stride 24}]
             :uniforms [{:name "projection"
                         :type :mat4
                         :values projection}])

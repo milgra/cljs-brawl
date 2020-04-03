@@ -144,7 +144,6 @@
                  true (assoc-in [:masses :foot_a] (:foot_a newbases))
                  true (assoc-in [:masses :foot_b] (:foot_b newbases))
                  true (move-hip-jump control))]
-    (println "newbases" newbases)
     result))
 
 
@@ -162,7 +161,7 @@
             (or (not down) (and up (= jump-state 1)))
             (/ (- t hy) 3))
         s (cond
-            (and up (= jump-state 0) (< (Math/abs d) 0.1)) 1
+            (and up (= jump-state 0) (< (Math/abs d) 0.5)) 1
             (and up (= jump-state 1) (< (Math/abs d) 1.0)) 2
             :else jump-state)
         nnext (if (= s 2) "jump" next)]
@@ -207,7 +206,7 @@
         surf (first collided)
         foot-target (if surf (nth surf 1) (:A step-zone))
         newpassivesurf (:active foot-surfaces)
-        newactivesurf (if surf (nth surf 1) nil)]
+        newactivesurf (if surf (nth surf 2) nil)]
     (-> state
         (assoc :step-zone {:A (:A step-zone)
                            :B (math2/add-v2 (:A step-zone)(:B step-zone))
