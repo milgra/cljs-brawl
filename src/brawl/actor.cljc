@@ -38,7 +38,7 @@
             :foot_b (phys2/mass2 (- x 20.0) y 4.0 10.0 0.0)}
    ; debug
    :step-zone [x y]
-   
+   ; body metrics
    :metrics {:headl 20.0 :bodyl 50.0 :arml 50.0  :legl 60.0 ; lengths
              :headw 40.0 :neckw 4.0  :armw 4.0   :bodyw 6.0 :hipw 6.0 :legw 6.0 ; widths
              :walks 0.6  :runs 0.4   :punchs 7.0 :kicks 0.2 ; speed
@@ -48,7 +48,7 @@
 
 
 (defn triangle_with_bases
-  "calculates third point of triangle based on the two base points, side length and direction"
+  "calculates third point of triangle based on the two base points, side length and direction, used for knee and elbow"
   [a b size dir]
   (let [[x y :as ab2] (math2/scale-v2 (math2/sub-v2 b a) 0.5)
         ab2l (math2/length-v2 ab2)]
@@ -59,19 +59,36 @@
       (math2/add-v2 a ab2))))
 
 
+(defn hit [{{:keys [head neck hip hand_a hand_b elbow_a elbow_b knee_a knee_b foot_a foot_b]} :masses} hitt hitd]
+  (let [headv (math2/sub-v2 neck head)
+        bodyv (math2/sub-v2 hip neck)
+        legav (math2/sub-v2 knee_a hip)
+        legbv (math2/sub-v2 knee_b hip)
+        headisp (math2/isp-v2-v2 hitt hitd head headv 0.0)
+        bodyisp (math2/isp-v2-v2 hitt hitd neck bodyv 0.0)
+        legaisp (math2/isp-v2-v2 hitt hitd hip legav 0.0)
+        legbisp (math2/isp-v2-v2 hitt hitd hip legbv 0.0)
+        result [(if headisp "head" nil)
+                (if bodyisp "body" nil)
+                (if legaisp "lega" nil)
+                (if legbisp "legb" nil)]]
+    result))
+
+
 (defn update-skeleton
   "update all points"
   [{{{[hipx hipy] :p} :hip
-                         {[txa tya :as foot_a] :p} :foot_a
-                         {[txb tyb :as foot_b] :p} :foot_b} :masses :as state} ]
+     {[txa tya :as foot_a] :p} :foot_a
+     {[txb tyb :as foot_b] :p} :foot_b} :masses :as state}
+   {:keys [left right up down punch]}]
   (let [facing (state :facing)
         neck [hipx (- hipy 50.0)]
         head [hipx (- hipy 70.0)]
         knee_a (triangle_with_bases foot_a [hipx hipy] 30.0 facing)
         knee_b (triangle_with_bases foot_b [hipx hipy] 30.0 facing)
-        hand_a [(+ hipx (* facing 40.0)) (- hipy 50.0)]
+        hand_a [(+ hipx (* facing (if punch 40.0 30.0))) (- hipy 50.0)]
         hand_b [(+ hipx (* facing 30.0)) (- hipy 40.0)]
-        elbow_a (triangle_with_bases neck hand_a 30.0 facing)
+        elbow_a (triangle_with_bases neck hand_a (if punch 20.0 30.0) facing)
         elbow_b (triangle_with_bases neck hand_b 30.0 facing)]
     (-> state
       (assoc-in [:masses :knee_a :p] knee_a ) 
@@ -275,5 +292,5 @@
   "update actor state"
   (-> state
       (update-fn control surfaces time)
-      (update-skeleton)
+      (update-skeleton control)
       (update-mode)))

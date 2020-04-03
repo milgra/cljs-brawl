@@ -121,29 +121,33 @@
         variation (Math/floor (mod (/ frame 20.0) 3.0 ))]
     (webgl/clear! gfx)
     (webgl/drawshapes! gfx projection (:trans state) variation)
-    (webgl/drawtriangles! gfx projection (actorskin/get-skin-triangles actor))
-    (webgl/drawlines! gfx projection (:surfacelines world))
+
+    (doall (map #((webgl/drawtriangles! gfx projection (actorskin/get-skin-triangles %))
+           (webgl/drawpoints! gfx projection (actorskin/getpoints %))
+           (webgl/drawlines! gfx projection (actorskin/getlines %))) (:actors world)))
+
     (webgl/drawpoints! gfx projection (map :p (vals (:masses world))))
-    ;(webgl/drawpoints! gfx projection (actorskin/getpoints actor))
-    ;(webgl/drawlines! gfx projection (actorskin/getlines actor))
-    ))
+    (webgl/drawlines! gfx projection (:surfacelines world))
+))
 
 
 (defn update-world [{:keys [actors surfaces masses setup] :as world} keycodes svglevel]
   "updates phyisics and actors"
   (cond
     setup ; create new state
-    (let [newactor (actor/update-actor (first actors) {:left (keycodes 37)
-                                                       :right (keycodes 39)
-                                                       :up (keycodes 38)
-                                                       :down (keycodes 40)} surfaces 1.0)
+    (let [newactors (vec (map #(actor/update-actor % {:left (keycodes 37)
+                                                 :right (keycodes 39)
+                                                 :up (keycodes 38)
+                                                 :down (keycodes 40)
+                                                 :punch (keycodes 70)
+                                                 } surfaces 1.0) actors))
           newmasses (-> masses
                         (phys2/add-gravity [0.0 0.2])
                         ;;(phys2/keep-angles (:aguards state))
                         ;;(phys2/keep-distances (:dguards state))
                         (phys2/move-masses surfaces))]
       (-> world
-          (assoc-in [:actors 0] newactor)
+          (assoc :actors newactors)
           (assoc :masses newmasses)))
     svglevel ; load new level
     (let [points (map :path (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) svglevel ))
@@ -176,7 +180,7 @@
         gui (uiwebgl/init)
         views (ui/gen-from-desc layouts/hud (get-in gui [:tempcanvas]))
         world {:setup false
-               :actors [(actor/init 480.0 300.0)]
+               :actors [(actor/init 480.0 300.0) (actor/init 580.0 300.0)]
                :masses {:0 (phys2/mass2 500.0 300.0 1.0 1.0 0.9)}
                :dguards []
                :aguards []
