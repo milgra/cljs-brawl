@@ -1,5 +1,7 @@
 # cljs-brawl
 
+[Live Demo](https://milgra.github.io/cljs-brawl/index.html)
+
 ## Mass Brawl Simulator
 
 run :
