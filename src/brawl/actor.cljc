@@ -2,6 +2,8 @@
   (:require [mpd.math2 :as math2]
             [mpd.phys2 :as phys2]))
 
+(def MPI2 (* Math/PI 2))
+
 (declare update-jump)
 (declare update-walk)
 (declare update-idle)
@@ -40,7 +42,7 @@
    ; debug
    :step-zone [x y]
    ; body metrics
-   :metrics {:headl 20.0 :bodyl 50.0 :arml 50.0  :legl 70.0 ; lengths
+   :metrics {:headl 20.0 :bodyl 50.0 :arml 70.0  :legl 70.0 ; lengths
              :headw 40.0 :neckw 4.0  :armw 4.0   :bodyw 6.0 :hipw 6.0 :legw 6.0 ; widths
              :walks 0.6  :runs 0.4   :punchs 7.0 :kicks 0.2 ; speed
              :maxp 100.0 :hitp 30.0  :kickp 30.0 ; power
@@ -76,9 +78,28 @@
     result))
 
 
+(defn move-hand-walk
+  "move head point"
+  [{:keys [facing] {{[hx hy] :p} :hip {[ax ay] :p} :foot_a {[bx by] :p} :foot_b {[nx ny :as neck] :p} :neck } :masses { arml :arml } :metrics angle :idle-angle :as state}
+   {:keys [down up left right punch]}]
+  (let [nax (+ (* facing (+ (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
+        nbx (- (* facing (- (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
+        nay (+ (* arml -0.1 ) (* (Math/cos angle ) 5.0))
+        nby (- (* arml -0.14 )(* (Math/cos angle ) 5.0))
+        hand_a [(+ nx nax) (+ ny nay)]
+        hand_b [(+ nx nbx) (+ ny nby)]
+        elbow_a (triangle_with_bases neck hand_a (if punch 20.0 30.0) facing)
+        elbow_b (triangle_with_bases neck hand_b 30.0 facing)]
+    (-> state
+        (assoc-in [:masses :hand_a :p] hand_a)
+        (assoc-in [:masses :hand_b :p] hand_b)
+        (assoc-in [:masses :elbow_a :p] elbow_a)
+        (assoc-in [:masses :elbow_b :p] elbow_b))))
+
+
 (defn move-head-walk
   "move head point"
-  [{:keys [next jump-state idle-angle facing speed] {{[hx hy] :p} :hip {[ax ay] :p} :foot_a {[bx by] :p} :foot_b } :masses { legl :legl } :metrics :as state}
+  [{:keys [facing] {{[hx hy] :p} :hip {[ax ay] :p} :foot_a {[bx by] :p} :foot_b } :masses { legl :legl } :metrics :as state}
    {:keys [down up left right]}]
   (let [nx (* facing (/ (Math/abs (- bx ax )) 8 )) ; head move forward and backwards when stepping
         nnx (if down (* facing 20.0)) ; head move even forward when squatting
@@ -255,18 +276,10 @@
    {:keys [left right up down punch]}]
   (let [facing (state :facing)
         knee_a (triangle_with_bases foot_a [hipx hipy] 30.0 facing)
-        knee_b (triangle_with_bases foot_b [hipx hipy] 30.0 facing)
-        hand_a [(+ hipx (* facing (if punch 50.0 30.0))) (- hipy 45.0)]
-        hand_b [(+ hipx (* facing 30.0)) (- hipy 40.0)]
-        elbow_a (triangle_with_bases neck hand_a (if punch 20.0 30.0) facing)
-        elbow_b (triangle_with_bases neck hand_b 30.0 facing)]
+        knee_b (triangle_with_bases foot_b [hipx hipy] 30.0 facing)]
     (-> state
       (assoc-in [:masses :knee_a :p] knee_a ) 
-      (assoc-in [:masses :knee_b :p] knee_b ) 
-      (assoc-in [:masses :hand_a :p] hand_a) 
-      (assoc-in [:masses :hand_b :p] hand_b) 
-      (assoc-in [:masses :elbow_a :p] elbow_a) 
-      (assoc-in [:masses :elbow_b :p] elbow_b))))
+      (assoc-in [:masses :knee_b :p] knee_b ))))
 
 
 (defn update-jump
@@ -288,7 +301,9 @@
                  next (assoc :next next)
                  true (assoc-in [:masses :foot_a] (:foot_a newbases))
                  true (assoc-in [:masses :foot_b] (:foot_b newbases))
-                 true (move-hip-jump control))]
+                 true (move-hip-jump control)
+                 true (move-head-walk control)
+                 true (move-hand-walk control))]
     result))
 
 
@@ -299,7 +314,8 @@
       (update-speed control time)
       (move-feet-walk surfaces time)
       (move-hip-walk control)
-      (move-head-walk control)))
+      (move-head-walk control)
+      (move-hand-walk control)))
 
 
 (defn update-idle [state] state)
@@ -307,8 +323,8 @@
 
 (defn update-angle
   [{angle :idle-angle :as state}]
-  (if (> angle Math/PI)
-    (assoc state :idle-angle (- angle Math/PI))
+  (if (> angle MPI2)
+    (assoc state :idle-angle (- angle MPI2))
     (update state :idle-angle + 0.05)))
 
 

@@ -124,11 +124,12 @@
           ;; body
           (map #(concat % [0.0 0.0 0.0 1.0])(gen-tube-triangles [(:p head) (:p neck) (:p hip)] [(+ neckw 2.0) (+ neckw 3.0) (+ hipw 2.0)]))
           (map #(concat % [0.5 0.5 0.8 1.0])(gen-tube-triangles [(:p head) (:p neck) (:p hip)] [neckw neckw hipw]))
+          ;; head
+          (map #(concat % [0.0 0.0 0.0 1.0])(gen-head-triangles (:p head) (:p neck) facing 3.0))
+          (map #(concat % [0.5 0.2 0.2 1.0])(gen-head-triangles (:p head) (:p neck) facing 0.0))
           ;; arms
           (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p neck) (:p elbow_a) (:p hand_a)] [8.0 8.0 8.0])) ; stroke
           (map #(concat % [0.5 0.4 0.5 1.0]) (gen-tube-triangles [(:p neck) (:p elbow_a) (:p hand_a)] [5.0 5.0 5.0]))
           (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p neck) (:p elbow_b) (:p hand_b)] [8.0 8.0 8.0])) ; stroke
           (map #(concat % [0.8 0.4 0.5 1.0]) (gen-tube-triangles [(:p neck) (:p elbow_b) (:p hand_b)] [5.0 5.0 5.0]))
-          ;; head
-          (map #(concat % [0.0 0.0 0.0 1.0])(gen-head-triangles (:p head) (:p neck) facing 3.0))
-          (map #(concat % [0.5 0.2 0.2 1.0])(gen-head-triangles (:p head) (:p neck) facing 0.0))))
+          ))

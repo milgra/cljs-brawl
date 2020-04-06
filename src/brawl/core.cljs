@@ -45,18 +45,28 @@
         (set! (. canvas -height) (. js/window -innerHeight))))
 
 
+(def keycodes (atom {}))
+
 (defn init-events! [keych tchch]
   "start event listening"
  
   (events/listen
    js/document
    EventType.KEYDOWN
-   (fn [event] (put! keych {:code (.-keyCode event) :value true})))
-  
+   (fn [event]
+     (let [code (.-keyCode event)
+           prev (get @keycodes code)]
+       (swap! keycodes assoc code true)
+       (if (not prev) (put! keych {:code (.-keyCode event) :value true})))))
+
   (events/listen
    js/document
    EventType.KEYUP
-   (fn [event] (put! keych {:code (.-keyCode event) :value false})))
+   (fn [event]
+     (let [code (.-keyCode event)
+           prev (get @keycodes code)]
+       (swap! keycodes assoc code false)
+       (if prev (put! keych {:code (.-keyCode event) :value false})))))
   
   (events/listen
    js/window
