@@ -21,6 +21,7 @@
    :foot-target nil
    :foot-surfaces {:active nil :passive nil}
    :jump-state 0
+   :step-length 0
    ; command collector
    :commands []
 
@@ -38,7 +39,10 @@
             :knee_b (phys2/mass2 x y 4.0 1.0 1.0)
 
             :foot_a (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
-            :foot_b (phys2/mass2 (- x 20.0) y 4.0 10.0 0.0)}
+            :foot_b (phys2/mass2 (- x 20.0) y 4.0 10.0 0.0)
+
+            :leg_a (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
+            :leg_b (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)}
    ; debug
    :step-zone [x y]
    ; body metrics
@@ -188,6 +192,7 @@
         (assoc :step-zone {:A (:A step-zone)
                            :B (math2/add-v2 (:A step-zone)(:B step-zone))
                            :C (math2/add-v2 (:A step-zone)(:C step-zone))})
+        (assoc :step-length (math2/length-v2 (math2/sub-v2 foot-target (:p (masses (:active foot-order))))))
         (assoc :dostep! false)
         (assoc :foot-order foot-order)
         (assoc :foot-target foot-target)
@@ -196,7 +201,7 @@
 
 (defn move-feet-walk
   "move active foot towards target point"
-  [{:keys [masses speed foot-order foot-target] :as state}
+  [{:keys [masses speed foot-order foot-target step-length] :as state}
    surfaces
    time]
   (if (> (Math/abs speed) 0.1)
@@ -208,10 +213,14 @@
             currl (* (Math/abs speed) time)
             currv (math2/resize-v2 stepv currl)
             currp (math2/add-v2 apt currv)
+            curr-delta (math2/length-v2 (math2/sub-v2 foot-target currp))
+            step-delta (if (> (/ step-length 2) curr-delta) (/ (- step-length curr-delta) step-length) (/ curr-delta step-length))
             nmasses (assoc-in masses [akw :p] currp)
             step? (if (< stepvl currl) true false)]
         (cond-> state
           true (assoc :masses nmasses)
+          true (assoc-in [:masses :leg_a] (get-in nmasses [:masses :foot_a]))
+          true (assoc-in [:masses :leg_b] (get-in nmasses [:masses :foot_b]))
           step? (step-feet-walk surfaces))) ; step if foot target is close
       (step-feet-walk state surfaces)) ; step if no foot target
     (assoc state :foot-target nil))) ; stay still if no speed
