@@ -66,15 +66,15 @@
 
 (defn draw-ui! [state frame]
   (let [projection (math4/proj_ortho 0 (.-innerWidth js/window) (.-innerHeight js/window) 0 -10.0 10.0)
-        gui (state :gui)
-        views (state :views)
-        viewids (ui/collect-visible-ids views ((views :baseview) :sv) "")
+        gui (:gui state)
+        views (:views state)
+        viewids (ui/collect-visible-ids views (:sv (:baseview views)) "")
         newstate (uiwebgl/draw! gui projection (map views viewids))]
     newstate))
 
   
 (defn update-ui [views]
-  (ui/align views ((views :baseview) :sv) 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
+  (ui/align views (:sv (:baseview views)) 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
   
 
 (defn update-translation [state keyevent]           
@@ -101,11 +101,12 @@
 
 (defn draw-world! [state frame]
   "draws background, actors, masses with projection"
-  (let [gfx (state :gfx)
-        world (state :world)
-        actor ((world :actors) 0)
-        head ((get-in actor [:masses :head]) :p)
-        [tx ty] head
+  (let [gfx (:gfx state)
+        world (:world state)
+        actor (first (:actors world))
+        [fax fay] (:p (get-in actor [:masses :foot_a]))
+        [fbx fby] (:p (get-in actor [:masses :foot_b]))
+        [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fby (/ (- fby fay) 2))  ]
         [sx sy] (:speed state)
         ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
         r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
@@ -136,11 +137,11 @@
   (cond
     setup ; create new state
     (let [newactors (vec (map #(actor/update-actor % {:left (keycodes 37)
-                                                 :right (keycodes 39)
-                                                 :up (keycodes 38)
-                                                 :down (keycodes 40)
-                                                 :punch (keycodes 70)
-                                                 } surfaces 1.0) actors))
+                                                      :right (keycodes 39)
+                                                      :up (keycodes 38)
+                                                      :down (keycodes 40)
+                                                      :punch (keycodes 70)
+                                                      } surfaces 1.0) actors))
           newmasses (-> masses
                         (phys2/add-gravity [0.0 0.2])
                         ;;(phys2/keep-angles (:aguards state))
@@ -180,7 +181,7 @@
         gui (uiwebgl/init)
         views (ui/gen-from-desc layouts/hud (get-in gui [:tempcanvas]))
         world {:setup false
-               :actors [(actor/init 480.0 300.0) (actor/init 580.0 300.0)]
+               :actors [(actor/init 480.0 300.0)] ; (actor/init 580.0 300.0)]
                :masses {:0 (phys2/mass2 500.0 300.0 1.0 1.0 0.9)}
                :dguards []
                :aguards []
@@ -219,7 +220,7 @@
                           true (assoc :views newviews)
                           true (update-translation keyevent))]
            (if (:setup newworld) (draw-world! newstate frame))
-           ;;(draw-ui! newstate frame)
+           (draw-ui! newstate frame)
            newstate)
          prestate)))))
 

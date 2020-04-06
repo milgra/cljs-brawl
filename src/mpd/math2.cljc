@@ -18,7 +18,7 @@
 
 
 (defn resize-v2 [[x y] size]
-  (if (and (not= size 0) (or (not= x 0) (not= x 0)))
+  (if (and (not= size 0) (or (not= x 0) (not= y 0)))
     (let [ratio (/ size (length-v2 [x y]))]
       [(* x ratio) (* y ratio)])
     [x y]))
