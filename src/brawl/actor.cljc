@@ -214,13 +214,16 @@
             currv (math2/resize-v2 stepv currl)
             currp (math2/add-v2 apt currv)
             curr-delta (math2/length-v2 (math2/sub-v2 base-target currp))
-            step-delta (if (> (/ step-length 2) curr-delta) (/ (- step-length curr-delta) step-length) (/ curr-delta step-length))
+            step-ratio (if (< (/ step-length 2) curr-delta) (/ (- step-length curr-delta) step-length) (/ curr-delta step-length))
+            act_dy (Math/abs (* speed 6.0 step-ratio))
             nmasses (assoc-in masses [akw :p] currp)
             step? (if (< stepvl currl) true false)]
         (cond-> state
           true (assoc :masses nmasses)
-          true (assoc-in [:masses :foot_l] (:base_l nmasses))
-          true (assoc-in [:masses :foot_r] (:base_r nmasses))
+          (= :base_l (:active base-order)) (assoc-in [:masses :foot_l :p] [(first currp) (- (second currp) act_dy)])
+          (= :base_l (:passive base-order)) (assoc-in [:masses :foot_l] (:base_l nmasses))
+          (= :base_r (:active base-order)) (assoc-in [:masses :foot_r :p] [(first currp) (- (second currp) act_dy)])
+          (= :base_r (:passive base-order)) (assoc-in [:masses :foot_r] (:base_r nmasses))
           step? (step-feet-walk surfaces))) ; step if base target is close
       (step-feet-walk state surfaces)) ; step if no base target
     (assoc state :base-target nil))) ; stay still if no speed

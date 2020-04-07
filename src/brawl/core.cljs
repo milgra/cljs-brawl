@@ -114,8 +114,8 @@
   (let [gfx (:gfx state)
         world (:world state)
         actor (first (:actors world))
-        [fax fay] (:p (get-in actor [:masses :foot_l]))
-        [fbx fby] (:p (get-in actor [:masses :foot_r]))
+        [fax fay] (:p (get-in actor [:masses :base_l]))
+        [fbx fby] (:p (get-in actor [:masses :base_r]))
         [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fby (/ (- fby fay) 2))  ]
         [sx sy] (:speed state)
         ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
@@ -192,7 +192,7 @@
         gui (uiwebgl/init)
         views (ui/gen-from-desc layouts/hud (get-in gui [:tempcanvas]))
         world {:setup false
-               :actors [(actor/init 480.0 300.0) (actor/init 580.0 300.0)]
+               :actors [(actor/init 480.0 300.0)] ; (actor/init 580.0 300.0)]
                :masses {:0 (phys2/mass2 500.0 300.0 1.0 1.0 0.9)}
                :dguards []
                :aguards []
