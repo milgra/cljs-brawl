@@ -14,3 +14,4 @@ run :
 * full skin & random sizes and colors
 * actor hit
 * phasing actor skin
+* punching should be continouos with a small break between punches - slowness and quickness can be kept

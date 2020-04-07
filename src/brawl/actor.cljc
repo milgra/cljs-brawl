@@ -18,8 +18,8 @@
    :hitrate 0.5
    :stamina 0.5
    :speed 0.5
-   :color_a [1.0 0.0 0.0]
-   :color_b [0.0 0.0 0.0]})
+   :color_a [1.0 0.0 0.0 1.0]
+   :color_b [0.0 0.0 1.0 1.0]})
 
 
 (defn basemetrics-random []
@@ -78,8 +78,7 @@
                 :headw headw :neckw neckw :armw armw :bodyw headw :hipw hipw :legw legw ; widths
                 :walks walks :runs runs   :punchs punchs :kicks kicks ; speed
                 :maxp maxp :hitp hitp  :kickp kickp :maxh maxh ; power and health
-                :cola color_a :colb [dra dga dba] :colc color_b :cold [drb dgb dbb]}] ; colors
-    (println "hp" hp "metrics" result)
+                :cola color_a :colb [dra dga dba 1.0] :colc color_b :cold [drb dgb dbb 1.0]}] ; colors
     result))
   
 
@@ -296,17 +295,18 @@
 
 (defn update-speed
   "update speed based on pressed buttons"
-  [{:keys [speed facing] :as state}
-   {:keys [left right up down]}
+  [{:keys [speed facing metrics] :as state}
+   {:keys [left right up down run]}
    time]
-  (let [nsx (cond
-              right (if (and (> speed -2.0) (< speed 0.0))
-                      0
-                      (max speed (+ (* 0.4 time)) 10.0))
-              left (if (and (< speed 2.0) (> speed 0.0))
-                     0
-                     (min speed (- (* 0.4 time)) -10.0))
-              :else (* speed 0.9))
+  (let [max (if (or run down) (:runs metrics) (:walks metrics))
+        nsx (cond
+              right (if (> speed max)
+                      (- speed (* 0.3 time))
+                      (+ speed (* 0.3 time)))
+              left (if (< speed (- max))
+                      (+ speed (* 0.3 time))
+                      (- speed (* 0.3 time)))
+              :else (* speed (- 1.0 (* 0.08 time))))
         dir (cond
               (and (> nsx 0.0 ) right) 1
               (and (< nsx 0.0 ) left ) -1

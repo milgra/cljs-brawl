@@ -152,6 +152,7 @@
                                                       :up (keycodes 38)
                                                       :down (keycodes 40)
                                                       :punch (keycodes 70)
+                                                      :run (keycodes 32)
                                                       } surfaces 1.0) actors))
           newmasses (-> masses
                         (phys2/add-gravity [0.0 0.2])

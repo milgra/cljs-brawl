@@ -78,11 +78,13 @@
 
 (defn gen-head-triangles [pa pb facing stroke]
   (let [ab (sub-v2 pb pa)
-        nlsa (add-v2 pa (resize-v2( rotate-90-ccw ab) (+ 10.0 stroke)))
-        nrsa (add-v2 pa (resize-v2( rotate-90-cw ab) (+ 10.0 stroke)))
-        nlea (add-v2 pb (resize-v2( rotate-90-ccw ab) (+ 11.0 stroke)))
-        nrea (add-v2 pb (resize-v2( rotate-90-cw ab) (+ 11.0 stroke)))
-        ab23 (add-v2 pa (scale-v2 ab 0.66))
+        ba (sub-v2 pa pb)
+        npa (add-v2 pa (resize-v2 ba stroke))
+        nlsa (add-v2 npa (resize-v2 (rotate-90-ccw ab) (+ 10.0 stroke)))
+        nrsa (add-v2 npa (resize-v2 (rotate-90-cw ab) (+ 10.0 stroke)))
+        nlea (add-v2 pb (resize-v2 (rotate-90-ccw ab) (+ 11.0 stroke)))
+        nrea (add-v2 pb (resize-v2 (rotate-90-cw ab) (+ 11.0 stroke)))
+        ab23 (add-v2 npa (scale-v2 ab 0.66))
         nose (if (= -1 facing)
                (add-v2 ab23 (resize-v2 (rotate-90-ccw ab) (+ 15.0 stroke)))
                (add-v2 ab23 (resize-v2 (rotate-90-cw ab) (+ 15.0 stroke))))]
@@ -93,7 +95,7 @@
 
 (defn get-skin-triangles
   [{{:keys [head neck hip elbow_l elbow_r hand_l hand_r knee_l knee_r foot_l foot_r]} :masses
-    {:keys [headw neckw bodyw hipw legw]} :metrics
+    {:keys [headw neckw bodyw hipw legw cola colb colc cold]} :metrics
     {af :active pf :passive} :foot-order
     {as :active ps :passive} :foot-surfaces
     facing :facing}]
@@ -117,19 +119,22 @@
             (map #(concat % [0.0 0.0 0.5 1.0])
                  (gen-foot-triangles (:p knee_r) (:p foot_r) 5.0 facing)))
           ;; legs
-          (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [5.0 (+ hipw 3.0) (+ legw 3.0) (+ legw 3.0)])) ; stroke
-          (map #(concat % [0.4 0.0 0.5 1.0]) (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [1.0 hipw legw legw]))
           (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)] [9.0 (+ hipw 3.0) (+ legw 3.0) (+ legw 3.0)])) ; stroke
-          (map #(concat % [0.0 0.0 0.5 1.0]) (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)] [6.0 hipw legw legw]))
+          (map #(concat % colb) (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)] [6.0 hipw legw legw]))
+
+          (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [5.0 (+ hipw 3.0) (+ legw 3.0) (+ legw 3.0)])) ; stroke
+          (map #(concat % cola) (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [1.0 hipw legw legw]))
+
+          (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [8.0 8.0 8.0])) ; stroke
+          (map #(concat % cola) (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [5.0 5.0 5.0]))
+
           ;; body
-          (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [(+ neckw 2.0) (+ neckw 3.0) (+ hipw 2.0)]))
-          (map #(concat % [0.5 0.5 0.8 1.0]) (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [neckw neckw hipw]))
+          (map #(concat % colc) (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [neckw neckw hipw]))
+
           ;; head
           (map #(concat % [0.0 0.0 0.0 1.0]) (gen-head-triangles (:p head) (:p neck) facing 3.0))
-          (map #(concat % [0.5 0.2 0.2 1.0]) (gen-head-triangles (:p head) (:p neck) facing 0.0))
+          (map #(concat % [0.8 0.5 0.5 1.0]) (gen-head-triangles (:p head) (:p neck) facing 1.0))
+
           ;; arms
-          (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [8.0 8.0 8.0])) ; stroke
-          (map #(concat % [0.5 0.4 0.5 1.0]) (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [5.0 5.0 5.0]))
           (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p neck) (:p elbow_r) (:p hand_r)] [8.0 8.0 8.0])) ; stroke
-          (map #(concat % [0.8 0.4 0.5 1.0]) (gen-tube-triangles [(:p neck) (:p elbow_r) (:p hand_r)] [5.0 5.0 5.0]))
-          ))
+          (map #(concat % colb) (gen-tube-triangles [(:p neck) (:p elbow_r) (:p hand_r)] [5.0 5.0 5.0]))))
