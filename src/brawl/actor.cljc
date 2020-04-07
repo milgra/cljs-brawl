@@ -17,7 +17,7 @@
    :update-fn update-jump
    :idle-angle 0
    ; walk state
-   :base-order {:active :base_a :passive :base_b}
+   :base-order {:active :base_l :passive :base_r}
    :base-target nil
    :base-surfaces {:active nil :passive nil}
    :jump-state 0
@@ -29,20 +29,20 @@
             :neck (phys2/mass2 x y 4.0 1.0 1.0)
             :hip  (phys2/mass2 x y 4.0 1.0 1.0)
 
-            :hand_a (phys2/mass2 x y 4.0 1.0 1.0)
-            :hand_b (phys2/mass2 x y 4.0 1.0 1.0)
+            :hand_l (phys2/mass2 x y 4.0 1.0 1.0)
+            :hand_r (phys2/mass2 x y 4.0 1.0 1.0)
             
-            :elbow_a (phys2/mass2 x y 4.0 1.0 1.0)
-            :elbow_b (phys2/mass2 x y 4.0 1.0 1.0)
+            :elbow_l (phys2/mass2 x y 4.0 1.0 1.0)
+            :elbow_r (phys2/mass2 x y 4.0 1.0 1.0)
             
-            :knee_a (phys2/mass2 x y 4.0 1.0 1.0)
-            :knee_b (phys2/mass2 x y 4.0 1.0 1.0)
+            :knee_l (phys2/mass2 x y 4.0 1.0 1.0)
+            :knee_r (phys2/mass2 x y 4.0 1.0 1.0)
 
-            :base_a (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
-            :base_b (phys2/mass2 (- x 20.0) y 4.0 10.0 0.0)
+            :foot_l (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
+            :foot_r (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
 
-            :foot_a (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
-            :foot_b (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)}
+            :base_l (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
+            :base_r (phys2/mass2 (- x 20.0) y 4.0 10.0 0.0)}
    ; debug
    :step-zone [x y]
    ; body metrics
@@ -54,7 +54,7 @@
              :col 0xFF0000FF :cola 0xAA0000FF :colb 0x00AA00FF :colc 0x0000AAFF :cold 0xAA00AAFF}}) ; colors
 
 
-(defn triangle_with_bases
+(defn triangle_with_rases
   "calculates third point of triangle based on the two base points, side length and direction, used for knee and elbow"
   [a b size dir]
   (let [[x y :as ab2] (math2/scale-v2 (math2/sub-v2 b a) 0.5)
@@ -66,11 +66,11 @@
       (math2/add-v2 a ab2))))
 
 
-(defn hit [{{:keys [head neck hip hand_a hand_b elbow_a elbow_b knee_a knee_b base_a base_b]} :masses} hitt hitd]
+(defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r base_l base_r]} :masses} hitt hitd]
   (let [headv (math2/sub-v2 neck head)
         bodyv (math2/sub-v2 hip neck)
-        footav (math2/sub-v2 knee_a hip)
-        footbv (math2/sub-v2 knee_b hip)
+        footav (math2/sub-v2 knee_l hip)
+        footbv (math2/sub-v2 knee_r hip)
         headisp (math2/isp-v2-v2 hitt hitd head headv 0.0)
         bodyisp (math2/isp-v2-v2 hitt hitd neck bodyv 0.0)
         footaisp (math2/isp-v2-v2 hitt hitd hip footav 0.0)
@@ -84,26 +84,26 @@
 
 (defn move-hand-walk
   "move head point"
-  [{:keys [facing] {{[hx hy] :p} :hip {[ax ay] :p} :base_a {[bx by] :p} :base_b {[nx ny :as neck] :p} :neck } :masses { arml :arml } :metrics angle :idle-angle :as state}
+  [{:keys [facing] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r {[nx ny :as neck] :p} :neck } :masses { arml :arml } :metrics angle :idle-angle :as state}
    {:keys [down up left right punch]}]
   (let [nax (+ (* facing (+ (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
         nbx (- (* facing (- (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
         nay (+ (* arml -0.1 ) (* (Math/cos angle ) 5.0))
         nby (- (* arml -0.14 )(* (Math/cos angle ) 5.0))
-        hand_a [(+ nx nax) (+ ny nay)]
-        hand_b [(+ nx nbx) (+ ny nby)]
-        elbow_a (triangle_with_bases neck hand_a (if punch 20.0 30.0) facing)
-        elbow_b (triangle_with_bases neck hand_b 30.0 facing)]
+        hand_l [(+ nx nax) (+ ny nay)]
+        hand_r [(+ nx nbx) (+ ny nby)]
+        elbow_l (triangle_with_rases neck hand_l (if punch 20.0 30.0) facing)
+        elbow_r (triangle_with_rases neck hand_r 30.0 facing)]
     (-> state
-        (assoc-in [:masses :hand_a :p] hand_a)
-        (assoc-in [:masses :hand_b :p] hand_b)
-        (assoc-in [:masses :elbow_a :p] elbow_a)
-        (assoc-in [:masses :elbow_b :p] elbow_b))))
+        (assoc-in [:masses :hand_l :p] hand_l)
+        (assoc-in [:masses :hand_r :p] hand_r)
+        (assoc-in [:masses :elbow_l :p] elbow_l)
+        (assoc-in [:masses :elbow_r :p] elbow_r))))
 
 
 (defn move-head-walk
   "move head point"
-  [{:keys [facing] {{[hx hy] :p} :hip {[ax ay] :p} :base_a {[bx by] :p} :base_b } :masses { legl :legl } :metrics :as state}
+  [{:keys [facing] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r } :masses { legl :legl } :metrics :as state}
    {:keys [down up left right]}]
   (let [nx (* facing (/ (Math/abs (- bx ax )) 8 )) ; head move forward and backwards when stepping
         nnx (if down (* facing 20.0)) ; head move even forward when squatting
@@ -117,7 +117,7 @@
 
 (defn move-hip-jump
   "move hip points, handle jumping"
-  [{:keys [next jump-state] {{[hx hy] :p} :hip {[ax ay] :p} :base_a {[bx by] :p} :base_b } :masses :as state}
+  [{:keys [next jump-state] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r } :masses :as state}
    {:keys [down up]}]
   (let [x (+ ax (/ (- bx ax) 2))
         y (+ ay (/ (- by ay) 2))]
@@ -126,7 +126,7 @@
 
 (defn move-hip-walk
   "move hip points, handle jumping"
-  [{:keys [next jump-state idle-angle facing speed] {{[hx hy] :p} :hip {[ax ay] :p} :base_a {[bx by] :p} :base_b } :masses { legl :legl } :metrics :as state}
+  [{:keys [next jump-state idle-angle facing speed] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r } :masses { legl :legl } :metrics :as state}
    {:keys [down up left right]}]
   (let [x (+ ax (/ (- bx ax) 2))
         y (+ ay (/ (- by ay) 2))
@@ -168,11 +168,11 @@
 (defn get-base-order
   "based on direction decides active and passive base"
   [masses speed]
-  (let [{[bax bay] :p} (masses :base_a)
-        {[bbx bby] :p} (masses :base_b)]
+  (let [{[bax bay] :p} (masses :base_l)
+        {[bbx bby] :p} (masses :base_r)]
     (if (or (and (< bax bbx) (>= speed 0.0)) (and (> bax bbx) (< speed 0.0)))
-      {:active :base_a :passive :base_b}
-      {:active :base_b :passive :base_a})))
+      {:active :base_l :passive :base_r}
+      {:active :base_r :passive :base_l})))
 
 
 (defn step-feet-walk
@@ -219,8 +219,8 @@
             step? (if (< stepvl currl) true false)]
         (cond-> state
           true (assoc :masses nmasses)
-          true (assoc-in [:masses :foot_a] (:base_a nmasses))
-          true (assoc-in [:masses :foot_b] (:base_b nmasses))
+          true (assoc-in [:masses :foot_l] (:base_l nmasses))
+          true (assoc-in [:masses :foot_r] (:base_r nmasses))
           step? (step-feet-walk surfaces))) ; step if base target is close
       (step-feet-walk state surfaces)) ; step if no base target
     (assoc state :base-target nil))) ; stay still if no speed
@@ -250,7 +250,7 @@
 
 (defn update-mode
   "if next mode is set, switch to that mode"
-  [{:keys [next speed] {ba :base_a bb :base_b} :masses :as state}]
+  [{:keys [next speed] {ba :base_l bb :base_r} :masses :as state}]
   (cond
     (= next nil) state
     (= next "walk")
@@ -268,10 +268,10 @@
       ; reset jump state
       (println "switching to jump mode")
       (-> state
-          (assoc-in [:masses :base_a :p] (math2/add-v2 (:p ba) [0 -5]))
-          (assoc-in [:masses :base_b :p] (math2/add-v2 (:p bb) [0 -5]))
-          (assoc-in [:masses :base_a :d] [(/ speed 2) -10])
-          (assoc-in [:masses :base_b :d] [(/ speed 2) -10])          
+          (assoc-in [:masses :base_l :p] (math2/add-v2 (:p ba) [0 -5]))
+          (assoc-in [:masses :base_r :p] (math2/add-v2 (:p bb) [0 -5]))
+          (assoc-in [:masses :base_l :d] [(/ speed 2) -10])
+          (assoc-in [:masses :base_r :d] [(/ speed 2) -10])          
           (assoc :next nil)
           (assoc :update-fn update-jump)))))
 
@@ -280,15 +280,15 @@
   "update all points"
   [{{{[hipx hipy] :p} :hip
      {neck :p} :neck
-     {[txa tya :as base_a] :p} :base_a
-     {[txb tyb :as base_b] :p} :base_b} :masses :as state}
+     {[txa tya :as base_l] :p} :base_l
+     {[txb tyb :as base_r] :p} :base_r} :masses :as state}
    {:keys [left right up down punch]}]
   (let [facing (state :facing)
-        knee_a (triangle_with_bases base_a [hipx hipy] 30.0 facing)
-        knee_b (triangle_with_bases base_b [hipx hipy] 30.0 facing)]
+        knee_l (triangle_with_rases base_l [hipx hipy] 30.0 facing)
+        knee_r (triangle_with_rases base_r [hipx hipy] 30.0 facing)]
     (-> state
-      (assoc-in [:masses :knee_a :p] knee_a ) 
-      (assoc-in [:masses :knee_b :p] knee_b ))))
+      (assoc-in [:masses :knee_l :p] knee_l ) 
+      (assoc-in [:masses :knee_r :p] knee_r ))))
 
 
 (defn update-jump
@@ -297,7 +297,7 @@
    {:keys [left right up down] :as control}
    surfaces
    time]
-  (let [bases (select-keys masses [:base_a :base_b])
+  (let [bases (select-keys masses [:base_l :base_r])
         newbases (-> bases
                     (phys2/add-gravity [0.0 0.5])
                     (phys2/move-masses surfaces))
@@ -308,8 +308,8 @@
                :else nil)
         result (cond-> state
                  next (assoc :next next)
-                 true (assoc-in [:masses :base_a] (:base_a newbases))
-                 true (assoc-in [:masses :base_b] (:base_b newbases))
+                 true (assoc-in [:masses :base_l] (:base_l newbases))
+                 true (assoc-in [:masses :base_r] (:base_r newbases))
                  true (move-hip-jump control)
                  true (move-head-walk control)
                  true (move-hand-walk control))]

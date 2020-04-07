@@ -114,8 +114,8 @@
   (let [gfx (:gfx state)
         world (:world state)
         actor (first (:actors world))
-        [fax fay] (:p (get-in actor [:masses :foot_a]))
-        [fbx fby] (:p (get-in actor [:masses :foot_b]))
+        [fax fay] (:p (get-in actor [:masses :foot_l]))
+        [fbx fby] (:p (get-in actor [:masses :foot_r]))
         [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fby (/ (- fby fay) 2))  ]
         [sx sy] (:speed state)
         ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
