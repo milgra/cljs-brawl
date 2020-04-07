@@ -1,18 +1,93 @@
 (ns brawl.actor
   (:require [mpd.math2 :as math2]
-            [mpd.phys2 :as phys2]))
+            [mpd.phys2 :as phys2]
+            [clojure.spec.alpha :as spec]))
 
 (def MPI2 (* Math/PI 2))
+(spec/def ::norm (spec/and #(> % 0.0) #(< % 1.0)))        
 
 (declare update-jump)
 (declare update-walk)
 (declare update-idle)
 (declare step-feet)
 
+
+(defn basemetrics-default []
+  {:height 0.5
+   :hitpower 0.5
+   :hitrate 0.5
+   :stamina 0.5
+   :speed 0.5
+   :color_a [1.0 0.0 0.0]
+   :color_b [0.0 0.0 0.0]})
+
+
+(defn basemetrics-random []
+  {:height (/ (rand 10) 10)
+   :hitpower (/ (rand 10) 10)
+   :hitrate (/ (rand 10) 10)
+   :stamine (/ (rand 10) 10)
+   :speed (/ (rand 10) 10)
+   :color_a [(rand) (rand) (rand)]
+   :color_b [(rand) (rand) (rand)]})
+
+
+(defn generate-metrics [{:keys [hitpower hitrate stamina speed height color_a color_b]}]
+  (let [hp (cond (> hitpower 1.0) 1.0 (< hitpower 0.0) 0.0 :else hitpower)
+        hr (cond (> hitrate 1.0) 1.0 (< hitrate 0.0) 0.0 :else hitrate)
+        st (cond (> stamina 1.0) 1.0 (< stamina 0.0) 0.0 :else stamina)
+        sp (cond (> speed 1.0) 1.0 (< speed 0.0) 0.0 :else speed)
+
+        delta (-(- 2.5 height) (+ st sp hp hr))
+        size (spec/conform ::norm (+ height delta))
+
+        headl (+ 16.0 (* size 8.0))
+        bodyl (+ 50.0 (* size 20.0)) 
+        arml (+ 50.0 (* size 20.0)) 
+        legl (+ 60.0 (* size 20.0)) 
+
+        headw (+ 36.0 (* size 8.0)) 
+        neckw (+ 4.0 (* hp 5.0)) 
+        armw (+ 4.0 (* hp 7.0)) 
+        hipw (+ 6.0 (* st 20.0)) 
+        legw (+ 6.0 (* st 5.0)) 
+        
+        runs (+ 5.0 (* speed 4.0) height )
+        walks (* runs 0.6)
+        punchs (+ 7.0 (* hitrate 2.0))
+        kicks (+ 0.2 hitrate)
+
+        maxh (+ 100.0 (* stamina 10.0))
+        maxp (+ 100.0 (* hitpower 10.0))
+
+        hitp (+ (* maxp 0.3) (* maxp 0.2 hitpower ) )
+        kickp (+ (* maxp 0.3) (* maxp 0.2 hitpower ) )
+
+        [ra ga ba] color_a
+        [rb gb bb] color_b
+
+        dra (if (> ra 0.2) (- ra 0.2) ra)
+        dga (if (> ga 0.2) (- ga 0.2) ga)
+        dba (if (> ba 0.2) (- ba 0.2) ba)
+
+        drb (if (> rb 0.2) (- rb 0.2) rb)
+        dgb (if (> gb 0.2) (- gb 0.2) gb)
+        dbb (if (> bb 0.2) (- bb 0.2) bb)
+        ; TODO bodyw needed?
+        result {:headl headl :bodyl bodyl :arml arml :legl legl ; lengths
+                :headw headw :neckw neckw :armw armw :bodyw headw :hipw hipw :legw legw ; widths
+                :walks walks :runs runs   :punchs punchs :kicks kicks ; speed
+                :maxp maxp :hitp hitp  :kickp kickp :maxh maxh ; power and health
+                :cola color_a :colb [dra dga dba] :colc color_b :cold [drb dgb dbb]}] ; colors
+    (println "hp" hp "metrics" result)
+    result))
+  
+
 (defn init [x y]
-  {; common state
-   :next nil
+  {:next nil
    :speed 0.0
+   :power 100.0
+   :health 100.0
    :facing 1.0
    :update-fn update-jump
    :idle-angle 0
@@ -24,37 +99,27 @@
    :step-length 0
    ; command collector
    :commands []
-
+   ; masses
    :masses {:head (phys2/mass2 x y 4.0 1.0 1.0)
             :neck (phys2/mass2 x y 4.0 1.0 1.0)
-            :hip  (phys2/mass2 x y 4.0 1.0 1.0)
-
+            :hip (phys2/mass2 x y 4.0 1.0 1.0)
             :hand_l (phys2/mass2 x y 4.0 1.0 1.0)
             :hand_r (phys2/mass2 x y 4.0 1.0 1.0)
-            
             :elbow_l (phys2/mass2 x y 4.0 1.0 1.0)
             :elbow_r (phys2/mass2 x y 4.0 1.0 1.0)
-            
             :knee_l (phys2/mass2 x y 4.0 1.0 1.0)
             :knee_r (phys2/mass2 x y 4.0 1.0 1.0)
-
             :foot_l (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
             :foot_r (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
-
             :base_l (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
             :base_r (phys2/mass2 (- x 20.0) y 4.0 10.0 0.0)}
    ; debug
    :step-zone [x y]
    ; body metrics
-   :metrics {:headl 20.0 :bodyl 50.0 :arml 70.0  :legl 70.0 ; lengths
-             :headw 40.0 :neckw 4.0  :armw 4.0   :bodyw 6.0 :hipw 6.0 :legw 6.0 ; widths
-             :walks 0.6  :runs 0.4   :punchs 7.0 :kicks 0.2 ; speed
-             :maxp 100.0 :hitp 30.0  :kickp 30.0 ; power
-             :maxh 100.0 :maxl 10 ; max health and level
-             :col 0xFF0000FF :cola 0xAA0000FF :colb 0x00AA00FF :colc 0x0000AAFF :cold 0xAA00AAFF}}) ; colors
+   :metrics (generate-metrics (basemetrics-default))})
 
-
-(defn triangle_with_rases
+        
+(defn triangle_with_bases
   "calculates third point of triangle based on the two base points, side length and direction, used for knee and elbow"
   [a b size dir]
   (let [[x y :as ab2] (math2/scale-v2 (math2/sub-v2 b a) 0.5)
@@ -66,7 +131,7 @@
       (math2/add-v2 a ab2))))
 
 
-(defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r base_l base_r]} :masses} hitt hitd]
+(defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses} hitt hitd]
   (let [headv (math2/sub-v2 neck head)
         bodyv (math2/sub-v2 hip neck)
         footav (math2/sub-v2 knee_l hip)
@@ -92,8 +157,8 @@
         nby (- (* arml -0.14 )(* (Math/cos angle ) 5.0))
         hand_l [(+ nx nax) (+ ny nay)]
         hand_r [(+ nx nbx) (+ ny nby)]
-        elbow_l (triangle_with_rases neck hand_l (if punch 20.0 30.0) facing)
-        elbow_r (triangle_with_rases neck hand_r 30.0 facing)]
+        elbow_l (triangle_with_bases neck hand_l (if punch 20.0 30.0) facing)
+        elbow_r (triangle_with_bases neck hand_r 30.0 facing)]
     (-> state
         (assoc-in [:masses :hand_l :p] hand_l)
         (assoc-in [:masses :hand_r :p] hand_r)
@@ -287,8 +352,8 @@
      {[txb tyb :as base_r] :p} :base_r} :masses :as state}
    {:keys [left right up down punch]}]
   (let [facing (state :facing)
-        knee_l (triangle_with_rases base_l [hipx hipy] 30.0 facing)
-        knee_r (triangle_with_rases base_r [hipx hipy] 30.0 facing)]
+        knee_l (triangle_with_bases base_l [hipx hipy] 30.0 facing)
+        knee_r (triangle_with_bases base_r [hipx hipy] 30.0 facing)]
     (-> state
       (assoc-in [:masses :knee_l :p] knee_l ) 
       (assoc-in [:masses :knee_r :p] knee_r ))))
