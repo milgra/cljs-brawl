@@ -133,9 +133,9 @@
     (webgl/clear! gfx)
     (webgl/drawshapes! gfx projection (:trans state) variation)
 
-    (doall (map #((webgl/drawtriangles! gfx projection (actorskin/get-skin-triangles %))
-           (webgl/drawpoints! gfx projection (actorskin/getpoints %))
-           (webgl/drawlines! gfx projection (actorskin/getlines %))) (:actors world)))
+    (doall (map #((webgl/drawpoints! gfx projection (actorskin/getpoints %))
+                  (webgl/drawtriangles! gfx projection (actorskin/get-skin-triangles %))
+                  (webgl/drawlines! gfx projection (actorskin/getlines %))) (:actors world)))
 
     (webgl/drawpoints! gfx projection (map :p (vals (:masses world))))
     (webgl/drawlines! gfx projection (:surfacelines world))
@@ -191,7 +191,7 @@
         gui (uiwebgl/init)
         views (ui/gen-from-desc layouts/hud (get-in gui [:tempcanvas]))
         world {:setup false
-               :actors [(actor/init 480.0 300.0)] ; (actor/init 580.0 300.0)]
+               :actors [(actor/init 480.0 300.0) (actor/init 580.0 300.0)]
                :masses {:0 (phys2/mass2 500.0 300.0 1.0 1.0 0.9)}
                :dguards []
                :aguards []

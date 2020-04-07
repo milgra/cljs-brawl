@@ -171,16 +171,7 @@
 (defn drawtriangles! [ {:keys [context shader location_pos location_col actor_buffer] :as state } projection points ]
     
   (.bindBuffer context buffer-object/array-buffer actor_buffer)
-  
-  (.bufferData context
-               buffer-object/array-buffer
-               (ta/float32
-                (vec
-                 (flatten
-                  (map
-                   (fn voxelize [[tx ty r g b a]]
-                     [tx ty r g b a]) points))))
-               buffer-object/dynamic-draw)
+  (.bufferData context buffer-object/array-buffer (ta/float32 (flatten points)) buffer-object/dynamic-draw)
   
   (buffers/draw!
    context
