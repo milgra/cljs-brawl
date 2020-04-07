@@ -133,9 +133,10 @@
     (webgl/clear! gfx)
     (webgl/drawshapes! gfx projection (:trans state) variation)
 
-    (doall (map #((webgl/drawpoints! gfx projection (actorskin/getpoints %))
-                  (webgl/drawtriangles! gfx projection (actorskin/get-skin-triangles %))
-                  (webgl/drawlines! gfx projection (actorskin/getlines %))) (:actors world)))
+    (doall (map #(do
+                   ((webgl/drawpoints! gfx projection (actorskin/getpoints %))
+                    (webgl/drawtriangles! gfx projection (actorskin/get-skin-triangles %))
+                    (webgl/drawlines! gfx projection (actorskin/getlines %)))) (:actors world)))
 
     (webgl/drawpoints! gfx projection (map :p (vals (:masses world))))
     (webgl/drawlines! gfx projection (:surfacelines world))
