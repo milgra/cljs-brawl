@@ -133,11 +133,12 @@
     (webgl/clear! gfx)
     (webgl/drawshapes! gfx projection (:trans state) variation)
 
-    (doall (map #(do
-                   ((webgl/drawpoints! gfx projection (actorskin/getpoints %))
-                    (webgl/drawtriangles! gfx projection (actorskin/get-skin-triangles %))
-                    (webgl/drawlines! gfx projection (actorskin/getlines %)))) (:actors world)))
-
+    (doall (map (fn [act]
+                  ;(webgl/drawpoints! gfx projection (actorskin/getpoints act))
+                  (webgl/drawtriangles! gfx projection (actorskin/get-skin-triangles act))
+                  ;(webgl/drawlines! gfx projection (actorskin/getlines act))
+                  ) (:actors world)))
+    
     (webgl/drawpoints! gfx projection (map :p (vals (:masses world))))
     (webgl/drawlines! gfx projection (:surfacelines world))
 ))
@@ -153,6 +154,7 @@
                                                       :down (keycodes 40)
                                                       :punch (keycodes 70)
                                                       :run (keycodes 32)
+                                                      :block (keycodes 68)
                                                       } surfaces 1.0) actors))
           newmasses (-> masses
                         (phys2/add-gravity [0.0 0.2])
@@ -232,7 +234,7 @@
                           true (assoc :views newviews)
                           true (update-translation keyevent))]
            (if (:setup newworld) (draw-world! newstate frame))
-           (draw-ui! newstate frame)
+           ; (draw-ui! newstate frame)
            newstate)
          prestate)))))
 

@@ -84,7 +84,7 @@
   
 
 (defn init [x y]
-  {:next nil
+  {:next nil ; next mode walk / jump / idle
    :speed 0.0
    :power 100.0
    :health 100.0
@@ -96,6 +96,10 @@
    :base-order {:active :base_l :passive :base_r}
    :base-target nil
    :base-surfaces {:active nil :passive nil}
+   :punch-hand :hand_l
+   :punch-press false
+   :kick-foot :foot_l
+   :kick-press false
    :jump-state 0
    :step-length 0
    ; command collector
@@ -150,14 +154,20 @@
 
 (defn move-hand-walk
   "move head point"
-  [{:keys [facing] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r {[nx ny :as neck] :p} :neck } :masses { arml :arml } :metrics angle :idle-angle :as state}
+  [{:keys [facing punch-pressed punch-hand] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r {[nx ny :as neck] :p} :neck } :masses { arml :arml } :metrics angle :idle-angle :as state}
    {:keys [down up left right punch block]}]
   (let [nlx (+ (* facing (+ (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
         nrx (- (* facing (- (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
         nly (+ (* arml 0.1 ) (* (Math/cos angle ) 5.0))
         nry (- (* arml 0.14 )(* (Math/cos angle ) 5.0))
-        hand_l [(+ nx nlx) (+ ny nly)]
-        hand_r [(+ nx nrx) (+ ny nry)]
+        hand_l (cond
+                 block [(+ nx (* facing arml 0.4)) (- ny 10.0)]
+                 (and punch-pressed (= punch-hand :hand_l)) [(+ nx (* facing arml 0.99)) ny]
+                 :else [(+ nx nlx) (+ ny nly)])
+        hand_r (cond
+                 block [(+ nx (* facing arml 0.4)) (- ny 10.0)]
+                 (and punch-pressed (= punch-hand :hand_r)) [(+ nx (* facing arml 0.99)) ny]                 
+                 :else [(+ nx nrx) (+ ny nry)])
         elbow_l (triangle_with_bases neck hand_l (* arml 0.5) facing)
         elbow_r (triangle_with_bases neck hand_r (* arml 0.5) facing)]
     (-> state
@@ -429,6 +439,19 @@
 (defn update-idle [state] state)
 
 
+(defn update-attack [{:keys [punch-pressed punch-hand] :as state} {:keys [left right up down punch] :as control}]
+  (let [pressed (cond
+                  (and (not punch-pressed) punch) true
+                  (and punch-pressed (not punch)) false
+                  :else punch-pressed)
+        hand (if (and (not punch-pressed) punch)
+               (if (= punch-hand :hand_l) :hand_r :hand_l)
+               punch-hand)]
+    (-> state
+        (assoc :punch-pressed pressed)
+        (assoc :punch-hand hand))))
+
+
 (defn update-angle
   [{angle :idle-angle :as state}]
   (if (> angle MPI2)
@@ -440,5 +463,6 @@
   "update actor state"
   (-> state
       (update-angle)
+      (update-attack control)
       (update-fn control surfaces time)
       (update-mode)))

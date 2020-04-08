@@ -66,13 +66,13 @@
         abbig pb ;;(add-v2 pb (scale-v2 ab 1.2))
         leftp (if (= facing -1)
                 (add-v2 abbig (resize-v2 (rotate-90-cw ab) -1.0))
-                (add-v2 abbig (resize-v2 (rotate-90-cw ab) 20.0)))
+                (add-v2 abbig (resize-v2 (rotate-90-cw ab) 30.0)))
         rightp (if (= facing -1)
-                (add-v2 abbig (resize-v2 (rotate-90-ccw ab) 20.0))
+                (add-v2 abbig (resize-v2 (rotate-90-ccw ab) 30.0))
                 (add-v2 abbig (resize-v2 (rotate-90-ccw ab) -1.0)))
         topp (if (= facing -1)
-                (add-v2 leftp (resize-v2 ab -10.0))
-                (add-v2 rightp (resize-v2 ab -10.0)))]
+                (add-v2 leftp (resize-v2 ab -15.0))
+                (add-v2 rightp (resize-v2 ab -15.0)))]
     [topp leftp rightp]))
 
 
@@ -100,30 +100,30 @@
     {as :active ps :passive} :base-surfaces
     facing :facing}]
   (concat []
-          ;; feet
-          (if (and (= pf :base_l) (not= ps nil))
-            (map #(concat % [0.5 0.0 0.5 1.0])
-                 (gen-foot-triangles (add-v2 (:p foot_l) (rotate-90-cw (:b ps)))
-                                     (:p foot_l)
-                                     5.0
-                                     facing))
-            (map #(concat % [0.5 0.0 0.5 1.0])
-                 (gen-foot-triangles (:p knee_l) (:p foot_l) 5.0 facing)))
-
+          ;; legs
+          (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)] [1.0 (+ hipw 3.0) (+ legw 3.0) (+ legw 4.0)])) ; stroke
+          (map #(concat % colb) (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)] [6.0 hipw legw legw]))
+          ; feet
           (if (and (= pf :base_r) (not= ps nil))
-            (map #(concat % [0.0 0.0 0.5 1.0])
+            (map #(concat % colb)
                  (gen-foot-triangles (add-v2 (:p foot_r) (rotate-90-cw (:b ps)))
                                      (:p foot_r)
                                      5.0
                                      facing))
-            (map #(concat % [0.0 0.0 0.5 1.0])
+            (map #(concat % colb)
                  (gen-foot-triangles (:p knee_r) (:p foot_r) 5.0 facing)))
-          ;; legs
-          (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)] [1.0 (+ hipw 3.0) (+ legw 3.0) (+ legw 4.0)])) ; stroke
-          (map #(concat % colb) (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)] [6.0 hipw legw legw]))
-
+          
           (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [6.0 (+ hipw 3.0) (+ legw 3.0) (+ legw 3.0)])) ; stroke
           (map #(concat % cola) (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [1.0 hipw legw legw]))
+          ;; feet
+          (if (and (= pf :base_l) (not= ps nil))
+            (map #(concat % cola)
+                 (gen-foot-triangles (add-v2 (:p foot_l) (rotate-90-cw (:b ps)))
+                                     (:p foot_l)
+                                     5.0
+                                     facing))
+            (map #(concat % cola)
+                 (gen-foot-triangles (:p knee_l) (:p foot_l) 5.0 facing)))
 
           (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [(+ armw 3.0) (+ armw 3.0) (+ armw 3.0)])) ; stroke
           (map #(concat % colb) (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [armw armw armw]))
