@@ -286,32 +286,51 @@
 
 (defn move-feet-walk
   "move active base towards target point"
-  [{:keys [masses speed base-order base-target step-length facing] {legl :legl} :metrics :as state}
+  [{:keys [masses speed base-order base-target step-length facing] {legl :legl runs :runs walks :walks} :metrics :as state}
+   {:keys [left right up down run]} 
    surfaces
    time]
   (if (> (Math/abs speed) 0.1)
     (if base-target
       (let [active-base (:active base-order)
+            passive-base (:passive base-order)
             actual-pos (:p (masses active-base))
             actual-vec (math2/sub-v2 base-target actual-pos)
             actual-size (math2/length-v2 actual-vec)
 
             current-size (* (Math/abs speed) time)
             current-vec (math2/resize-v2 actual-vec current-size)
+
             [cpx cpy :as current-pos] (math2/add-v2 actual-pos current-vec)
+            [px py] (:p (masses passive-base))
             
             remaining-size (- actual-size current-size)
-            current-ratio (if (< (/ step-length 2) remaining-size) 
+            ; when walking, highest foot position is center
+            walk-lift-ratio (if (< (/ step-length 2) remaining-size) 
                             (/ (- step-length remaining-size) step-length) 
                             (/ remaining-size step-length))
-            
-            foot-lift (Math/abs (* speed 6.0 current-ratio))
-            foot_l (cond
-                     (= :base_l (:active base-order)) [cpx (- cpy foot-lift)]
-                     (= :base_l (:passive base-order)) (:p (:base_l masses)))
-            foot_r (cond
-                     (= :base_r (:active base-order)) [cpx (- cpy foot-lift)]
-                     (= :base_r (:passive base-order)) (:p (:base_r masses)))
+            ; when running. highest foot position is third
+            run-lift-ratio  (if (< remaining-size (/ step-length 3))
+                              (/ (- (/  step-length 3.0) remaining-size ) ( / step-length 3.0 ))
+                              walk-lift-ratio)
+            ; active leg is in air, passive is on ground
+            walk-lift-active (Math/abs (* speed 6.0 walk-lift-ratio))
+            walk-lift-passive 0.0
+            ; both leg is in air in center position, on ground on final position
+            run-lift-active (* legl 0.5 walk-lift-ratio)
+            run-lift-passive (* legl 0.5 run-lift-ratio)
+            ; walk/run speed ratio
+            speed-ratio (if (> (Math/abs speed) walks)
+                          (let [speed-diff (- runs speed)
+                                walkr (/ speed-diff (- runs walks))]
+                            walkr)
+                          1.0)
+            ; merge walk and run states
+            lift-active (+ (* speed-ratio walk-lift-active) (* (- 1.0 speed-ratio) run-lift-active))
+            lift-passive (+ (* speed-ratio walk-lift-passive) (* (- 1.0 speed-ratio) run-lift-passive))
+            ; set positions
+            foot_l (if (= :base_l (:active base-order)) [cpx (- cpy lift-active)] [px (- py lift-passive)])
+            foot_r (if (= :base_r (:active base-order)) [cpx (- cpy lift-active)] [px (- py lift-passive)])
             step? (if (< actual-size current-size) true false)]
         (cond-> state
           true (assoc-in [:masses active-base :p] current-pos)
@@ -404,7 +423,7 @@
   [state control surfaces time]
   (-> state
       (update-speed control time)
-      (move-feet-walk surfaces time)
+      (move-feet-walk control surfaces time)
       (move-hip-walk control)
       (move-knee-walk control)
       (move-head-walk control)
