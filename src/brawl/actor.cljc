@@ -26,13 +26,14 @@
   {:height (/ (rand 10) 10)
    :hitpower (/ (rand 10) 10)
    :hitrate (/ (rand 10) 10)
-   :stamine (/ (rand 10) 10)
+   :stamina (/ (rand 10) 10)
    :speed (/ (rand 10) 10)
    :color_a [(rand) (rand) (rand) 1.0]
    :color_b [(rand) (rand) (rand) 1.0]})
 
 
-(defn generate-metrics [{:keys [hitpower hitrate stamina speed height color_a color_b]}]
+(defn generate-metrics [{:keys [hitpower hitrate stamina speed height color_a color_b] :as base}]
+  (println "generate metrics" base)
   (let [hp (cond (> hitpower 1.0) 1.0 (< hitpower 0.0) 0.0 :else hitpower)
         hr (cond (> hitrate 1.0) 1.0 (< hitrate 0.0) 0.0 :else hitrate)
         st (cond (> stamina 1.0) 1.0 (< stamina 0.0) 0.0 :else stamina)
@@ -54,14 +55,14 @@
         
         runs (+ 5.0 (* speed 4.0) height )
         walks (* runs 0.6)
-        punchs (+ 7.0 (* hitrate 2.0))
-        kicks (+ 0.2 hitrate)
+        punchs (+ 7.0 (* hr 2.0))
+        kicks (+ 0.2 hr)
 
-        maxh (+ 100.0 (* stamina 10.0))
-        maxp (+ 100.0 (* hitpower 10.0))
+        maxh (+ 100.0 (* st 10.0))
+        maxp (+ 100.0 (* hp 10.0))
 
-        hitp (+ (* maxp 0.3) (* maxp 0.2 hitpower ) )
-        kickp (+ (* maxp 0.3) (* maxp 0.2 hitpower ) )
+        hitp (+ (* maxp 0.3) (* maxp 0.2 hp ) )
+        kickp (+ (* maxp 0.3) (* maxp 0.2 hp ) )
 
         [ra ga ba] color_a
         [rb gb bb] color_b
@@ -198,9 +199,7 @@
         sty (- cy (+ (* legl 0.85) ; starting position is 0.85 leglength
                      (/ (Math/abs (- bx ax)) 10.0) ; if legs are closer hip is higher
                      (* (Math/sin idle-angle) 2.0) ; breathing movement
-                     (if (< (Math/abs speed) 3.0) (- (* (- 3.0 (Math/abs speed)) 2.0) (/ (Math/abs (- bx ax)) 5.0)) 0)
-                     ))
-               ;)) ; if stangind stand up more with straight back
+                     (if (< (Math/abs speed) 3.0) (- (* (- 3.0 (Math/abs speed)) 2.0) (/ (Math/abs (- bx ax)) 5.0)) 0))) ; if stangind stand up more with straight back
         ; squatting y pos
         sqy (- cy (* legl 0.5))
         ; final x
@@ -232,8 +231,8 @@
   "gets base collision triangle"
   [[x y] speed]
   (let [size (cond
-               (and (> speed -1.0) (<  speed 0.0)) -10.0
-               (and (< speed  1.0) (>= speed 0.0))  10.0
+               (and (> speed -1.0) (<  speed 0.0)) -20.0
+               (and (< speed  1.0) (>= speed 0.0))  20.0
                :else (+ (* (/ speed (Math/abs speed ) 40.0 ) ) (* speed 8.0)))
         A [(+ x size) y]
         B [(- size) (/ (Math/abs size) 2.0)]
@@ -275,6 +274,16 @@
         (assoc :base-surfaces {:active newactivesurf :passive newpassivesurf}))))
 
 
+(defn move-knee-walk
+ [{:keys [masses speed base-order base-target step-length facing] {legl :legl} :metrics :as state}
+   time]
+  (let [knee_l (triangle_with_bases (get-in masses [:foot_l :p]) (get-in masses [:hip :p]) (/ legl 1.95) facing)
+        knee_r (triangle_with_bases (get-in masses [:foot_r :p]) (get-in masses [:hip :p]) (/ legl 1.95) facing)]
+    (-> state
+        (assoc-in [:masses :knee_l :p] knee_l) 
+        (assoc-in [:masses :knee_r :p] knee_r))))
+
+
 (defn move-feet-walk
   "move active base towards target point"
   [{:keys [masses speed base-order base-target step-length facing] {legl :legl} :metrics :as state}
@@ -299,14 +308,9 @@
                      (= :base_l (:passive base-order)) (:p (:base_l nmasses)))
             foot_r (cond
                      (= :base_r (:active base-order)) [(first currp) (- (second currp) act_dy)]
-                     (= :base_r (:passive base-order)) (:p (:base_r nmasses)))
-            knee_l (triangle_with_bases foot_l (get-in masses [:hip :p]) (/ legl 1.95) facing)
-            knee_r (triangle_with_bases foot_r (get-in masses [:hip :p]) (/ legl 1.95) facing)]
-
+                     (= :base_r (:passive base-order)) (:p (:base_r nmasses)))]
         (cond-> state
           true (assoc :masses nmasses)
-          true (assoc-in [:masses :knee_l :p] knee_l) 
-          true (assoc-in [:masses :knee_r :p] knee_r)
           true (assoc-in [:masses :foot_l :p] foot_l) 
           true (assoc-in [:masses :foot_r :p] foot_r)
           step? (step-feet-walk surfaces))) ; step if base target is close
@@ -385,6 +389,7 @@
                  true (assoc-in [:masses :base_l] (:base_l newbases))
                  true (assoc-in [:masses :base_r] (:base_r newbases))
                  true (move-hip-jump control)
+                 true (move-knee-walk control)
                  true (move-head-walk control)
                  true (move-hand-walk control))]
     result))
@@ -397,6 +402,7 @@
       (update-speed control time)
       (move-feet-walk surfaces time)
       (move-hip-walk control)
+      (move-knee-walk control)
       (move-head-walk control)
       (move-hand-walk control)))
 
