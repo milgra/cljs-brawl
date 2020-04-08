@@ -154,8 +154,8 @@
    {:keys [down up left right punch block]}]
   (let [nlx (+ (* facing (+ (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
         nrx (- (* facing (- (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
-        nly (+ (* arml -0.1 ) (* (Math/cos angle ) 5.0))
-        nry (- (* arml -0.14 )(* (Math/cos angle ) 5.0))
+        nly (+ (* arml 0.1 ) (* (Math/cos angle ) 5.0))
+        nry (- (* arml 0.14 )(* (Math/cos angle ) 5.0))
         hand_l [(+ nx nlx) (+ ny nly)]
         hand_r [(+ nx nrx) (+ ny nry)]
         elbow_l (triangle_with_bases neck hand_l (* arml 0.5) facing)
@@ -279,6 +279,15 @@
         (assoc-in [:masses :knee_r :p] knee_r))))
 
 
+(defn move-feet-jump
+  "move active base towards target point"
+  [{:keys [masses speed base-order base-target step-length facing] {legl :legl runs :runs walks :walks} :metrics :as state}
+   {:keys [left right up down run]}]
+  (-> state
+      (assoc-in [:masses :foot_l] (:base_l masses)) 
+      (assoc-in [:masses :foot_r] (:base_r masses))))
+      
+
 (defn move-feet-walk
   "move active base towards target point"
   [{:keys [masses speed base-order base-target step-length facing] {legl :legl runs :runs walks :walks} :metrics :as state}
@@ -397,6 +406,7 @@
                  next (assoc :next next)
                  true (assoc-in [:masses :base_l] (:base_l newbases))
                  true (assoc-in [:masses :base_r] (:base_r newbases))
+                 true (move-feet-jump control)
                  true (move-hip-jump control)
                  true (move-knee-walk control)
                  true (move-head-walk control)
