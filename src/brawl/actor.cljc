@@ -28,8 +28,8 @@
    :hitrate (/ (rand 10) 10)
    :stamine (/ (rand 10) 10)
    :speed (/ (rand 10) 10)
-   :color_a [(rand) (rand) (rand)]
-   :color_b [(rand) (rand) (rand)]})
+   :color_a [(rand) (rand) (rand) 1.0]
+   :color_b [(rand) (rand) (rand) 1.0]})
 
 
 (defn generate-metrics [{:keys [hitpower hitrate stamina speed height color_a color_b]}]
@@ -39,7 +39,7 @@
         sp (cond (> speed 1.0) 1.0 (< speed 0.0) 0.0 :else speed)
 
         delta (-(- 2.5 height) (+ st sp hp hr))
-        size (spec/conform ::norm (+ height delta))
+        size (cond (> (+ height delta) 1.0) 1.0 (< (+ height delta) 0.0) 0.0 :else (+ height delta))
 
         headl (+ 16.0 (* size 8.0))
         bodyl (+ 50.0 (* size 20.0)) 
@@ -115,7 +115,7 @@
    ; debug
    :step-zone [x y]
    ; body metrics
-   :metrics (generate-metrics (basemetrics-default))})
+   :metrics (generate-metrics (basemetrics-random))})
 
         
 (defn triangle_with_bases
@@ -191,29 +191,41 @@
 (defn move-hip-walk
   "move hip points, handle jumping"
   [{:keys [next jump-state idle-angle facing speed] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r } :masses { legl :legl } :metrics :as state}
-   {:keys [down up left right]}]
-  (let [x (+ ax (/ (- bx ax) 2))
-        y (+ ay (/ (- by ay) 2))
-        t (- y (* legl 0.85) )
-        b (- y 20.0)
-        d (cond
-            (or down (and up (= jump-state 0)))
-            (/ (- b hy) 3)
-            (or (not down) (and up (= jump-state 1)))
-            (/ (- t hy) 3))
-        breathdy (if (and (not left) (not right)) (+ -2.0 (* (Math/sin idle-angle) 2.0)) 2.0)
-        legdisty (Math/abs (/ (- bx ax) 10))
-        y (+ hy d breathdy legdisty) ; breathing movement when idle, standing should be higher than waling
-        dx (if (or left right) (* 0.5 speed) 0.0) ; hip leand forward when moving with speed
-        s (cond
-            (and up (= jump-state 0) (< (Math/abs d) 0.5)) 1
-            (and up (= jump-state 1) (< (Math/abs d) 1.0)) 2
-            :else jump-state)
-        nnext (if (= s 2) "jump" next)]
+   {:keys [down up left right run]}]
+  (let [cx (+ ax (/ (- bx ax) 2)) ; x center of bases
+        cy (+ ay (/ (- by ay) 2)) ; y center of bases
+        ; standing y pos
+        sty (- cy (+ (* legl 0.85) ; starting position is 0.85 leglength
+                     (/ (Math/abs (- bx ax)) 10.0) ; if legs are closer hip is higher
+                     (* (Math/sin idle-angle) 2.0) ; breathing movement
+                     (if (< (Math/abs speed) 3.0) (- (* (- 3.0 (Math/abs speed)) 2.0) (/ (Math/abs (- bx ax)) 5.0)) 0)
+                     ))
+               ;)) ; if stangind stand up more with straight back
+        ; squatting y pos
+        sqy (- cy (* legl 0.5))
+        ; final x
+        fx (cond
+             run (+ cx (* facing 10.0)) ; head is in front of body when running
+             :else (+ cx (* facing 2.0))) ; when waling
+        ; final y
+        dy (cond
+             (or down (and up (= jump-state 0)))
+             (/ (- sqy hy) 3) ; move to standing pos 
+             (or (not down) (and up (= jump-state 1)))
+             (/ (- sty hy) 3)) ; move to squatting pos
+
+        fy (+ hy dy)
+        
+        newstate (cond
+                (and up (= jump-state 0) (< (Math/abs dy) 0.5)) 1
+                (and up (= jump-state 1) (< (Math/abs dy) 1.0)) 2
+                :else jump-state)
+
+        newnext (if (= newstate 2) "jump" next)]
     (-> state
-        (assoc :next nnext)
-        (assoc-in [:masses :hip :p] [(+ x dx) y])
-        (assoc :jump-state s))))
+        (assoc-in [:masses :hip :p] [fx fy])
+        (assoc :next newnext)
+        (assoc :jump-state newstate))))
 
 
 (defn get-step-zone
@@ -265,7 +277,7 @@
 
 (defn move-feet-walk
   "move active base towards target point"
-  [{:keys [masses speed base-order base-target step-length] :as state}
+  [{:keys [masses speed base-order base-target step-length facing] {legl :legl} :metrics :as state}
    surfaces
    time]
   (if (> (Math/abs speed) 0.1)
@@ -281,13 +293,22 @@
             step-ratio (if (< (/ step-length 2) curr-delta) (/ (- step-length curr-delta) step-length) (/ curr-delta step-length))
             act_dy (Math/abs (* speed 6.0 step-ratio))
             nmasses (assoc-in masses [akw :p] currp)
-            step? (if (< stepvl currl) true false)]
+            step? (if (< stepvl currl) true false)
+            foot_l (cond
+                     (= :base_l (:active base-order)) [(first currp) (- (second currp) act_dy)]
+                     (= :base_l (:passive base-order)) (:p (:base_l nmasses)))
+            foot_r (cond
+                     (= :base_r (:active base-order)) [(first currp) (- (second currp) act_dy)]
+                     (= :base_r (:passive base-order)) (:p (:base_r nmasses)))
+            knee_l (triangle_with_bases foot_l (get-in masses [:hip :p]) (/ legl 1.95) facing)
+            knee_r (triangle_with_bases foot_r (get-in masses [:hip :p]) (/ legl 1.95) facing)]
+
         (cond-> state
           true (assoc :masses nmasses)
-          (= :base_l (:active base-order)) (assoc-in [:masses :foot_l :p] [(first currp) (- (second currp) act_dy)])
-          (= :base_l (:passive base-order)) (assoc-in [:masses :foot_l] (:base_l nmasses))
-          (= :base_r (:active base-order)) (assoc-in [:masses :foot_r :p] [(first currp) (- (second currp) act_dy)])
-          (= :base_r (:passive base-order)) (assoc-in [:masses :foot_r] (:base_r nmasses))
+          true (assoc-in [:masses :knee_l :p] knee_l) 
+          true (assoc-in [:masses :knee_r :p] knee_r)
+          true (assoc-in [:masses :foot_l :p] foot_l) 
+          true (assoc-in [:masses :foot_r :p] foot_r)
           step? (step-feet-walk surfaces))) ; step if base target is close
       (step-feet-walk state surfaces)) ; step if no base target
     (assoc state :base-target nil))) ; stay still if no speed
@@ -344,21 +365,6 @@
           (assoc :update-fn update-jump)))))
 
 
-(defn update-skeleton
-  "update all points"
-  [{{{[hipx hipy] :p} :hip
-     {neck :p} :neck
-     {[txa tya :as base_l] :p} :base_l
-     {[txb tyb :as base_r] :p} :base_r} :masses :as state}
-   {:keys [left right up down punch]}]
-  (let [facing (state :facing)
-        knee_l (triangle_with_bases base_l [hipx hipy] 30.0 facing)
-        knee_r (triangle_with_bases base_r [hipx hipy] 30.0 facing)]
-    (-> state
-      (assoc-in [:masses :knee_l :p] knee_l ) 
-      (assoc-in [:masses :knee_r :p] knee_r ))))
-
-
 (defn update-jump
   "jump state update, update base masses in the world, check if they reached ground" 
   [{:keys [masses speed] :as state}
@@ -410,5 +416,4 @@
   (-> state
       (update-angle)
       (update-fn control surfaces time)
-      (update-skeleton control)
       (update-mode)))
