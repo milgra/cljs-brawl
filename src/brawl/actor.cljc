@@ -53,7 +53,7 @@
         hipw (+ 6.0 (* st 20.0)) 
         legw (+ 6.0 (* st 5.0)) 
         
-        runs (+ 5.0 (* speed 4.0) height )
+        runs (+ 5.0 (* sp 4.0) height)
         walks (* runs 0.6)
         punchs (+ 7.0 (* hr 2.0))
         kicks (+ 0.2 hr)
@@ -92,6 +92,7 @@
    :update-fn update-jump
    :idle-angle 0
    ; walk state
+   :squat-size 0
    :base-order {:active :base_l :passive :base_r}
    :base-target nil
    :base-surfaces {:active nil :passive nil}
@@ -150,15 +151,15 @@
 (defn move-hand-walk
   "move head point"
   [{:keys [facing] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r {[nx ny :as neck] :p} :neck } :masses { arml :arml } :metrics angle :idle-angle :as state}
-   {:keys [down up left right punch]}]
-  (let [nax (+ (* facing (+ (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
-        nbx (- (* facing (- (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
-        nay (+ (* arml -0.1 ) (* (Math/cos angle ) 5.0))
-        nby (- (* arml -0.14 )(* (Math/cos angle ) 5.0))
-        hand_l [(+ nx nax) (+ ny nay)]
-        hand_r [(+ nx nbx) (+ ny nby)]
-        elbow_l (triangle_with_bases neck hand_l (if punch 20.0 30.0) facing)
-        elbow_r (triangle_with_bases neck hand_r 30.0 facing)]
+   {:keys [down up left right punch block]}]
+  (let [nlx (+ (* facing (+ (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
+        nrx (- (* facing (- (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
+        nly (+ (* arml -0.1 ) (* (Math/cos angle ) 5.0))
+        nry (- (* arml -0.14 )(* (Math/cos angle ) 5.0))
+        hand_l [(+ nx nlx) (+ ny nly)]
+        hand_r [(+ nx nrx) (+ ny nry)]
+        elbow_l (triangle_with_bases neck hand_l (* arml 0.5) facing)
+        elbow_r (triangle_with_bases neck hand_r (* arml 0.5) facing)]
     (-> state
         (assoc-in [:masses :hand_l :p] hand_l)
         (assoc-in [:masses :hand_r :p] hand_r)
@@ -168,13 +169,13 @@
 
 (defn move-head-walk
   "move head point"
-  [{:keys [facing] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r } :masses { legl :legl } :metrics :as state}
+  [{:keys [facing squat-size] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r } :masses { legl :legl bodyl :bodyl headl :headl } :metrics :as state}
    {:keys [down up left right]}]
-  (let [nx (* facing (/ (Math/abs (- bx ax )) 8 )) ; head move forward and backwards when stepping
-        nnx (if down (* facing 20.0)) ; head move even forward when squatting
-        ny (if down 20.0 0.0) ; head should move lower when squatting
-        neck [(+ hx nx nnx) (- hy 50.0)]
-        head [(+ hx nx nnx) (- (+ hy ny) 70.0)]]
+  (let [nx (* facing (/ (Math/abs (- bx ax )) 8.0 )) ; head move forward and backwards when stepping
+        nnx (* facing squat-size 0.5) ; head move even forward when squatting
+        ny (* squat-size 0.25) ; head should move lower when squatting
+        neck [(+ hx nx nnx) (- (+ hy ny) bodyl)]
+        head [(+ hx nx nnx) (- (+ hy ny) (+ bodyl headl))]]
     (-> state
         (assoc-in [:masses :neck :p] neck)
         (assoc-in [:masses :head :p] head))))
@@ -195,35 +196,29 @@
    {:keys [down up left right run]}]
   (let [cx (+ ax (/ (- bx ax) 2)) ; x center of bases
         cy (+ ay (/ (- by ay) 2)) ; y center of bases
-        ; standing y pos
-        sty (- cy (+ (* legl 0.85) ; starting position is 0.85 leglength
+        sty (- cy (+ (* legl 0.85) ; standing y pos, starting position is 0.85 leglength
                      (/ (Math/abs (- bx ax)) 10.0) ; if legs are closer hip is higher
                      (* (Math/sin idle-angle) 2.0) ; breathing movement
                      (if (< (Math/abs speed) 3.0) (- (* (- 3.0 (Math/abs speed)) 2.0) (/ (Math/abs (- bx ax)) 5.0)) 0))) ; if stangind stand up more with straight back
-        ; squatting y pos
-        sqy (- cy (* legl 0.5))
-        ; final x
-        fx (cond
+        sqy (- cy (* legl 0.5)) ; squatting y pos
+        fx (cond ; final x
              run (+ cx (* facing 10.0)) ; head is in front of body when running
              :else (+ cx (* facing 2.0))) ; when waling
-        ; final y
         dy (cond
              (or down (and up (= jump-state 0)))
              (/ (- sqy hy) 3) ; move to standing pos 
              (or (not down) (and up (= jump-state 1)))
              (/ (- sty hy) 3)) ; move to squatting pos
-
-        fy (+ hy dy)
-        
+        fy (+ hy dy) ; final y
         newstate (cond
                 (and up (= jump-state 0) (< (Math/abs dy) 0.5)) 1
                 (and up (= jump-state 1) (< (Math/abs dy) 1.0)) 2
                 :else jump-state)
-
         newnext (if (= newstate 2) "jump" next)]
     (-> state
         (assoc-in [:masses :hip :p] [fx fy])
         (assoc :next newnext)
+        (assoc :squat-size (- fy sty))
         (assoc :jump-state newstate))))
 
 
@@ -233,7 +228,7 @@
   (let [size (cond
                (and (> speed -1.0) (<  speed 0.0)) -20.0
                (and (< speed  1.0) (>= speed 0.0))  20.0
-               :else (+ (* (/ speed (Math/abs speed ) 40.0 ) ) (* speed 8.0)))
+               :else (+ (* (/ speed (Math/abs speed)) 40.0) (* speed 8.0)))
         A [(+ x size) y]
         B [(- size) (/ (Math/abs size) 2.0)]
         C [(- size) (-(/ (Math/abs size) 2.0))]]
@@ -297,41 +292,32 @@
             actual-pos (:p (masses active-base))
             actual-vec (math2/sub-v2 base-target actual-pos)
             actual-size (math2/length-v2 actual-vec)
-
             current-size (* (Math/abs speed) time)
             current-vec (math2/resize-v2 actual-vec current-size)
-
-            [cpx cpy :as current-pos] (math2/add-v2 actual-pos current-vec)
-            [px py] (:p (masses passive-base))
-            
             remaining-size (- actual-size current-size)
-            ; when walking, highest foot position is center
-            walk-lift-ratio (if (< (/ step-length 2) remaining-size) 
-                            (/ (- step-length remaining-size) step-length) 
-                            (/ remaining-size step-length))
-            ; when running. highest foot position is third
-            run-lift-ratio  (if (< remaining-size (/ step-length 3))
-                              (/ (- (/  step-length 3.0) remaining-size ) ( / step-length 3.0 ))
-                              walk-lift-ratio)
-            ; active leg is in air, passive is on ground
+            [cpx cpy :as current-pos] (math2/add-v2 actual-pos current-vec) ; current position
+            [ppx ppy] (:p (masses passive-base)) ; passive position
+            walk-lift-ratio (if (< (/ step-length 2) remaining-size); when walking, highest foot position is center TODO simplify 
+                              (/ (- step-length remaining-size) step-length) 
+                              (/ remaining-size step-length))
+            run-lift-ratio-passive  (if (< remaining-size (/ step-length 3)) ; when running. highest foot position is third for passive
+                                  (/ (- (/  step-length 3.0) remaining-size ) ( / step-length 3.0 ))
+                                  0.0)
+            run-lift-ratio-active (/ remaining-size step-length) ; active foot falling is linear to target point
             walk-lift-active (Math/abs (* speed 6.0 walk-lift-ratio))
             walk-lift-passive 0.0
-            ; both leg is in air in center position, on ground on final position
-            run-lift-active (* legl 0.5 walk-lift-ratio)
-            run-lift-passive (* legl 0.5 run-lift-ratio)
-            ; walk/run speed ratio
-            speed-ratio (if (> (Math/abs speed) walks)
-                          (let [speed-diff (- runs speed)
+            run-lift-active (* legl 0.5 run-lift-ratio-active)
+            run-lift-passive (* legl 0.5 run-lift-ratio-passive)
+            speed-ratio (if (> (Math/abs speed) walks) ; walk / run speed ratio in actual state
+                          (let [speed-diff (- runs (Math/abs speed))
                                 walkr (/ speed-diff (- runs walks))]
                             walkr)
                           1.0)
-            ; merge walk and run states
-            lift-active (+ (* speed-ratio walk-lift-active) (* (- 1.0 speed-ratio) run-lift-active))
+            lift-active (+ (* speed-ratio walk-lift-active) (* (- 1.0 speed-ratio) run-lift-active)) ; merge walk and run states
             lift-passive (+ (* speed-ratio walk-lift-passive) (* (- 1.0 speed-ratio) run-lift-passive))
-            ; set positions
-            foot_l (if (= :base_l (:active base-order)) [cpx (- cpy lift-active)] [px (- py lift-passive)])
-            foot_r (if (= :base_r (:active base-order)) [cpx (- cpy lift-active)] [px (- py lift-passive)])
-            step? (if (< actual-size current-size) true false)]
+            foot_l (if (= :base_l (:active base-order)) [cpx (- cpy lift-active)] [ppx (- ppy lift-passive)]) ; final position
+            foot_r (if (= :base_r (:active base-order)) [cpx (- cpy lift-active)] [ppx (- ppy lift-passive)])
+            step? (if (< actual-size current-size) true false)] ; do we need step
         (cond-> state
           true (assoc-in [:masses active-base :p] current-pos)
           true (assoc-in [:masses :foot_l :p] foot_l) 
@@ -346,7 +332,7 @@
   [{:keys [speed facing metrics] :as state}
    {:keys [left right up down run]}
    time]
-  (let [max (if (or run down) (:runs metrics) (:walks metrics))
+  (let [max (if (or (not run) down) (:walks metrics) (:runs metrics))
         nsx (cond
               right (if (> speed max)
                       (- speed (* 0.3 time))
