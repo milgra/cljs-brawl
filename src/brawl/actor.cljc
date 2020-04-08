@@ -291,26 +291,30 @@
    time]
   (if (> (Math/abs speed) 0.1)
     (if base-target
-      (let [akw (:active base-order)
-            apt (:p (masses akw))
-            stepv (math2/sub-v2 base-target apt)
-            stepvl (math2/length-v2 stepv)
-            currl (* (Math/abs speed) time)
-            currv (math2/resize-v2 stepv currl)
-            currp (math2/add-v2 apt currv)
-            curr-delta (math2/length-v2 (math2/sub-v2 base-target currp))
-            step-ratio (if (< (/ step-length 2) curr-delta) (/ (- step-length curr-delta) step-length) (/ curr-delta step-length))
-            act_dy (Math/abs (* speed 6.0 step-ratio))
-            nmasses (assoc-in masses [akw :p] currp)
-            step? (if (< stepvl currl) true false)
+      (let [active-base (:active base-order)
+            actual-pos (:p (masses active-base))
+            actual-vec (math2/sub-v2 base-target actual-pos)
+            actual-size (math2/length-v2 actual-vec)
+
+            current-size (* (Math/abs speed) time)
+            current-vec (math2/resize-v2 actual-vec current-size)
+            [cpx cpy :as current-pos] (math2/add-v2 actual-pos current-vec)
+            
+            remaining-size (- actual-size current-size)
+            current-ratio (if (< (/ step-length 2) remaining-size) 
+                            (/ (- step-length remaining-size) step-length) 
+                            (/ remaining-size step-length))
+            
+            foot-lift (Math/abs (* speed 6.0 current-ratio))
             foot_l (cond
-                     (= :base_l (:active base-order)) [(first currp) (- (second currp) act_dy)]
-                     (= :base_l (:passive base-order)) (:p (:base_l nmasses)))
+                     (= :base_l (:active base-order)) [cpx (- cpy foot-lift)]
+                     (= :base_l (:passive base-order)) (:p (:base_l masses)))
             foot_r (cond
-                     (= :base_r (:active base-order)) [(first currp) (- (second currp) act_dy)]
-                     (= :base_r (:passive base-order)) (:p (:base_r nmasses)))]
+                     (= :base_r (:active base-order)) [cpx (- cpy foot-lift)]
+                     (= :base_r (:passive base-order)) (:p (:base_r masses)))
+            step? (if (< actual-size current-size) true false)]
         (cond-> state
-          true (assoc :masses nmasses)
+          true (assoc-in [:masses active-base :p] current-pos)
           true (assoc-in [:masses :foot_l :p] foot_l) 
           true (assoc-in [:masses :foot_r :p] foot_r)
           step? (step-feet-walk surfaces))) ; step if base target is close
