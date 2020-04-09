@@ -135,7 +135,7 @@
 
     (doall (map (fn [act]
                   ;(webgl/drawpoints! gfx projection (actorskin/getpoints act))
-                  (webgl/drawtriangles! gfx projection (actorskin/get-skin-triangles act))
+                  (webgl/drawtriangles! gfx projection (actorskin/get-skin-triangles act variation))
                   ;(webgl/drawlines! gfx projection (actorskin/getlines act))
                   ) (:actors world)))
     

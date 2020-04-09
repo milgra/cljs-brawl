@@ -10,8 +10,10 @@ run :
 
 ## Todo
 
-* punch, kick, block
+* actor startup position
+* parameter slider with start button
+* first level
+* working punch
 * jump ending should be when both foot is close to a surface
 * actor hit
-* phasing actor skin
 * punching should be continouos with a small break between punches - slowness and quickness can be kept

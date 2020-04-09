@@ -10,7 +10,7 @@
    (fn extract [res act]
      (cond
        (or (s/starts-with? act "M") (s/starts-with? act "L"))
-       (conj res (map #(float (cljs.reader/read-string %)) (s/split (subs act 1) #",")))
+       (conj res (map #(* (float (cljs.reader/read-string %)) 2.5 ) (s/split (subs act 1) #",")))
        ;;(s/starts-with? act "z")
        ;;(conj res (first res))
        :else

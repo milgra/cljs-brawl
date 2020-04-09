@@ -120,8 +120,8 @@
    ; debug
    :step-zone [x y]
    ; body metrics
+   :randoms (vec (repeatedly 40 #(+ -1.5 (rand 3)))); random sizes for skin phasing
    :metrics (generate-metrics (basemetrics-random))})
-
         
 (defn triangle_with_bases
   "calculates third point of triangle based on the two base points, side length and direction, used for knee and elbow"
