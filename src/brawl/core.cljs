@@ -134,18 +134,33 @@
     (webgl/drawshapes! gfx projection (:trans state) variation)
 
     (doall (map (fn [act]
-                  ;(webgl/drawpoints! gfx projection (actorskin/getpoints act))
                   (webgl/drawtriangles! gfx projection (actorskin/get-skin-triangles act variation))
-                  ;(webgl/drawlines! gfx projection (actorskin/getlines act))
+                  (webgl/drawpoints! gfx projection (actorskin/getpoints act))
+                  (webgl/drawlines! gfx projection (actorskin/getlines act))
                   ) (:actors world)))
     
     (webgl/drawpoints! gfx projection (map :p (vals (:masses world))))
     (webgl/drawlines! gfx projection (:surfacelines world))
-))
+    ))
 
 
-(defn update-world [{:keys [actors surfaces masses setup] :as world} keycodes svglevel]
+(defn create-actors
+  "add actors, infos, guns and enpoint to scene based on pivot points in svg"
+  [state pivots]
+  (reduce (fn [{:keys [actors guns infos] :as state1} {id :id path :path}]         
+            (let [pos (nth path 3)
+                  toks (clojure.string/split id #"_")
+                  type (first (second toks))]
+              (cond (= type "l") (assoc state1 :actors (conj actors (actor/init (first pos) (second pos))))
+                    (= type "g") (assoc state1 :guns (conj guns {:pos pos}))
+                    (= type "e") (assoc state1 :endpos pos)
+                    (= type "i") (assoc state1 :infos (conj infos {:pos pos :index (js/parseInt (second type))})))     
+         )) state pivots))
+
+
+(defn update-world
   "updates phyisics and actors"
+  [{:keys [actors surfaces masses setup] :as world} keycodes svglevel]
   (cond
     setup ; create new state
     (let [newactors (vec (map #(actor/update-actor % {:left (keycodes 37)
@@ -167,9 +182,14 @@
           (assoc :masses newmasses)))
     svglevel ; load new level
     (let [points (map :path (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) svglevel ))
+          pivots (filter #(clojure.string/includes? (:id %) "Pivot") svglevel)
           surfaces (phys2/surfaces-from-pointlist points)
           lines (reduce (fn [result {t :t b :b}] (conj result t (math2/add-v2 t b))) [] surfaces)]       
+
+      (println "pivots" pivots)
+
       (-> world
+          (create-actors pivots)
           (assoc :setup true)
           (assoc :surfaces surfaces)
           (assoc :surfacelines lines)))
@@ -196,7 +216,10 @@
         gui (uiwebgl/init)
         views (ui/gen-from-desc layouts/hud (get-in gui [:tempcanvas]))
         world {:setup false
-               :actors [(actor/init 480.0 300.0)] ; (actor/init 580.0 300.0)]
+               :actors [] ; (actor/init 580.0 300.0)]
+               :guns []
+               :infos []
+               :endpos [0 0]
                :masses {:0 (phys2/mass2 500.0 300.0 1.0 1.0 0.9)}
                :dguards []
                :aguards []
@@ -235,7 +258,7 @@
                           true (assoc :views newviews)
                           true (update-translation keyevent))]
            (if (:setup newworld) (draw-world! newstate frame))
-           ; (draw-ui! newstate frame)
+           (draw-ui! newstate frame)
            newstate)
          prestate)))))
 
