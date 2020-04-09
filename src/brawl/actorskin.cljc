@@ -129,6 +129,7 @@
           (map #(concat % colb) (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [armw armw armw]))
 
           ;; body
+          (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [(+ neckw 3.0) (+ neckw 3.0) (+ hipw 3.0)]))
           (map #(concat % colc) (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [neckw neckw hipw]))
 
           ;; head

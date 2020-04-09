@@ -154,6 +154,7 @@
                                                       :down (keycodes 40)
                                                       :punch (keycodes 70)
                                                       :run (keycodes 32)
+                                                      :kick (keycodes 83)
                                                       :block (keycodes 68)
                                                       } surfaces 1.0) actors))
           newmasses (-> masses
