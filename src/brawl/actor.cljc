@@ -28,8 +28,8 @@
    :hitrate (/ (rand 10) 10)
    :stamina (/ (rand 10) 10)
    :speed (/ (rand 10) 10)
-   :color_a [(rand) (rand) (rand) 1.0]
-   :color_b [(rand) (rand) (rand) 1.0]})
+   :color_a [1.0 (rand) (rand) 1.0]
+   :color_b [1.0 (rand) (rand) 1.0]})
 
 
 (defn generate-metrics [{:keys [hitpower hitrate stamina speed height color_a color_b] :as base}]

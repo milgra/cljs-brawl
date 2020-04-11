@@ -39,6 +39,7 @@ O CLButton TEOptions BC00FFFFFF FCFFFFFFFF VA0 HA0 WI250 HE50
 D CLButton TEDonate BCFFFFFFFF FCFFFFFFFF TAO HA0 WI250 HE50
 ")
 
+
 (def opts
 "
  M |
@@ -52,3 +53,28 @@ A CLSlider TEControls~Alpha BCFFFFFF55 FCFFFFFFFF VA0 HA0 WI250 HE50
 P CLToggle TEShow/Hide~Physics BCFFFFFF55 FCFFFFFFFF TAA HA0 WI250 HE50
 B CLButton TEBack BCFFFFFF55 FCFFFFFFFF TAP HA0 WI250 HE50
 ")
+
+
+(def sliders
+;  if buttons are on the side, they will align to the sides
+;  if buttons are mid-line, they will align to center
+"
+|Hitpower Height Stamina|
+|Hitrate         Speed|
+Hitpower Class:Indicator Color:0000FF55 Color1:FFFFFF55 Width:200 Height:50
+Height   Class:Indicator Color:0000FF55 Color1:FFFFFF55 Width:200 Height:50
+Stamina  Class:Indicator Color:FF000055 Color1:FFFFFF55 Width:200 Height:50
+Hitrate  Class:Indicator Color:0000FF55 Color1:FFFFFF55 Width:200 Height:50
+Speed    Class:Indicator Color:FF000055 Color1:FFFFFF55 Width:200 Height:50")
+
+(def generator
+"
+|XP               Menu|
+|     Sliders
+|
+|     Randomize
+|     Start_Game
+Menu       Class:Button      Color:FF00FF55 Color1:FFFFFFFF Command:ShowMenu
+Sliders    Component:sliders Color:FF00FF55 Width:600 Height:200
+Randomize  Class:Button      Color:FF00FF55 Color1:FFFFFFFF Command:Randomize
+Start_Game Class:Button      Color:FF00FF55 Color1:FFFFFFFF Command:Startgame")

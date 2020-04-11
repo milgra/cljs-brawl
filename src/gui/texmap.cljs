@@ -1,5 +1,5 @@
-;; texture map
-;; places smaller bitmaps into one big bitmap to use it as gpu texture
+; texture map
+; places smaller bitmaps into one big bitmap to use it as gpu texture
 
 (ns gui.texmap
   (:require [gui.bitmap :as bitmap]))

@@ -10,7 +10,6 @@ run :
 
 ## Todo
 
-* actor startup position
 * parameter slider with start button
 * time scaling
 * first level
@@ -18,3 +17,4 @@ run :
 * jump ending should be when both foot is close to a surface
 * actor hit
 * punching should be continouos with a small break between punches - slowness and quickness can be kept
+* kickable trash cans

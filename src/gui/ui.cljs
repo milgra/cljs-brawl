@@ -14,27 +14,27 @@
 
 (defn gen-view [id name class width height color]
   "generate basic view with color"
-  {:cl class
+  {:class class
+   :name name
    :id id
-   :na name
    :x 0
    :y 0
    ;; if its between 0 and 1 its percentage, if its over its fixed
-   :w width
-   :h height
-   :tx (if (= class "Debug")
+   :width width
+   :height height
+   :color (if (= class "Debug")
          "Debug"
          (str "Color 0x" color))
-   :sv []})
+   :subviews []})
 
 
 (defn gen-label [tempcanvas text size]
-  (let [{lw :width lh :height} (webgl/sizes-for-glyph tempcanvas text size)
+  (let [{lw :widthidth lh :height} (webgl/sizes-for-glyph tempcanvas text size)
         hash (keyword (gen-id 8))
         view (gen-view hash text "Label" lw lh "00000000")]
   (-> view
-      (assoc :tx (str "Glyph " size "%" text))
-      (assoc :te text)
+      (assoc :color (str "Glyph " size "%" text))
+      (assoc :text text)
       (assoc :ha "0")
       (assoc :va "0"))
   ))
@@ -59,17 +59,17 @@
      (fn [result word]
        (cond
          (= (count word) 1) (assoc result :id word)
-         (str/starts-with? word "WI") (assoc result :w (js/parseInt (subs word 2) 10))
-         (str/starts-with? word "HE") (assoc result :h (js/parseInt (subs word 2) 10))
-         (str/starts-with? word "TE") (assoc result :te (str/replace (subs word 2) #"~" " "))
+         (str/starts-with? word "WI") (assoc result :width (js/parseInt (subs word 2) 10))
+         (str/starts-with? word "HE") (assoc result :height (js/parseInt (subs word 2) 10))
+         (str/starts-with? word "TE") (assoc result :text (str/replace (subs word 2) #"~" " "))
          :default (assoc result (keyword (str/lower-case (subs word 0 2))) (subs word 2))))
      {}
      words)))
 
 
-(defn add-subview [{subviews :sv :as view} subview]
+(defn add-subview [{subviews :subviews :as view} subview]
   "inserts subview's id to views sv property"
-  (assoc view :sv (conj subviews (subview :id))))
+  (assoc view :subviews (conj subviews (subview :id))))
 
 
 (defn get-key-for-name [viewmap name]
@@ -78,7 +78,7 @@
     (= name nil) nil
     (= name "0") "0"
     :else (when name
-            (let [pick (first (filter #(= ((val %) :na) name) (seq viewmap)))]
+            (let [pick (first (filter #(= ((val %) :name) name) (seq viewmap)))]
               (when pick (key pick))))))
 
 
@@ -99,53 +99,80 @@
    viewmap))
 
 
-(defn gen-base-views [lines]
+(defn gen-elements [viewmap line]
+  (let [words (str/split line #"\s+")
+        views (reduce (fn [res word]
+                        (let [id (when (> (count word) 1)
+                                   (cond
+                                     (str/starts-with? word "|") (subs word 1)
+                                     (str/ends-with? word "|") (subs word 0 (dec (count word)))
+                                     :else word))]
+                          (if id
+                            (let [kw (keyword id)
+                                  view (assoc (gen-view kw "none" "none" 100 100 "00000000") :text id)]
+                              (assoc res kw view))
+                            res)))
+                      {}
+                      words)]
+    (into viewmap views)))
+
+
+(defn gen-subviews
+  "generate subview if needed"
+  [viewmap {:keys[class text] :as view} tempcanvas]
+  (cond
+    (= class "Button")
+    (let [subview (gen-label tempcanvas text 40)
+          newview (add-subview view subview)]
+      (-> viewmap
+          (assoc (:id subview) subview)
+          (assoc (:id newview) newview)))
+    :else
+    viewmap))
+
+
+(defn gen-details [viewmap line tempcanvas]
+  (let [words (str/split line #"\s+")
+        id (first words)
+        view ((keyword id) viewmap)
+        newview (reduce (fn [res word]
+                          (let [[key value] (str/split word #":")]
+                            (assoc res (keyword (str/lower-case key)) value)))
+                        view
+                        (rest words))
+        base (:baseview viewmap)]
+    (-> viewmap
+        (assoc (keyword id) newview) ; store new view
+        (gen-subviews newview tempcanvas) ; generate subviews and update new view
+        (assoc :baseview (add-subview base newview))))) ; add view as base view subview
+
+
+(defn gen-base-views [lines tempcanvas]
   "generate basic views from line descriptions"
-  (let [baseview (gen-view :base "base" "base" 100 100 "00000000")]
-    (reduce
-     (fn [viewmap line]
-       (if-not (or (= (count line) 0) (str/ends-with? line "|"))
-         (let [{:keys [id cl w h bc fc ta ba la ra va ha te co]} (parse-desc line)
-               view (-> (gen-view (keyword (gen-id 8)) id cl w h bc)
-                        (add-align ta ba la ra ha va)
-                        (assoc :te te)
-                        (assoc :co co))
-               base (:baseview viewmap)]
-           (-> viewmap
-               (assoc (view :id) view)
-               (assoc :baseview (add-subview base view))))
-         viewmap))
-     {:baseview baseview}
-     lines)))
-
-
-(defn gen-detailed-views [viewmap tempcanvas]
-  "generate labels for buttons if needed"
-  (reduce
-   (fn [oldmap pair]
-     (let [{:keys [id te] :as view} (val pair)]
-       (if te
-         (let [newview (gen-label tempcanvas te 40)]
-           (-> oldmap
-               (assoc id (add-subview view newview))
-               (assoc (newview :id) newview)))
-         oldmap)))
-   viewmap
-   viewmap))
+  (let [baseview (gen-view :base "base" "base" 100 100 "00000000")
+        result (reduce
+                (fn [viewmap line]
+                  (cond
+                    (str/starts-with? line "|") (gen-elements viewmap line) ; schema line with element names
+                    (< 0 (count line)) (gen-details viewmap line tempcanvas) ; detail line with element details
+                    :else viewmap)) ; unchanged viewmap
+                {:baseview baseview}
+                lines)]
+    (println "result" result)
+    result))
 
 
 (defn gen-from-desc [desc tempcanvas]
   "generate view structure from description"  
   (let [lines (str/split-lines desc)]
-    (-> (gen-base-views lines)
-        (gen-detailed-views tempcanvas)
+    (-> (gen-base-views lines tempcanvas)
         (replace-alignment-names))))
 
 
 (defn align-view [viewmap id cx cy width height]
   "aligns view"
   (let [view (get viewmap id)
-        {:keys [x y w h ta ba la ra va ha cl te]} view
+        {:keys [x y ta ba la ra va ha class text] w :width h :height } view
         taview (get viewmap ta)
         baview (get viewmap ba)
         laview (get viewmap la)
@@ -159,7 +186,7 @@
                         (not= la nil)
                         (if (= la "0")
                           0
-                          (+ cx (laview :x) (laview :w)))
+                          (+ cx (laview :x) (laview :width)))
                         ;; align to view on the right or to screen edge
                         (not= ra nil)
                         (if (= ra "0")
@@ -169,7 +196,7 @@
                         (not= ha nil)
                         (if (= ha "0")
                           (+ cx (- (/ width 2) (/ w 2)))
-                          (- (- (laview :x) (/ (- (raview :x)(+ (laview :x)(laview :w))) 2) ) (/ w 2)))
+                          (- (- (laview :x) (/ (- (raview :x)(+ (laview :x)(laview :width))) 2) ) (/ w 2)))
                         ;; or leave x position as is
                         :default
                         x))
@@ -178,7 +205,7 @@
                         (not= ta nil)
                         (if (= ta "0")
                           0
-                          (+ (taview :y)(taview :h)))
+                          (+ (taview :y)(taview :height)))
                         ;; align to view on the bottom or to screen edge
                         (not= ba nil)
                         (if (= ba "0")
@@ -188,12 +215,12 @@
                         (not= va nil)
                         (if (= va "0")
                           (+ cy (- (/ height 2) (/ h 2)))
-                          (- (- (baview :y) (/ (- (baview :y)(+ (taview :y)(taview :h))) 2 )) (/ h 2)))
+                          (- (- (baview :y) (/ (- (baview :y)(+ (taview :y)(taview :height))) 2 )) (/ h 2)))
                         :default
                         y)))]
     ;;(println "a:" cl te x y w h
-    ;;         "to" cx cy width height
-    ;;         "final" (result :x) (result :y) (result :w) (result :h))
+   ;;         "to" cx cy width height
+    ;;         "final" (result :x) (result :y) (result :width) (result :height))
     result))
 
 
@@ -201,7 +228,7 @@
   "iterate through all views and align them based on their alignment switches"
   (reduce (fn [oldmap id]
             (let [view (get oldmap id)
-                  {:keys [x y w h ta ba la ra va ha id cl te]} view
+                  {:keys [x y ta ba la ra va ha id class text] w :width h :height} view
                   ;; filter nil and 0 switches, 0 means to full parent view
                   toalign (filter #(and (not= % nil) (not= % "0")) [ta ba la ra va ha])
                   ;; first align relative views
@@ -209,7 +236,7 @@
                   ;; align self
                   newview (align-view newmap id cx cy width height)
                   ;; align subviews
-                  newnewmap (align newmap (newview :sv) (newview :x) (newview :y) (newview :w) (newview :h))]
+                  newnewmap (align newmap (newview :subviews) (newview :x) (newview :y) (newview :width) (newview :height))]
               (assoc newnewmap id newview)))
           viewmap
           coll))
@@ -221,7 +248,7 @@
   (reduce
    (fn [res id]
      (let [view (viewmap id)]
-       (concat res (collect-visible-ids viewmap (view :sv) (str path ":" (view :cl) )))))
+       (concat res (collect-visible-ids viewmap (view :subviews) (str path ":" (view :class) )))))
    coll
    coll))
 
@@ -230,7 +257,7 @@
   "collects view under touch point"
   (reduce
    (fn [result view]
-     (let [{:keys [id x y w h]} view
+     (let [{:keys [id x y] w :width h :height} view
            px (event :x)
            py (event :y)]
        (if (and (and (> px x) (< px (+ x w))) (and (> py y) (< py (+ y h))))

@@ -135,8 +135,8 @@
 
     (doall (map (fn [act]
                   (webgl/drawtriangles! gfx projection (actorskin/get-skin-triangles act variation))
-                  (webgl/drawpoints! gfx projection (actorskin/getpoints act))
-                  (webgl/drawlines! gfx projection (actorskin/getlines act))
+                  ;(webgl/drawpoints! gfx projection (actorskin/getpoints act))
+                  ;(webgl/drawlines! gfx projection (actorskin/getlines act))
                   ) (:actors world)))
     
     (webgl/drawpoints! gfx projection (map :p (vals (:masses world))))
@@ -214,7 +214,7 @@
   "entering point"
   (let [gfx (webgl/init)
         gui (uiwebgl/init)
-        views (ui/gen-from-desc layouts/hud (get-in gui [:tempcanvas]))
+        views (ui/gen-from-desc layouts/generator (get-in gui [:tempcanvas]))
         world {:setup false
                :actors [] ; (actor/init 580.0 300.0)]
                :guns []
