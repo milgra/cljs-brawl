@@ -161,14 +161,15 @@
              projection
              views]
   "draw views defined by x y width height and texure requirements." 
+  ; (cljs.pprint/pprint views)
   (let [;; generate textures for new views
         newtexmap (tex-gen-for-ids tempcanvas ui-texmap views)
         ;; generate vertex data from views
         vertexes (flatten
                   (map
-                   (fn [{:keys [x y color] w :width h :height :as view}]
+                   (fn [{:keys [id x y color] w :width h :height :as view}]
                      (let [[tlx tly brx bry] (texmap/getbmp newtexmap color)]
-                        (concat
+                       (concat
                         [x y] [tlx tly]
                         [(+ x w) y] [brx tly]
                         [x (+ y h)] [tlx bry]

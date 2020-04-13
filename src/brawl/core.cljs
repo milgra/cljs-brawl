@@ -74,17 +74,14 @@
    (fn [event] (resize-context!))))
 
 
-(defn draw-ui! [state frame]
+(defn draw-ui! [{:keys [gui views viewids]  :as state} frame]
   (let [projection (math4/proj_ortho 0 (.-innerWidth js/window) (.-innerHeight js/window) 0 -10.0 10.0)
-        gui (:gui state)
-        views (:views state)
-        viewids (ui/collect-visible-ids views (:sv (:baseview views)) "")
         newstate (uiwebgl/draw! gui projection (map views viewids))]
     newstate))
 
   
 (defn update-ui [views]
-  (ui/align views (:sv (:baseview views)) 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
+  (ui/align views (:subviews (:baseview views)) 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
   
 
 (defn update-translation [state keyevent]           
@@ -185,9 +182,6 @@
           pivots (filter #(clojure.string/includes? (:id %) "Pivot") svglevel)
           surfaces (phys2/surfaces-from-pointlist points)
           lines (reduce (fn [result {t :t b :b}] (conj result t (math2/add-v2 t b))) [] surfaces)]       
-
-      (println "pivots" pivots)
-
       (-> world
           (create-actors pivots)
           (assoc :setup true)
@@ -215,6 +209,7 @@
   (let [gfx (webgl/init)
         gui (uiwebgl/init)
         views (ui/gen-from-desc layouts/generator (get-in gui [:tempcanvas]))
+        viewids (ui/collect-visible-ids views (:subviews (:baseview views)) "")
         world {:setup false
                :actors [] ; (actor/init 580.0 300.0)]
                :guns []
@@ -229,6 +224,7 @@
                :gui gui
                :world world
                :views views
+               :viewids viewids
                :level_file "level0.svg"
                :texfile "font.png"
                :keycodes {}

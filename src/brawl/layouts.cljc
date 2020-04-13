@@ -74,7 +74,7 @@ Speed    Class:Indicator Color:FF000055 Color1:FFFFFF55 Width:200 Height:50")
 |
 |     Randomize
 |     Start_Game
-Menu       Class:Button      Color:FF00FF55 Color1:FFFFFFFF Command:ShowMenu
+Menu       Class:Button      Color:FF00FF55 Color1:FFFFFFFF Command:ShowMenu Width:150 Height:50 Top:0 Right:0
 Sliders    Component:sliders Color:FF00FF55 Width:600 Height:200
 Randomize  Class:Button      Color:FF00FF55 Color1:FFFFFFFF Command:Randomize
 Start_Game Class:Button      Color:FF00FF55 Color1:FFFFFFFF Command:Startgame")
