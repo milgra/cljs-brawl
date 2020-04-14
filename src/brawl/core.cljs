@@ -208,8 +208,9 @@
   "entering point"
   (let [gfx (webgl/init)
         gui (uiwebgl/init)
-        views (ui/gen-from-desc layouts/generator (get-in gui [:tempcanvas]))
-        viewids (ui/collect-visible-ids views (:subviews (:baseview views)) "")
+        views-generator (ui/gen-from-desc {} layouts/generator (get-in gui [:tempcanvas]))
+        ; views views-gen
+        ;viewids (ui/collect-visible-ids views "")
         world {:setup false
                :actors [] ; (actor/init 580.0 300.0)]
                :guns []
@@ -223,8 +224,8 @@
         state {:gfx gfx
                :gui gui
                :world world
-               :views views
-               :viewids viewids
+               ;:views views
+               ;:viewids viewids
                :level_file "level0.svg"
                :texfile "font.png"
                :keycodes {}

@@ -12,7 +12,7 @@
    :id id
    :x 0
    :y 0
-   ;
+
    :hor "0" ; align to center by default
    :ver "0" ; align to center by default
    ; if its between 0 and 1 its percentage, if its over its fixed
@@ -87,9 +87,8 @@
         view ((keyword id) viewmap)
         newview (reduce (fn [res word]
                           (let [[key value] (str/split word #":")]
-                            (if (= key "Color")
-                              (assoc res :color (str "Color 0x" value)) ; set color texture
-                              (assoc res (keyword (str/lower-case key)) value))))
+                            (cond (= key "Color") (assoc res :color (str "Color 0x" value)) ; set color texture
+                                  :else (assoc res (keyword (str/lower-case key)) value))))
                         view
                         (rest words))
         base (:baseview viewmap)]
@@ -114,12 +113,51 @@
     result))
 
 
-(defn gen-from-desc [desc tempcanvas]
-  "generate view structure from description"  
-  (let [lines (str/split-lines desc)]
-    (-> (gen-base-views lines tempcanvas)
-        ;(replace-alignment-names)
-        )))
+(defn get-value [text]
+  (let [[element value measure] (str/split text #" ")]
+    (if (= measure nil)
+      (if (= value "px") ; two element value for width and height , "100 px" or "50 %"
+        {:pixel (js/parseInt element)}
+        {:ratio (/ (js/parseInt element) 100)})
+      (if (= measure "px") ; three element value for alignments , "Edge 50 %" or "Button 5 px"
+        {:element (keyword element) :pixel (js/parseInt value)}
+        {:element (keyword element) :ratio (/ (js/parseInt value) 100.0)}))))
+
+
+(defn gen-from-desc [viewmap desclist tempcanvas]
+  "generate view structure from description"
+  (reduce
+   (fn [oldmap viewdesc]
+     (let [view (reduce
+                 (fn [result pair]
+                   (case (key pair)
+                     :id (assoc result :id (keyword (val pair)))
+                     :class (assoc result :class (val pair))
+                     :command (assoc result :command (val pair))
+                     :color (assoc result :color (val pair))
+                     :width (assoc result :width (get-value (val pair)))
+                     :height (assoc result :height (get-value (val pair)))
+                     :center-x (assoc result :center-x (get-value (val pair)))                      
+                     :center-y (assoc result :center-x (get-value (val pair)))
+                     :left (assoc result :left (get-value (val pair)))
+                     :right (assoc result :right (get-value (val pair)))
+                     :top (assoc result :top (get-value (val pair)))
+                     :bottom (assoc result :bottom (get-value (val pair)))
+                     (assoc result (key pair) (val pair))))
+                 {:x 0.0 :y 0.0}
+                 viewdesc)
+           subids (if (:subviews view) (map (fn [desc] (keyword (:id desc))) (:subviews view)))
+           subviewmap (if (:subviews view) (gen-from-desc oldmap (:subviews view)) oldmap)
+           newview (assoc view :subviews subids)]
+       ;; generate label if necessary
+       (assoc subviewmap (:id view) newview)))
+   viewmap
+   desclist))
+  
+;  (let [lines (str/split-lines desc)]
+;    (-> (gen-base-views lines tempcanvas)
+;        ;(replace-alignment-names)
+;        )))
 
 
 (defn add-align [view top bottom left right hor ver]
@@ -164,12 +202,6 @@
   "aligns view"
   (let [view (get viewmap id)
         {:keys [x y top bottom left right ver hor class text] w :width h :height } view
-        topview (get viewmap top)
-        bottomview (get viewmap bottom)
-        leftview (get viewmap left)
-        rightview (get viewmap right)
-        horview (get viewmap hor)
-        verview (get viewmap ver)
         result
         (-> view
             (assoc :x (cond
@@ -177,17 +209,25 @@
                         (not= left nil)
                         (if (= left "0")
                           0
-                          (+ cx (:x leftview) (:width leftview)))
+                          (let [leftview ((keyword left) viewmap)]
+                                (+ cx (:x leftview) (:width leftview))))
                         ;; align to view on the right or to screen edge
                         (not= right nil)
                         (if (= right "0")
                           (- width w)
-                          (- (:x rightview) w))
+                          (let [rightview ((keyword right) viewmap)]
+                            (- (:x rightview) w)))
                         ;; align to horizontal center or between left align and right align view
                         (not= hor nil)
                         (if (= hor "0")
                           (+ cx (- (/ width 2) (/ w 2)))
-                          (- (- (:x leftview) (/ (- (:x rightview)(+ (:x leftview)(:width leftview))) 2) ) (/ w 2)))
+                          (let [leftview ((keyword left) viewmap)
+                                rightview ((keyword right) viewmap)]
+                            (-
+                             (-
+                              (:x leftview)
+                              (/ (- (:x rightview) (+ (:x leftview) (:width leftview)) ) 2 ) )
+                             (/ w 2))))
                         ;; or leave x position as is
                         :default
                         x))
@@ -196,20 +236,24 @@
                         (not= top nil)
                         (if (= top "0")
                           0
-                          (+ (:y topview)(:height topview)))
+                          (let [topview ((keyword top) viewmap)]
+                          (+ (:y topview)(:height topview))))
                         ;; align to view on the bottom or to screen edge
                         (not= bottom nil)
                         (if (= bottom "0")
                           (- height h)
-                          (- (:y bottomview) h))
+                          (let [bottomview ((keyword bottom) viewmap)]
+                          (- (:y bottomview) h)))
                         ;; align to vertical center or between bottom and top align view
                         (not= ver nil)
                         (if (= ver "0")
                           (+ cy (- (/ height 2) (/ h 2)))
-                          (- (- (:y bottomview) (/ (- (:y bottomview)(+ (:y topview)(:height topview))) 2 )) (/ h 2)))
+                          (let [topview ((keyword top) viewmap)
+                                bottomview ((keyword bottom) viewmap)]
+                          (- (- (:y bottomview) (/ (- (:y bottomview)(+ (:y topview)(:height topview))) 2 )) (/ h 2))))
                         :default
                         y)))]
-    ;(println "a:" class text x y width height
+    ;(println "a:" id class text x y width height
     ;         "to" cx cy width height
     ;         "final" (result :x) (result :y) (result :width) (result :height))
     result))
@@ -219,7 +263,7 @@
   "iterate through all views and align them based on their alignment switches"
   (reduce (fn [oldmap id]
             (let [view (get oldmap id)
-                  {:keys [x y top bottom left right ver hor id class text] w :width h :height} view
+                  {:keys [x y top bottom left right ver hor] w :width h :height} view
                   ;; filter nil and 0 switches, 0 means to full parent view
                   toalign (filter #(and (not= % nil) (not= % "0")) [top bottom left right ver hor])
                   ;; first align relative views
@@ -235,7 +279,6 @@
 
 (defn collect-visible-ids [viewmap coll path]
   "collects ids of views that are currently visible"
-  (println "path:" path "coll:" coll)
   (reduce
    (fn [res id]
      (let [view (viewmap id)]

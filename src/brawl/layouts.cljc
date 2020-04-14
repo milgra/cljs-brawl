@@ -1,15 +1,105 @@
 (ns brawl.layouts)
 
+;; class - built in classes Button, Indicator
+;; color - background color
+;; width - pixel or percent "100 px" "30 %"
+;; height - pixel or percent "100 px" "30 %"
+;; center-x - x center of element, optional, percent "50 %"
+;; center-y - y center of element, optional, percent "20 %"
+;; top - positon of top edge of element, pixel or percent, absolute or relative "Edge 50 %" "CustomButton 10 px"
+;; bottom - positon of top edge of element, pixel or percent, absolute or relative "Edge 50 %" "CustomButton 10 px"
+;; left - positon of top edge of element, pixel or percent, absolute or relative "Edge 50 %" "CustomButton 10 px"
+;; right - positon of top edge of element, pixel or percent, absolute or relative "Edge 50 %" "CustomButton 10 px"
+
+(def sliders
+;; |Hitpower Height Stamina|
+;; |Hitrate         Speed  |
+  [{:id "Hitpower"
+    :class "Indicator"
+    :color 0x0000FF55
+    :color1 0xFFFFFF55
+    :width "200 px"
+    :height "50 px"}
+   
+   {:id "Height"
+    :class "Indicator"
+    :color 0x0000FF55
+    :color1 0xFFFFFF55
+    :width "200 px"
+    :height "50 px"}
+   
+   {:id "Stamina"
+    :class "Indicator"
+    :color 0xFF000055
+    :color1 0xFFFFFF55
+    :width "200 px"
+    :height "50 px"}
+   
+   {:id "Hitrate"
+    :class "Indicator"
+    :color 0x0000FF55
+    :color1 0xFFFFFF55
+    :width "200 px"
+    :height "50 px"}
+   
+   {:id "Speed"
+    :class "Indicator"
+    :color 0xFF000055
+    :color1 0xFFFFFF55
+    :width "200 px"
+    :height "50 px"}])
+  
+
+(def generator
+;;|                Menu|
+;;|     Sliders        |
+;;|                    |
+;;|     Randomize      |
+;;|     StartGame      |
+  [{:id "Menu"
+    :class "Button" 
+    :color 0xFF00FF55 
+    :color1 0xFFFFFFFF 
+    :command "ShowMenu" 
+    :width "150 px" 
+    :height "50 px" 
+    :top "Edge 0 px" 
+    :right "Edge 0 px"}
+
+   {:id "Sliders"
+    :width "450 px"
+    :height "300 px"
+    :center-x "Edge 50 %"
+    :center-y "Edge 50 %"
+    :subviews sliders}
+
+   {:id "Randomize"
+    :class "Button" 
+    :color 0xFF00FF55 
+    :color1 0xFFFFFFFF
+    :command "Randomize" 
+    :width "150 px" 
+    :height "50 px" 
+    :cemter-x "Edge" 
+    :bottom "StartGame 10 px"}
+   
+   {:id "StartGame"
+    :class "Button" 
+    :color 0xFF00FF55 
+    :color1 0xFFFFFFFF 
+    :command "Startgame" 
+    :width "200 px" 
+    :height "50 px" 
+    :bottom "Edge 50 px"}])
+
+
 (def hud
-;; CL Class TE text BC back color FC fore color WI width HE height
-;; TA top BA bottom LA left RA right HA horizontal VA vertical align
-;; 0 : edges or screen"
+;;                                      Menu|
+;;                                          |
+;;Punch                                     |
+;;Block Jump                      Left Right|
+;;Kick  Shoot   Health Bullets Power    Down|
 "
-X             M|
-               |
-C              |
-BJ           LR|
-KG    HSP     D|
 X CLIndicator TEXP BCFFFFFF55 FCFFFFFFFF TA0 LA0 WI150 HE50
 M CLButton TEMenu BCFF00FF55 FCFFFFFFFF TA0 RA0 WI150 HE50 COShowMenu
 H CLIndicator TEHealth BCFF000055 FCFFFFFFFF BA0 RAS WI200 HE50
@@ -23,58 +113,4 @@ J CLButton TEJump BCFFFFFF55 FCFFFFFFFF BAG LAB WI100 HE100
 L CLButton TELeft BCFFFFFF55 FCFFFFFFFF BA0 RAR WI100 HE100
 R CLButton TERight BCFFFFFF55 FCFFFFFFFF BAD RA0 WI100 HE100
 D CLButton TEDown BCFFFFFF55 FCFFFFFFFF BA0 RA0 WI100 HE100
-E CLDebug TA0 LA0 WI300 HE300
-")
-
-       
-(def menu
-"
- C |
- N |
- O |
- D |
-C CLButton TEContinue BCFF00FFFF FCFFFFFFFF BAN HA0 WI250 HE50
-N CLButton TENew~Game BCFFFF00FF FCFFFFFFFF BAO HA0 WI250 HE50
-O CLButton TEOptions BC00FFFFFF FCFFFFFFFF VA0 HA0 WI250 HE50
-D CLButton TEDonate BCFFFFFFFF FCFFFFFFFF TAO HA0 WI250 HE50
-")
-
-
-(def opts
-"
- M |
- S |
- A |
- P |
- B |
-M CLSlider TEMusic~Volume BCFFFFFF55 FCFFFFFFFF BAS HA0 WI250 HE50
-S CLSlider TESound~Volume BCFFFFFF55 FCFFFFFFFF BAA HA0 WI250 HE50
-A CLSlider TEControls~Alpha BCFFFFFF55 FCFFFFFFFF VA0 HA0 WI250 HE50
-P CLToggle TEShow/Hide~Physics BCFFFFFF55 FCFFFFFFFF TAA HA0 WI250 HE50
-B CLButton TEBack BCFFFFFF55 FCFFFFFFFF TAP HA0 WI250 HE50
-")
-
-
-(def sliders
-;  if buttons are on the side, they will align to the sides
-;  if buttons are mid-line, they will align to center
-"
-|Hitpower Height Stamina|
-|Hitrate         Speed|
-Hitpower Class:Indicator Color:0000FF55 Color1:FFFFFF55 Width:200 Height:50
-Height   Class:Indicator Color:0000FF55 Color1:FFFFFF55 Width:200 Height:50
-Stamina  Class:Indicator Color:FF000055 Color1:FFFFFF55 Width:200 Height:50
-Hitrate  Class:Indicator Color:0000FF55 Color1:FFFFFF55 Width:200 Height:50
-Speed    Class:Indicator Color:FF000055 Color1:FFFFFF55 Width:200 Height:50")
-
-(def generator
-"
-|XP               Menu|
-|     Sliders
-|
-|     Randomize
-|     Start_Game
-Menu       Class:Button      Color:FF00FF55 Color1:FFFFFFFF Command:ShowMenu Width:150 Height:50 Top:0 Right:0
-Sliders    Component:sliders Color:FF00FF55 Width:600 Height:200
-Randomize  Class:Button      Color:FF00FF55 Color1:FFFFFFFF Command:Randomize
-Start_Game Class:Button      Color:FF00FF55 Color1:FFFFFFFF Command:Startgame")
+E CLDebug TA0 LA0 WI300 HE300")
