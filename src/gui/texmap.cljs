@@ -59,7 +59,7 @@
         over? (> newh (texbmp :height))]
     
     (if over?
-      nil
+      texmap
       (-> texmap
           (assoc-in [:contents texid] [newtlx newtly newbrx newbry])
           (assoc :lastx texw)

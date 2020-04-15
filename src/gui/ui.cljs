@@ -74,11 +74,6 @@
      (reduce str id)))
 
 
-(defn add-subview [{subviews :subviews :as view} subview]
-  "inserts subview's id to views subviews property"
-  (assoc view :subviews (conj subviews (subview :id))))
-
-
 (defn add-align [view top bottom left right center-x center-y]
   "add alignment properties to view"
   (-> view
@@ -88,6 +83,11 @@
       (assoc :right right)
       (assoc :center-x center-x)
       (assoc :center-y center-y)))
+
+
+(defn add-subview [{subviews :subviews :as view} subview]
+  "inserts subview's id to views subviews property"
+  (assoc view :subviews (conj subviews (subview :id))))
 
 ;; alignment
 
@@ -131,17 +131,14 @@
 
 (defn align [viewmap coll px py pwidth pheight]
   "iterate through all views and align them based on their alignment switches"
-  (reduce (fn [oldmap id]
-            (let [{:keys [x y width height top bottom left right center-x center-y] :as view} (get oldmap id)
-                  ;; get view to align before actual view
-                  toalign (remove nil? (map :element [top bottom left right center-x center-y]))
-                  ;; first align relative views
-                  newmap (if (empty? toalign) oldmap (align oldmap toalign px py pwidth pheight))
-                  ;; align self
-                  newview (align-view newmap id px py pwidth pheight)
-                  ;; align subviews
-                  newnewmap (align newmap (:subviews newview) (:x newview) (:y newview) (:width newview) (:height newview))]
-              (assoc newnewmap id newview)))
+  (reduce (fn [result id]
+            (let [{:keys [top bottom left right center-x center-y] :as view} (get result id)
+                  related-views (remove nil? (map :element [top bottom left right center-x center-y])) ; get views to align before actual view
+                  related-viewmap (align result related-views px py pwidth pheight) ; first align relative views
+                  aligned-view (align-view related-viewmap id px py pwidth pheight) ; align self
+                  {:keys [x y w h subviews]} aligned-view  ; align self
+                  aligned-viewmap (align related-viewmap subviews x y w h)] ; align subviews
+              (assoc aligned-viewmap id aligned-view)))
           viewmap
           coll))
 

@@ -53,7 +53,7 @@
 ;;|     StartGame      |
   [{:id "Menu"
     :class "Button"
-    :texture "Label 40 Menu 0xFFFFFFFF 0xFF00FF55"
+    :texture "Label 30 Menu FFFFFF11 FFFFFFFF"
     :command "ShowMenu" 
     :width "150 px" 
     :height "50 px" 
@@ -61,7 +61,7 @@
     :right "Edge 0 px"}
 
    {:id "Sliders"
-    :texture "Color 0xFF00FF55"
+    :texture "Color FF00FF55"
     :width "450 px"
     :height "300 px"
     :center-x "Edge 50 %"
@@ -70,16 +70,16 @@
 
    {:id "Randomize"
     :class "Button" 
-    :texture "Label 40 Randomize 0xFFFFFFFF 0xFF00FF55"
+    :texture "Label 30 Randomize FFFFFF11 FFFFFFFF"
     :command "Randomize" 
-    :width "150 px" 
+    :width "200 px" 
     :height "50 px" 
     :center-x "Edge 50 %"
     :bottom "StartGame 10 px"}
    
    {:id "StartGame"
     :class "Button" 
-    :texture "Label 40 Startgame 0xFFFFFFFF 0xFF00FF55"
+    :texture "Label 30 Startgame FFFFFF11 FFFFFFFF"
     :command "Startgame" 
     :width "200 px" 
     :height "50 px"

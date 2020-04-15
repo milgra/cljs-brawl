@@ -74,10 +74,10 @@
    (fn [event] (resize-context!))))
 
 
-(defn draw-ui! [{:keys [gui views viewids]  :as state} frame]
+(defn draw-ui! [{:keys [gui views viewids] :as state} frame]
   (let [projection (math4/proj_ortho 0 (.-innerWidth js/window) (.-innerHeight js/window) 0 -10.0 10.0)
-        newstate (uiwebgl/draw! gui projection (map views viewids))]
-    newstate))
+        newgui (uiwebgl/draw! gui projection (map views viewids))]
+    (assoc state :gui newgui)))
 
   
 (defn update-ui [views baseviews]
@@ -243,7 +243,7 @@
     (load-level! svgch (:level_file state))
     
     (animate state (fn [prestate frame time]
-       (if (= (mod frame 5) 0 ) ; frame skipping for development
+       (if (= (mod frame 1) 0 ) ; frame skipping for development
          (let [svglevel (poll! svgch)
                teximage (poll! imgch)
                keyevent (poll! keych)
@@ -256,8 +256,7 @@
                           true (assoc :views newviews)
                           true (update-translation keyevent))]
            (if (:setup newworld) (draw-world! newstate frame))
-           (draw-ui! newstate frame)
-           newstate)
+           (draw-ui! newstate frame))
          prestate)))))
 
 (main)

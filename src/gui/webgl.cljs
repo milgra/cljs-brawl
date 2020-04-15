@@ -84,19 +84,29 @@
      :height (int itemhth)}))
 
 
-(defn bitmap-for-glyph [canvas height text]
+(defn bitmap-for-glyph [canvas width height desc]
   "returns glyph bitmap"
-  (let [context (.getContext canvas "2d")
-        itemhth (int (* height 1.2))]
-    (set! (.-font context) (str height "px Cantarell"))
-    (set! (.-fillStyle context) "#000000")
+  (let [[s label c1 c2] (str/split desc #" ")
+        [fr fg fb fa] (map js/parseInt (map (partial str "0x") (re-seq #".{1,2}" c1)))
+        [br bg bb ba] (map js/parseInt (map (partial str "0x") (re-seq #".{1,2}" c2)))
+        size (js/parseInt s)
+        backcol (str "rgba("fr","fg","fb","(/ fa 255)")")
+        forecol (str "rgba("br","bg","bb","(/ ba 255)")")
+        context (.getContext canvas "2d")
+        linehth (int (* size 1.2))]
+
+    (.clearRect context 0 0 (.-width canvas) (.-height canvas))
+    (set! (.-fillStyle context) backcol)
+    (.fillRect context 0 0 (.-width canvas) (.-height canvas))
+    (set! (.-font context) (str size "px Cantarell"))
+    (set! (.-fillStyle context) forecol)
     (set! (.-textBaseline context) "middle")
-    (.clearRect context 0 0 (.-width canvas) (.-height canvas)) 
-    (let [width (int (.-width (.measureText context text)))]
-      (.fillText context text 0 (int (/ itemhth 1.8)))
-      {:data (.-data (.getImageData context 0 0 width itemhth))
+    (println "backcol" backcol forecol)
+    (let [itemwth (int (.-width (.measureText context label)))]
+      (.fillText context label (int (* (- width itemwth) 0.5)) (int (/ height 1.8)))
+      {:data (.-data (.getImageData context 0 0 width height))
        :width width
-       :height itemhth})))
+       :height height})))
 
 
 (defn tex-gen-for-ids [tempcanvas ui-texmap views]
@@ -105,7 +115,7 @@
          tmap ui-texmap]
     (if (empty? remviews)
       tmap
-      (let [{:keys [texture] :as view} (first remviews)
+      (let [{:keys [texture w h] :as view} (first remviews)
             newtmap (if (texmap/hasbmp? tmap texture)
                       tmap
                       (cond
@@ -129,8 +139,7 @@
 
                         (str/starts-with? texture "Label")
                         ;; show glyph
-                        (let [arg (str/split (subs texture 6) #" ")
-                              bmp (bitmap-for-glyph tempcanvas (js/parseInt (arg 0)) (arg 1))]
+                        (let [bmp (bitmap-for-glyph tempcanvas w h (subs texture 6))]
                           (texmap/setbmp tmap bmp texture 0))
 
                         :default
@@ -138,7 +147,6 @@
                         tmap))]
         
         (recur (rest remviews) newtmap)))))
-
 
 (defn clear! [{context :context :as state}]
   (buffers/clear-color-buffer
@@ -162,6 +170,7 @@
              views]
   "draw views defined by x y width height and texure requirements." 
   ;(cljs.pprint/pprint views)
+
   (let [;; generate textures for new views
         newtexmap (tex-gen-for-ids tempcanvas ui-texmap views)
         ;; generate vertex data from views
@@ -179,6 +188,7 @@
                         [x (+ y h)] [tlx bry] ))) views))]
 
     ;(cljs.pprint/pprint vertexes)>
+
     ;; upload texture map if changed
     (when (newtexmap :changed)
       (texture/upload-texture
