@@ -74,7 +74,7 @@
     :command "Randomize" 
     :width "150 px" 
     :height "50 px" 
-    :cemter-x "Edge" 
+    :center-x "Edge 50 %"
     :bottom "StartGame 10 px"}
    
    {:id "StartGame"
@@ -82,7 +82,8 @@
     :texture "Label 40 Startgame 0xFFFFFFFF 0xFF00FF55"
     :command "Startgame" 
     :width "200 px" 
-    :height "50 px" 
+    :height "50 px"
+    :center-x "Edge 50 %"
     :bottom "Edge 50 px"}])
 
 

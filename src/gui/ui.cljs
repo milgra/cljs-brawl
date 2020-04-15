@@ -13,9 +13,10 @@
       (if (= value "px") ; two element value for width and height , "100 px" or "50 %"
         {:pixel (js/parseInt element)}
         {:ratio (/ (js/parseInt element) 100)})
-      (if (= measure "px") ; three element value for alignments , "Edge 50 %" or "Button 5 px"
-        {:element (keyword element) :pixel (js/parseInt value)}
-        {:element (keyword element) :ratio (/ (js/parseInt value) 100.0)}))))
+      (let [elem (if (= element "Edge") nil (keyword element))]
+        (if (= measure "px") ; three element value for alignments , "Edge 50 %" or "Button 5 px"
+          {:element elem :pixel (js/parseInt value)}
+          {:element elem :ratio (/ (js/parseInt value) 100.0)})))))
 
 
 (defn gen-from-desc [viewmap desclist]
@@ -37,7 +38,7 @@
                      :width    (assoc result :width (get-value v))
                      :height   (assoc result :height (get-value v))
                      :center-x (assoc result :center-x (get-value v))      
-                     :center-y (assoc result :center-x (get-value v))
+                     :center-y (assoc result :center-y (get-value v))
                      :left     (assoc result :left (get-value v))
                      :right    (assoc result :right (get-value v))
                      :top      (assoc result :top (get-value v))
@@ -90,78 +91,54 @@
 
 ;; alignment
 
-(defn align-view [viewmap id cx cy width height]
+(defn align-view [viewmap id px py pwidth pheight]
   "aligns view"
-  (let [view (get viewmap id)
-        {:keys [x y top bottom left right ver hor class text] w :width h :height } view
-        result
-        (-> view
-            (assoc :x (cond
-                        ;; align to view on the left or to screen edge
-                        (not= left nil)
-                        (if (= left "0")
-                          0
-                          (let [leftview ((keyword left) viewmap)]
-                                (+ cx (:x leftview) (:width leftview))))
-                        ;; align to view on the right or to screen edge
-                        (not= right nil)
-                        (if (= right "0")
-                          (- width w)
-                          (let [rightview ((keyword right) viewmap)]
-                            (- (:x rightview) w)))
-                        ;; align to horizontal center or between left align and right align view
-                        (not= hor nil)
-                        (if (= hor "0")
-                          (+ cx (- (/ width 2) (/ w 2)))
-                          (let [leftview ((keyword left) viewmap)
-                                rightview ((keyword right) viewmap)]
-                            (-
-                             (-
-                              (:x leftview)
-                              (/ (- (:x rightview) (+ (:x leftview) (:width leftview)) ) 2 ) )
-                             (/ w 2))))
-                        ;; or leave x position as is
-                        :default
-                        x))
-            (assoc :y (cond
-                        ;; align to view on the top or to screen edge
-                        (not= top nil)
-                        (if (= top "0")
-                          0
-                          (let [topview ((keyword top) viewmap)]
-                          (+ (:y topview)(:height topview))))
-                        ;; align to view on the bottom or to screen edge
-                        (not= bottom nil)
-                        (if (= bottom "0")
-                          (- height h)
-                          (let [bottomview ((keyword bottom) viewmap)]
-                          (- (:y bottomview) h)))
-                        ;; align to vertical center or between bottom and top align view
-                        (not= ver nil)
-                        (if (= ver "0")
-                          (+ cy (- (/ height 2) (/ h 2)))
-                          (let [topview ((keyword top) viewmap)
-                                bottomview ((keyword bottom) viewmap)]
-                          (- (- (:y bottomview) (/ (- (:y bottomview)(+ (:y topview)(:height topview))) 2 )) (/ h 2))))
-                        :default
-                        y)))]
-    ;(println "a:" id class text x y width height
-    ;         "to" cx cy width height
-    ;         "final" (result :x) (result :y) (result :width) (result :height))
-    result))
+  (let [{:keys [x y w h width height top bottom left right center-x center-y] :as view } (get viewmap id)
+        neww (cond
+               (:pixel width) (:pixel width)
+               (:ratio width) (* (:ratio width) pwidth)
+               :else w)
+
+        newh (cond
+               (:pixel height) (:pixel height)
+               (:ratio height) (* (:ratio height) pheight)
+               :else h)
+
+        newx (cond
+               (:ratio center-x) (- (+ px (* pwidth (:ratio center-x))) (* neww 0.5)) ; align view center to ratio
+               (:pixel center-x) (- (+ px (:pixel center-x)) (* neww 0.5)) ; align view center by pixel
+               (:element left) (+ (:x ((:element left) viewmap)) (:w ((:element left) viewmap)) (:pixel left)) ; align view to pixel distance from top view
+               (:element right) (- (:x ((:element right) viewmap)) (:pixel right) neww) ; align view to pixel distance from bottom view
+               (:pixel left) (+ px (:pixel left)) ; align view to the left based on ratio
+               (:pixel right) (- (+ px pwidth) (:pixel right) neww) ; align view to the right based on ratio
+               (:ratio left) (+ px (* (:ratio left) pwidth)) ; align view to the left based on ratio
+               (:ratio right) (- (+ px (* (:ratio right) pwidth)) neww) ; align view to the right based on ratio
+               :else px)
+               
+        newy (cond
+               (:ratio center-y) (- (+ py (* pheight (:ratio center-y))) (* newh 0.5)) ; align view center to ratio
+               (:pixel center-y) (- (+ py (:pixel center-y)) (* newh 0.5)) ; align view center by pixel
+               (:element top) (+ (:y ((:element top) viewmap)) (:h ((:element top) viewmap)) (:pixel top)) ; align view to pixel distance from top view
+               (:element bottom) (- (:y ((:element bottom) viewmap)) (:pixel bottom) newh) ; align view to pixel distance from bottom view
+               (:pixel top) (+ py (:pixel top)) ; align view to the left based on ratio
+               (:pixel bottom) (- (+ py pheight) (:pixel bottom) newh) ; align view to the right based on ratio
+               (:ratio top) (+ py (* (:ratio top) pheight)) ; align view to the left based on ratio
+               (:ratio bottom) (- (+ py (* (:ratio bottom) pheight)) newh) ; align view to the right based on ratio
+               :else py)]
+    
+    (assoc view :w neww :h newh :x newx :y newy)))
 
 
-(defn align [viewmap coll cx cy width height]
+(defn align [viewmap coll px py pwidth pheight]
   "iterate through all views and align them based on their alignment switches"
   (reduce (fn [oldmap id]
-            (let [view (get oldmap id)
-                  {:keys [x y top bottom left right ver hor] w :width h :height} view
-                  ;; filter nil and 0 switches, 0 means to full parent view
-                  toalign (filter #(and (not= % nil) (not= % "0")) [top bottom left right ver hor])
+            (let [{:keys [x y width height top bottom left right center-x center-y] :as view} (get oldmap id)
+                  ;; get view to align before actual view
+                  toalign (remove nil? (map :element [top bottom left right center-x center-y]))
                   ;; first align relative views
-                  newmap (align oldmap toalign (+ cx x) (+ cy y) width height)
+                  newmap (if (empty? toalign) oldmap (align oldmap toalign px py pwidth pheight))
                   ;; align self
-                  newview (align-view newmap id cx cy width height)
+                  newview (align-view newmap id px py pwidth pheight)
                   ;; align subviews
                   newnewmap (align newmap (:subviews newview) (:x newview) (:y newview) (:width newview) (:height newview))]
               (assoc newnewmap id newview)))

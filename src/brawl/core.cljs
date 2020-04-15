@@ -80,10 +80,8 @@
     newstate))
 
   
-(defn update-ui [views]
-  ;(ui/align views (:subviews (:baseview views)) 0 0 (. js/window -innerWidth) (. js/window -innerHeight))
-  views
-  )
+(defn update-ui [views baseviews]
+  (ui/align views baseviews 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
   
 
 (defn update-translation [state keyevent]           
@@ -211,7 +209,8 @@
   (let [gfx (webgl/init)
         gui (uiwebgl/init)
         views (ui/gen-from-desc {} layouts/generator)
-        viewids (ui/collect-visible-ids views (ui/get-base-ids layouts/generator)  "")
+        baseviews (ui/get-base-ids layouts/generator)
+        viewids (ui/collect-visible-ids views baseviews  "")
         world {:setup false
                :actors [] ; (actor/init 580.0 300.0)]
                :guns []
@@ -226,6 +225,7 @@
                :gui gui
                :world world
                :views views
+               :baseviews baseviews
                :viewids viewids
                :level_file "level0.svg"
                :texfile "font.png"
@@ -248,7 +248,7 @@
                teximage (poll! imgch)
                keyevent (poll! keych)
                tchevent (poll! tchch)
-               newviews (update-ui (:views prestate))      
+               newviews (update-ui (:views prestate) (:baseviews prestate))      
                newworld (update-world (:world prestate) (:keycodes prestate) svglevel)
                newstate (cond-> prestate
                           svglevel (assoc :gfx (webgl/loadshapes (:gfx prestate) svglevel))

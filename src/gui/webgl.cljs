@@ -178,8 +178,7 @@
                         [(+ x w) (+ y h)] [brx bry]
                         [x (+ y h)] [tlx bry] ))) views))]
 
-    (cljs.pprint/pprint vertexes)
-    
+    ;(cljs.pprint/pprint vertexes)>
     ;; upload texture map if changed
     (when (newtexmap :changed)
       (texture/upload-texture
