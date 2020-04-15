@@ -153,14 +153,12 @@
    coll))
 
 
-(defn collect-pressed-views [viewmap event]
+(defn collect-pressed-views [viewmap [ex ey]]
   "collects view under touch point"
   (reduce
    (fn [result view]
-     (let [{:keys [id x y] w :width h :height} view
-           px (:x event)
-           py (:y event)]
-       (if (and (and (> px x) (< px (+ x w))) (and (> py y) (< py (+ y h))))
+     (let [{:keys [id x y w h]} view]
+       (if (and (and (> ex x) (< ex (+ x w))) (and (> ey y) (< ey (+ y h))))
          (conj result id)
          result)))
    []

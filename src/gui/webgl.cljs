@@ -97,7 +97,7 @@
     (.clearRect context 0 0 (.-width canvas) (.-height canvas))
     (set! (.-fillStyle context) backcol)
     (.fillRect context 0 0 (.-width canvas) (.-height canvas))
-    (set! (.-font context) (str size "px Cantarell"))
+    (set! (.-font context) (str "italic small-caps bold " size "px arial"))
     (set! (.-fillStyle context) forecol)
     (set! (.-textBaseline context) "middle")
     (let [itemwth (int (.-width (.measureText context label)))]

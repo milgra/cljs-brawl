@@ -67,7 +67,25 @@
            prev (get @keycodes code)]
        (swap! keycodes assoc code false)
        (if prev (put! keych {:code (.-keyCode event) :value false})))))
-  
+
+  (events/listen
+   js/document
+   EventType.TOUCHSTART
+   (fn [event]
+     (println "touchstart" event)))
+
+  (events/listen
+   js/document
+   EventType.MOUSEDOWN
+   (fn [event]
+     (put! tchch {:type "down" :point [(.-clientX event) (.-clientY event)]})))
+
+  (events/listen
+   js/document
+   EventType.MOUSEUP
+   (fn [event]
+     (put! tchch {:type "up" :point [(.-clientX event) (.-clientY event)]})))
+
   (events/listen
    js/window
    EventType.RESIZE
@@ -80,7 +98,11 @@
     (assoc state :gui newgui)))
 
   
-(defn update-ui [views baseviews]
+(defn update-ui [views baseviews touchevent]
+  (if touchevent
+    (let [touched-views (ui/collect-pressed-views views (:point touchevent))]
+      (println "touched-views" touched-views)
+      ))
   (ui/align views baseviews 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
   
 
@@ -208,7 +230,7 @@
   "entering point"
   (let [gfx (webgl/init)
         gui (uiwebgl/init)
-        views (ui/gen-from-desc {} layouts/generator)
+        views (ui/gen-from-desc {} layouts/generator) ; viewmap contains all visible views as id-desc pairs
         baseviews (ui/get-base-ids layouts/generator)
         viewids (ui/collect-visible-ids views baseviews  "")
         world {:setup false
@@ -248,8 +270,11 @@
                teximage (poll! imgch)
                keyevent (poll! keych)
                tchevent (poll! tchch)
-               newviews (update-ui (:views prestate) (:baseviews prestate))      
+
+               newviews (update-ui (:views prestate) (:baseviews prestate) tchevent)      
+
                newworld (update-world (:world prestate) (:keycodes prestate) svglevel)
+
                newstate (cond-> prestate
                           svglevel (assoc :gfx (webgl/loadshapes (:gfx prestate) svglevel))
                           true (assoc :world newworld)

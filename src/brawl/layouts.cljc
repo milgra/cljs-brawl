@@ -15,34 +15,34 @@
 ;; |Hitpower Height Stamina|
 ;; |Hitrate         Speed  |
   [{:id "Hitpower"
-    :class "Indicator"
+    :class "Slider"
     :texture "Label 30 Hitpower 000000AA FFFFFFFF"
     :width "150 px"
     :height "50 px"}
-   
+
    {:id "Height"
-    :class "Indicator"
+    :class "Slider"
     :texture "Label 30 Height 000000AA FFFFFFFF"
     :width "150 px"
     :height "50 px"
     :center-x "Edge 50 %"}
    
    {:id "Stamina"
-    :class "Indicator"
+    :class "Slider"
     :texture "Label 30 Stamina 000000AA FFFFFFFF"
     :width "150 px"
     :height "50 px"
     :right "Edge 0 px"}
    
    {:id "Hitrate"
-    :class "Indicator"
+    :class "Slider"
     :texture "Label 30 Hitrate 000000AA FFFFFFFF"
     :width "150 px"
     :height "50 px"
     :bottom "Edge 0 px"}
    
    {:id "Speed"
-    :class "Indicator"
+    :class "Slider"
     :texture "Label 30 Speed 000000AA FFFFFFFF"
     :width "150 px"
     :height "50 px"
