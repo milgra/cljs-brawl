@@ -16,33 +16,38 @@
 ;; |Hitrate         Speed  |
   [{:id "Hitpower"
     :class "Indicator"
-    :texture "Label 40 Hitpower 0xFFFFFFFF 0xFF00FF55"
-    :width "200 px"
+    :texture "Label 30 Hitpower 000000AA FFFFFFFF"
+    :width "150 px"
     :height "50 px"}
    
    {:id "Height"
     :class "Indicator"
-    :texture "Label 40 Height 0xFFFFFFFF 0xFF00FF55"
-    :width "200 px"
-    :height "50 px"}
+    :texture "Label 30 Height 000000AA FFFFFFFF"
+    :width "150 px"
+    :height "50 px"
+    :center-x "Edge 50 %"}
    
    {:id "Stamina"
     :class "Indicator"
-    :texture "Label 40 Stamin 0xFFFFFFFF 0xFF00FF55"
-    :width "200 px"
-    :height "50 px"}
+    :texture "Label 30 Stamina 000000AA FFFFFFFF"
+    :width "150 px"
+    :height "50 px"
+    :right "Edge 0 px"}
    
    {:id "Hitrate"
     :class "Indicator"
-    :texture "Label 40 Hitrate 0xFFFFFFFF 0xFF00FF55"
-    :width "200 px"
-    :height "50 px"}
+    :texture "Label 30 Hitrate 000000AA FFFFFFFF"
+    :width "150 px"
+    :height "50 px"
+    :bottom "Edge 0 px"}
    
    {:id "Speed"
     :class "Indicator"
-    :texture "Label 40 Speed 0xFFFFFFFF 0xFF00FF55"
-    :width "200 px"
-    :height "50 px"}])
+    :texture "Label 30 Speed 000000AA FFFFFFFF"
+    :width "150 px"
+    :height "50 px"
+    :right "Edge 0 px"
+    :bottom "Edge 0 px"}])
   
 
 (def generator
@@ -62,10 +67,10 @@
 
    {:id "Sliders"
     :texture "Color FF00FF55"
-    :width "450 px"
-    :height "300 px"
+    :width "453 px"
+    :height "101 px"
     :center-x "Edge 50 %"
-    :center-y "Edge 50 %"
+    :center-y "Edge 10 %"
     :subviews sliders}
 
    {:id "Randomize"

@@ -94,14 +94,12 @@
         forecol (str "rgba("br","bg","bb","(/ ba 255)")")
         context (.getContext canvas "2d")
         linehth (int (* size 1.2))]
-
     (.clearRect context 0 0 (.-width canvas) (.-height canvas))
     (set! (.-fillStyle context) backcol)
     (.fillRect context 0 0 (.-width canvas) (.-height canvas))
     (set! (.-font context) (str size "px Cantarell"))
     (set! (.-fillStyle context) forecol)
     (set! (.-textBaseline context) "middle")
-    (println "backcol" backcol forecol)
     (let [itemwth (int (.-width (.measureText context label)))]
       (.fillText context label (int (* (- width itemwth) 0.5)) (int (/ height 1.8)))
       {:data (.-data (.getImageData context 0 0 width height))
