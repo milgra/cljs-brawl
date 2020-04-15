@@ -105,33 +105,33 @@
          tmap ui-texmap]
     (if (empty? remviews)
       tmap
-      (let [{:keys [color] :as view} (first remviews)
-            newtmap (if (texmap/hasbmp? tmap color)
+      (let [{:keys [texture] :as view} (first remviews)
+            newtmap (if (texmap/hasbmp? tmap texture)
                       tmap
                       (cond
 
-                        (str/starts-with? color "Debug")
+                        (str/starts-with? texture "Debug")
                         ;; show full texture in quad
-                        (assoc-in tmap [:contents color] [0 0 1 1])
+                        (assoc-in tmap [:contents texture] [0 0 1 1])
 
-                        (str/starts-with? color "Image")
+                        (str/starts-with? texture "Image")
                         ;; show image in quad
                         (tmap)
 
-                        (str/starts-with? color "Color")
+                        (str/starts-with? texture "Color")
                         ;; show color in quad
-                        (let [rem (subs color 8)
+                        (let [rem (subs texture 8)
                               r (js/parseInt (subs rem 0 2) 16)
                               g (js/parseInt (subs rem 2 4) 16)
                               b (js/parseInt (subs rem 4 6) 16)
                               a (js/parseInt (subs rem 6 8) 16)]
-                          (texmap/setbmp tmap (bitmap/init 10 10 r g b a) color 1))
+                          (texmap/setbmp tmap (bitmap/init 10 10 r g b a) texture 1))
 
-                        (str/starts-with? color "Glyph")
+                        (str/starts-with? texture "Label")
                         ;; show glyph
-                        (let [arg (str/split (subs color 5) #"%")
+                        (let [arg (str/split (subs texture 6) #" ")
                               bmp (bitmap-for-glyph tempcanvas (js/parseInt (arg 0)) (arg 1))]
-                          (texmap/setbmp tmap bmp color 0))
+                          (texmap/setbmp tmap bmp texture 0))
 
                         :default
                         ;; return empty texmap if unknown
@@ -161,14 +161,14 @@
              projection
              views]
   "draw views defined by x y width height and texure requirements." 
-  ; (cljs.pprint/pprint views)
+  ;(cljs.pprint/pprint views)
   (let [;; generate textures for new views
         newtexmap (tex-gen-for-ids tempcanvas ui-texmap views)
         ;; generate vertex data from views
         vertexes (flatten
                   (map
-                   (fn [{:keys [id x y color] w :width h :height :as view}]
-                     (let [[tlx tly brx bry] (texmap/getbmp newtexmap color)]
+                   (fn [{:keys [id x y w h texture] :as view}]
+                     (let [[tlx tly brx bry] (texmap/getbmp newtexmap texture)]
                        (concat
                         [x y] [tlx tly]
                         [(+ x w) y] [brx tly]
@@ -178,6 +178,8 @@
                         [(+ x w) (+ y h)] [brx bry]
                         [x (+ y h)] [tlx bry] ))) views))]
 
+    (cljs.pprint/pprint vertexes)
+    
     ;; upload texture map if changed
     (when (newtexmap :changed)
       (texture/upload-texture

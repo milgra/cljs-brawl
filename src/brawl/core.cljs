@@ -81,7 +81,9 @@
 
   
 (defn update-ui [views]
-  (ui/align views (:subviews (:baseview views)) 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
+  ;(ui/align views (:subviews (:baseview views)) 0 0 (. js/window -innerWidth) (. js/window -innerHeight))
+  views
+  )
   
 
 (defn update-translation [state keyevent]           
@@ -208,9 +210,8 @@
   "entering point"
   (let [gfx (webgl/init)
         gui (uiwebgl/init)
-        views-generator (ui/gen-from-desc {} layouts/generator (get-in gui [:tempcanvas]))
-        ; views views-gen
-        ;viewids (ui/collect-visible-ids views "")
+        views (ui/gen-from-desc {} layouts/generator)
+        viewids (ui/collect-visible-ids views (ui/get-base-ids layouts/generator)  "")
         world {:setup false
                :actors [] ; (actor/init 580.0 300.0)]
                :guns []
@@ -224,8 +225,8 @@
         state {:gfx gfx
                :gui gui
                :world world
-               ;:views views
-               ;:viewids viewids
+               :views views
+               :viewids viewids
                :level_file "level0.svg"
                :texfile "font.png"
                :keycodes {}
@@ -242,7 +243,7 @@
     (load-level! svgch (:level_file state))
     
     (animate state (fn [prestate frame time]
-       (if (= (mod frame 1) 0 ) ; frame skipping for development
+       (if (= (mod frame 5) 0 ) ; frame skipping for development
          (let [svglevel (poll! svgch)
                teximage (poll! imgch)
                keyevent (poll! keych)

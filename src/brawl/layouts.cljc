@@ -16,36 +16,31 @@
 ;; |Hitrate         Speed  |
   [{:id "Hitpower"
     :class "Indicator"
-    :color 0x0000FF55
-    :color1 0xFFFFFF55
+    :texture "Label 40 Hitpower 0xFFFFFFFF 0xFF00FF55"
     :width "200 px"
     :height "50 px"}
    
    {:id "Height"
     :class "Indicator"
-    :color 0x0000FF55
-    :color1 0xFFFFFF55
+    :texture "Label 40 Height 0xFFFFFFFF 0xFF00FF55"
     :width "200 px"
     :height "50 px"}
    
    {:id "Stamina"
     :class "Indicator"
-    :color 0xFF000055
-    :color1 0xFFFFFF55
+    :texture "Label 40 Stamin 0xFFFFFFFF 0xFF00FF55"
     :width "200 px"
     :height "50 px"}
    
    {:id "Hitrate"
     :class "Indicator"
-    :color 0x0000FF55
-    :color1 0xFFFFFF55
+    :texture "Label 40 Hitrate 0xFFFFFFFF 0xFF00FF55"
     :width "200 px"
     :height "50 px"}
    
    {:id "Speed"
     :class "Indicator"
-    :color 0xFF000055
-    :color1 0xFFFFFF55
+    :texture "Label 40 Speed 0xFFFFFFFF 0xFF00FF55"
     :width "200 px"
     :height "50 px"}])
   
@@ -57,9 +52,8 @@
 ;;|     Randomize      |
 ;;|     StartGame      |
   [{:id "Menu"
-    :class "Button" 
-    :color 0xFF00FF55 
-    :color1 0xFFFFFFFF 
+    :class "Button"
+    :texture "Label 40 Menu 0xFFFFFFFF 0xFF00FF55"
     :command "ShowMenu" 
     :width "150 px" 
     :height "50 px" 
@@ -67,6 +61,7 @@
     :right "Edge 0 px"}
 
    {:id "Sliders"
+    :texture "Color 0xFF00FF55"
     :width "450 px"
     :height "300 px"
     :center-x "Edge 50 %"
@@ -75,8 +70,7 @@
 
    {:id "Randomize"
     :class "Button" 
-    :color 0xFF00FF55 
-    :color1 0xFFFFFFFF
+    :texture "Label 40 Randomize 0xFFFFFFFF 0xFF00FF55"
     :command "Randomize" 
     :width "150 px" 
     :height "50 px" 
@@ -85,8 +79,7 @@
    
    {:id "StartGame"
     :class "Button" 
-    :color 0xFF00FF55 
-    :color1 0xFFFFFFFF 
+    :texture "Label 40 Startgame 0xFFFFFFFF 0xFF00FF55"
     :command "Startgame" 
     :width "200 px" 
     :height "50 px" 
