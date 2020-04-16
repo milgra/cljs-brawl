@@ -45,7 +45,7 @@
 (defn setup-view [{:keys [class] :as view}]
   "setup view and create subviews if needed"
   (if (= class "Slider")
-    (let [subview (create-view (gen-id 5) "None" {:pixel 10.0} {:ratio 1.0} "Color 0xFF000022")
+    (let [subview (create-view (gen-id 5) "None" {:pixel 10.0} {:ratio 1.0} "Color 0xFF000055")
           newview (add-subview view subview)]
       [newview subview]) ; return the modified view and the new view
     [view])) ; return the view only
