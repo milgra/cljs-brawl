@@ -18,7 +18,8 @@
     :class "Slider"
     :texture "Label 30 Hitpower 000000AA FFFFFFFF"
     :width "150 px"
-    :height "50 px"}
+    :height "50 px"
+    :command "set-hitpower"}
 
    {:id "Height"
     :class "Slider"

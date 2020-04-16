@@ -3,8 +3,53 @@
             [gui.bitmap :as bitmap]
             [gui.webgl :as webgl]
             [clojure.string :as str]))
+  
+;; individual views
+
+(defn create-view [id class width height texture]
+  "generate basic view with color"
+  {:x 0
+   :y 0
+   :id id
+   :class class
+   :width width
+   :height height
+   :texture texture ; "Color 0xFFFFFFFF" "Label Text 0xFFFFFFFF 0x000000FF" "Debug" 
+   :subviews []})
+
+  
+(defn gen-id [length]
+  "generates fixed length alfanumeric hash"
+   (let [chars (map char (concat (range 48 57) (range 65 90) (range 97 122)))
+         id (take length (repeatedly #(rand-nth chars)))]
+     (reduce str id)))
+
+
+(defn add-align [view top bottom left right center-x center-y]
+  "add alignment properties to view"
+  (-> view
+      (assoc :top top)
+      (assoc :bottom bottom)
+      (assoc :left left)
+      (assoc :right right)
+      (assoc :center-x center-x)
+      (assoc :center-y center-y)))
+
+
+(defn add-subview [{subviews :subviews :as view} subview]
+  "inserts subview's id to views subviews property"
+  (assoc view :subviews (conj subviews (subview :id))))
 
 ;; generator
+
+(defn setup-view [{:keys [class] :as view}]
+  "setup view and create subviews if needed"
+  (if (= class "Slider")
+    (let [subview (create-view (gen-id 5) "None" {:pixel 10.0} {:ratio 1.0} "Color 0xFF000022")
+          newview (add-subview view subview)]
+      [newview subview]) ; return the modified view and the new view
+    [view])) ; return the view only
+
 
 (defn get-value [text]
   "extract measurement, value and element from alignment/dimension value"
@@ -44,50 +89,14 @@
                      :top      (assoc result :top (get-value v))
                      :bottom   (assoc result :bottom (get-value v))
                      :subviews (assoc result :subviews subids)
-                     (assoc result (key pair) v)))) {:x 0.0 :y 0.0 :w 150.0 :h 50.0 :subviews []} viewdesc)]
-       ;; generate label if necessary
-       (assoc subviewmap (:id view) view)))
+                     (assoc result k v)))) {:x 0.0 :y 0.0 :w 150.0 :h 50.0 :subviews []} viewdesc)
+           newviews (setup-view view)] ; generate subviews for sliders, buttons, etc
+       (reduce #(assoc %1 (:id %2) %2) subviewmap newviews)))
    viewmap
    desclist))
 
 (defn get-base-ids [desclist]
   (map (fn [desc] (keyword (:id desc))) desclist))
-  
-;; individual views
-
-(defn create-view [id class width height texture]
-  "generate basic view with color"
-  {:x 0
-   :y 0
-   :id id
-   :class class
-   :width width
-   :height height
-   :texture texture ; "Color 0xFFFFFFFF" "Label Text 0xFFFFFFFF 0x000000FF" "Debug" 
-   :subviews []})
-
-  
-(defn gen-id [length]
-  "generates fixed length alfanumeric hash"
-   (let [chars (map char (concat (range 48 57) (range 65 90) (range 97 122)))
-         id (take length (repeatedly #(rand-nth chars)))]
-     (reduce str id)))
-
-
-(defn add-align [view top bottom left right center-x center-y]
-  "add alignment properties to view"
-  (-> view
-      (assoc :top top)
-      (assoc :bottom bottom)
-      (assoc :left left)
-      (assoc :right right)
-      (assoc :center-x center-x)
-      (assoc :center-y center-y)))
-
-
-(defn add-subview [{subviews :subviews :as view} subview]
-  "inserts subview's id to views subviews property"
-  (assoc view :subviews (conj subviews (subview :id))))
 
 ;; alignment
 

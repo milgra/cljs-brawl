@@ -97,13 +97,25 @@
         newgui (uiwebgl/draw! gui projection (map views viewids))]
     (assoc state :gui newgui)))
 
+
+(defn touch-slider [{:keys [command subviews x y w h] :as view} viewmap [px py]]
+  (let [subview (-> (get viewmap (first subviews))
+                    (assoc :width {:pixel (- px x)}))]
+    {:views [subview] :command {:text command :ratio (/ (- px x) w)}}))
+
   
 (defn update-ui [views baseviews touchevent]
-  (if touchevent
-    (let [touched-views (ui/collect-pressed-views views (:point touchevent))]
-      (println "touched-views" touched-views)
-      ))
-  (ui/align views baseviews 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
+  (let [newviews
+        (if touchevent
+          (let [touched-views (ui/collect-pressed-views views (:point touchevent))]
+            (reduce (fn [oldviews {:keys [class] :as view}]
+                      (cond
+                        (= class "Slider")
+                        (let [touchres (touch-slider view oldviews (:point touchevent))]
+                          (reduce #(assoc %1 (:id %2) %2) oldviews (:views touchres)))
+                        :else oldviews)) views (map views touched-views)))
+          views)]
+    (ui/align newviews baseviews 0 0 (. js/window -innerWidth) (. js/window -innerHeight))))
   
 
 (defn update-translation [state keyevent]           
