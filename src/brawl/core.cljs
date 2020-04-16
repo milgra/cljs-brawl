@@ -137,7 +137,7 @@
 
 (defn draw-world [{:keys [world gfx trans] :as state} frame svglevel]
   "draws background, actors, masses with projection"
-  (if (:setup world)
+  (if (:inited world)
     (let [actors (:actors world)
           actor (first actors)
           [fax fay] (:p (get-in actor [:masses :base_l]))
@@ -176,21 +176,20 @@
 
 (defn update-world
   "updates phyisics and actors"
-  [{{:keys [actors surfaces masses setup] :as world} :world keycodes :keycodes :as state} svglevel]
+  [{{:keys [actors surfaces masses inited] :as world} :world keycodes :keycodes :as state} svglevel]
   (let [newworld
         (cond
           
-          setup ; create new state
-          (let [
-                newactors (vec (map #(actor/update-actor % {:left (keycodes 37)
-                                                            :right (keycodes 39)
-                                                            :up (keycodes 38)
-                                                            :down (keycodes 40)
-                                                            :punch (keycodes 70)
-                                                            :run (keycodes 32)
-                                                            :kick (keycodes 83)
-                                                            :block (keycodes 68)
-                                                            } surfaces 1.0) actors))
+          inited ; create new state
+          (let [currcodes {:left (keycodes 37)
+                           :right (keycodes 39)
+                           :up (keycodes 38)
+                           :down (keycodes 40)
+                           :punch (keycodes 70)
+                           :run (keycodes 32)
+                           :kick (keycodes 83)
+                           :block (keycodes 68)}
+                newactors (vec (map #(actor/update-actor % currcodes surfaces 1.0) actors))
                 newmasses (-> masses
                               (phys2/add-gravity [0.0 0.2])
                               ;;(phys2/keep-angles (:aguards state))
@@ -207,7 +206,7 @@
                 lines (reduce (fn [result {t :t b :b}] (conj result t (math2/add-v2 t b))) [] surfaces)]       
             (-> world
                 (create-actors pivots)
-                (assoc :setup true)
+                (assoc :inited true)
                 (assoc :surfaces surfaces)
                 (assoc :surfacelines lines)))
           :else ; return unchanged
@@ -258,7 +257,7 @@
         views (ui/gen-from-desc {} layouts/generator) ; viewmap contains all visible views as id-desc pairs
         baseviews (ui/get-base-ids layouts/generator)
         viewids (ui/collect-visible-ids views baseviews  "")
-        world {:setup false
+        world {:inited false
                :actors [] ; (actor/init 580.0 300.0)]
                :guns []
                :infos []
@@ -289,23 +288,23 @@
     (load-image! imgch (:texfile state))
     (load-level! svgch (:level_file state))
     
-    (animate state (fn [prestate frame time]
-       (if (= (mod frame 1) 0 ) ; frame skipping for development
-         (let [svglevel (poll! svgch)
-               teximage (poll! imgch)
-               keyevent (poll! keych)
-               tchevent (poll! tchch)
-
-               newstate (-> prestate
-                          ; world
-                          (update-keycodes keyevent)
-                          (update-world svglevel)
-                          (draw-world frame svglevel)
-                          ; ui
-                          (update-ui tchevent)
-                          (draw-ui frame)
-                          )]
-           newstate)
-         prestate)))))
+    (animate state
+             (fn [prestate frame time]
+               (if (= (mod frame 1) 0 ) ; frame skipping for development
+                 (let [svglevel (poll! svgch)
+                       teximage (poll! imgch)
+                       keyevent (poll! keych)
+                       tchevent (poll! tchch)
+                       
+                       newstate (-> prestate
+                                        ; world
+                                    (update-keycodes keyevent)
+                                    (update-world svglevel)
+                                    (draw-world frame svglevel)
+                                        ; ui
+                                    (update-ui tchevent)
+                                    (draw-ui frame))]
+                   newstate)
+                 prestate)))))
 
 (main)
