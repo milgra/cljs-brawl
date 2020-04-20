@@ -90,12 +90,6 @@
    js/window
    EventType.RESIZE
    (fn [event] (resize-context!))))
-
-
-(defn touch-slider [{:keys [command subviews x y w h] :as view} viewmap [px py]]
-  (let [subview (-> (get viewmap (first subviews))
-                    (assoc :width {:pixel (- px x)}))]
-    {:views [subview] :command {:text command :ratio (/ (- px x) w)}}))
     
 
 (defn create-actors
@@ -112,8 +106,6 @@
          )) state pivots))
 
 
-
-
 (defn draw-ui [{:keys [gui views viewids] :as state} frame]
   (let [projection (math4/proj_ortho 0 (.-innerWidth js/window) (.-innerHeight js/window) 0 -10.0 10.0)
         newgui (uiwebgl/draw! gui projection (map views viewids))]
@@ -121,17 +113,24 @@
 
   
 (defn update-ui [{:keys [views baseviews] :as state} touchevent]
-  (let [newviews
-        (if touchevent
-          (let [touched-views (ui/collect-pressed-views views (:point touchevent))]
-            (reduce (fn [oldviews {:keys [class] :as view}]
-                      (cond
-                        (= class "Slider")
-                        (let [touchres (touch-slider view oldviews (:point touchevent))]
-                          (reduce #(assoc %1 (:id %2) %2) oldviews (:views touchres)))
-                        :else oldviews)) views (map views touched-views)))
-          views)]    
-    (assoc state :views (ui/align newviews baseviews 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
+  (let [results (if touchevent
+                  (let [touched-views (ui/collect-pressed-views views (:point touchevent))]
+                    (reduce
+                     (fn [result {:keys [class] :as view}]
+                       (cond
+                         (= class "Slider") (conj result (ui/touch-slider view views (:point touchevent)))
+                         :else result))
+                     []
+                     (map views touched-views)))
+                  [])
+        newviews (reduce (fn [oldviews {newviews :views}]
+                           (reduce #(assoc oldviews (:id %2) %2) oldviews newviews))
+                         views
+                         results)
+        newcommands (map :command results)]
+    (-> state
+        (assoc :views (ui/align newviews baseviews 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
+        (assoc :commands newcommands))
     ))
 
 

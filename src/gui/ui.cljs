@@ -172,3 +172,11 @@
          result)))
    []
    (vals viewmap)))
+
+
+(defn touch-slider
+  "touch event for slider"
+  [{:keys [command subviews x y w h] :as view} viewmap [px py]]
+  (let [subview (-> (get viewmap (first subviews))
+                    (assoc :width {:pixel (- px x)}))]
+    {:views [subview] :command {:text command :ratio (/ (- px x) w)}}))
