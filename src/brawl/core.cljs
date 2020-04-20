@@ -103,7 +103,17 @@
                     (= type "g") (assoc state1 :guns (conj guns {:pos pos}))
                     (= type "e") (assoc state1 :endpos pos)
                     (= type "i") (assoc state1 :infos (conj infos {:pos pos :index (js/parseInt (second type))})))     
-         )) state pivots))
+              )) state pivots))
+
+
+(defn execute-commands [{commands :commands :as state}]
+  (reduce (fn [oldstate command]
+            (cond
+              (= command "set-hitpower") oldstate
+              :else oldstate
+              ))
+            state
+            commands))
 
 
 (defn draw-ui [{:keys [gui views viewids] :as state} frame]
@@ -302,7 +312,9 @@
                                     (draw-world frame svglevel)
                                         ; ui
                                     (update-ui tchevent)
-                                    (draw-ui frame))]
+                                    (draw-ui frame)
+                                    (execute-commands)
+                                    )]
                    newstate)
                  prestate)))))
 

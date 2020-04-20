@@ -12,24 +12,39 @@
 (declare step-feet)
 
 
+(defn basemetrics-normalize [ {:keys [hitpower hitrate stamina speed height color_a color_b] :as base} mkey]
+  (let [half (- 1.25 (* height 0.5)) 
+        hp (if (= mkey :hitrate) (- half hitrate) hitpower) 
+        hr (if (= mkey :hitpower) (- half hitpower) hitrate)
+        st (if (= mkey :speed) (- half speed) stamina)
+        sp (if (= mkey :stamina) (- half stamina) speed)
+        nhp (if (< hr 0) (- hp hr) hp) ; check overflow
+        nhr (if (< hp 0) (- hr hp) hr)
+        nst (if (< sp 0) (- st sp) st)
+        nsp (if (< st 0) (- sp st) sp)]
+    (assoc base :hitpower nhp :hitrate nhr :stamina nst :speed nsp)))
+
+
 (defn basemetrics-default []
-  {:height 0.5
+  (basemetrics-normalize
+   {:height 0.5
    :hitpower 0.5
    :hitrate 0.5
    :stamina 0.5
    :speed 0.5
    :color_a [1.0 0.0 0.0 1.0]
-   :color_b [0.0 0.0 1.0 1.0]})
+   :color_b [0.0 0.0 1.0 1.0]} :height))
 
 
 (defn basemetrics-random []
-  {:height (/ (rand 10) 10)
-   :hitpower (/ (rand 10) 10)
-   :hitrate (/ (rand 10) 10)
-   :stamina (/ (rand 10) 10)
-   :speed (/ (rand 10) 10)
-   :color_a [1.0 (rand) (rand) 1.0]
-   :color_b [1.0 (rand) (rand) 1.0]})
+  (basemetrics-normalize
+   {:height (/ (rand 10) 10)
+    :hitpower (/ (rand 10) 10)
+    :hitrate (/ (rand 10) 10)
+    :stamina (/ (rand 10) 10)
+    :speed (/ (rand 10) 10)
+    :color_a [1.0 (rand) (rand) 1.0]
+    :color_b [1.0 (rand) (rand) 1.0]} :height))
 
 
 (defn generate-metrics [{:keys [hitpower hitrate stamina speed height color_a color_b] :as base}]
@@ -79,7 +94,8 @@
                 :headw headw :neckw neckw :armw armw :bodyw headw :hipw hipw :legw legw ; widths
                 :walks walks :runs runs   :punchs punchs :kicks kicks ; speed
                 :maxp maxp :hitp hitp  :kickp kickp :maxh maxh ; power and health
-                :cola color_a :colb [dra dga dba 1.0] :colc color_b :cold [drb dgb dbb 1.0]}] ; colors
+                :cola color_a :colb [dra dga dba 1.0] :colc color_b :cold [drb dgb dbb 1.0]
+                :base base}] ; colors
     result))
   
 
