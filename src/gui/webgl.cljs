@@ -1,6 +1,7 @@
 (ns gui.webgl
   (:require [gui.bitmap :as bitmap]
             [gui.texmap :as texmap]
+            [brawl.floatbuffer :as fb]
             [clojure.string :as str]
             [cljs-webgl.context :as context]
             [cljs-webgl.shaders :as shaders]
@@ -63,7 +64,8 @@
         ui-location-texcoord (shaders/get-attrib-location context ui-shader "texcoord")]
     
     {:context context
-     :tempcanvas tempcanvas 
+     :tempcanvas tempcanvas
+     :floatbuffer (fb/create!)
      :textures {}
      :ui-shader ui-shader
      :ui-buffer ui-buffer
@@ -92,16 +94,15 @@
         size (js/parseInt s)
         backcol (str "rgba("fr","fg","fb","(/ fa 255)")")
         forecol (str "rgba("br","bg","bb","(/ ba 255)")")
-        context (.getContext canvas "2d")
-        linehth (int (* size 1.2))]
+        context (.getContext canvas "2d")]
     (.clearRect context 0 0 (.-width canvas) (.-height canvas))
     (set! (.-fillStyle context) backcol)
     (.fillRect context 0 0 (.-width canvas) (.-height canvas))
-    (set! (.-font context) (str "italic small-caps bold " size "px arial"))
+    (set! (.-font context) (str "small-caps bold " size "px monospace"))
     (set! (.-fillStyle context) forecol)
     (set! (.-textBaseline context) "middle")
     (let [itemwth (int (.-width (.measureText context label)))]
-      (.fillText context label (int (* (- width itemwth) 0.5)) (int (/ height 1.8)))
+      (.fillText context label (int (* (- width itemwth) 0.5)) (int (/ height 1.6)))
       {:data (.-data (.getImageData context 0 0 width height))
        :width width
        :height height})))
@@ -157,6 +158,7 @@
 
 (defn draw! [{:keys [context
                      tempcanvas
+                     floatbuffer
                      textures
                      ui-shader
                      ui-buffer
@@ -172,21 +174,21 @@
   (let [;; generate textures for new views
         newtexmap (tex-gen-for-ids tempcanvas ui-texmap views)
         ;; generate vertex data from views
-        vertexes (flatten
-                  (map
-                   (fn [{:keys [id x y w h texture] :as view}]
-                     (let [[tlx tly brx bry] (texmap/getbmp newtexmap texture)]
-                       (concat
-                        [x y] [tlx tly]
-                        [(+ x w) y] [brx tly]
-                        [x (+ y h)] [tlx bry]
-                        
-                        [(+ x w) y] [brx tly]
-                        [(+ x w) (+ y h)] [brx bry]
-                        [x (+ y h)] [tlx bry] ))) views))]
-
+        resfb (fb/empty! floatbuffer)
+        newfb (reduce (fn [oldbuf {:keys [id x y w h texture] :as view}]
+                        (let [[tlx tly brx bry] (texmap/getbmp newtexmap texture)]
+                          (fb/append!
+                           oldbuf
+                           (array x y tlx tly
+                                  (+ x w) y brx tly
+                                  x (+ y h) tlx bry
+                                  
+                                  (+ x w) y brx tly
+                                  (+ x w) (+ y h) brx bry
+                                  x (+ y h) tlx bry)))) resfb views)]
+    
     ;(cljs.pprint/pprint vertexes)>
-
+    
     ;; upload texture map if changed
     (when (newtexmap :changed)
       (texture/upload-texture
@@ -200,14 +202,14 @@
     (buffers/upload-buffer
      context
      ui-buffer
-     (arrays/float32 vertexes)
+     (:data newfb)
      buffer-object/array-buffer
      buffer-object/dynamic-draw)
 
     ;; draw vertexes
     (buffers/draw!
      context
-     :count (/ (count vertexes) 4)
+     :count (/ (:index newfb) 4)
      :first 0
      :shader ui-shader
      :draw-mode draw-mode/triangles
@@ -235,4 +237,7 @@
                 :name "texture_main"
                 :texture-unit texture-unit/texture0}])
 
-    (assoc state :ui-texmap (assoc newtexmap :changed false))))
+    (-> state
+        (assoc :ui-texmap (assoc newtexmap :changed false))
+        (assoc :floatbuffer newfb)
+        )))

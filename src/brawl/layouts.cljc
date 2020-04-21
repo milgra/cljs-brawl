@@ -16,14 +16,14 @@
 ;; |Hitrate         Speed  |
   [{:id "Hitpower"
     :class "Slider"
-    :texture "Label 30 Hitpower 000000AA FFFFFFFF"
+    :texture "Label 25 HITPOWER 000000AA FFFFFFFF"
     :width "150 px"
     :height "50 px"
     :command "set-hitpower"}
 
    {:id "Height"
     :class "Slider"
-    :texture "Label 30 Height 000000AA FFFFFFFF"
+    :texture "Label 25 HEIGHT 000000AA FFFFFFFF"
     :width "150 px"
     :height "50 px"
     :center-x "Edge 50 %"
@@ -31,7 +31,7 @@
    
    {:id "Stamina"
     :class "Slider"
-    :texture "Label 30 Stamina 000000AA FFFFFFFF"
+    :texture "Label 25 STAMINA 000000AA FFFFFFFF"
     :width "150 px"
     :height "50 px"
     :right "Edge 0 px"
@@ -39,7 +39,7 @@
    
    {:id "Hitrate"
     :class "Slider"
-    :texture "Label 30 Hitrate 000000AA FFFFFFFF"
+    :texture "Label 25 HITRATE 000000AA FFFFFFFF"
     :width "150 px"
     :height "50 px"
     :bottom "Edge 0 px"
@@ -47,7 +47,7 @@
    
    {:id "Speed"
     :class "Slider"
-    :texture "Label 30 Speed 000000AA FFFFFFFF"
+    :texture "Label 25 SPEED 000000AA FFFFFFFF"
     :width "150 px"
     :height "50 px"
     :right "Edge 0 px"

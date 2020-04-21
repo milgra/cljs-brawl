@@ -10,9 +10,7 @@ run :
 
 ## Todo
 
-* parameter slider with start button
 * time scaling
-* first level
 * working punch
 * jump ending should be when both foot is close to a surface
 * actor hit

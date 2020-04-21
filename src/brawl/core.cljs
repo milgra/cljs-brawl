@@ -250,7 +250,7 @@
           actor (first actors)
           [fax fay] (:p (get-in actor [:masses :base_l]))
           [fbx fby] (:p (get-in actor [:masses :base_r]))
-          [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fby (/ (- fby fay) 2))  ]
+          [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2))  ]
           [sx sy] (:speed state)
           ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
           r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
@@ -275,8 +275,8 @@
       ;;(webgl/drawpoints! gfx projection (actorskin/getpoints act))
       ;;(webgl/drawlines! gfx projection (actorskin/getlines act))
 
-      ;(webgl/drawpoints! newgfx projection (map :p (vals (:masses world))))
-      ;(webgl/drawlines! newgfx projection (:surfacelines world))
+      ;;(webgl/drawpoints! newgfx projection (map :p (vals (:masses world))))
+      ;;(webgl/drawlines! newgfx projection (:surfacelines world))
       (-> state
           (assoc :gfx newgfx)
           (assoc :floatbuffer newbuf1)
