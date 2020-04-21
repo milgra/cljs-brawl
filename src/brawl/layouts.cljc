@@ -118,3 +118,66 @@ L CLButton TELeft BCFFFFFF55 FCFFFFFFFF BA0 RAR WI100 HE100
 R CLButton TERight BCFFFFFF55 FCFFFFFFFF BAD RA0 WI100 HE100
 D CLButton TEDown BCFFFFFF55 FCFFFFFFFF BA0 RA0 WI100 HE100
 E CLDebug TA0 LA0 WI300 HE300")
+
+
+(def menu
+  ;;
+  ;;    BRAWL
+  ;;    Continue
+  ;;    New Game
+  ;;    Options
+  ;;    Donate
+  ;;    Exit
+  ;;
+  [{:id "Brawl"
+    :class ""
+    :texture "Label 50 BRAWL 00000088 FFFFFFFF"
+    :width "250 px" 
+    :height "70 px" 
+    :bottom "Continue 10 px" 
+    :center-x "Edge 50 %"}
+
+   {:id "Continue"
+    :class "Button"
+    :command "continue"
+    :texture "Label 30 Continue 00000088 FFFFFFFF"
+    :width "150 px" 
+    :height "50 px" 
+    :center-y "Edge 40 %" 
+    :center-x "Edge 50 %"}
+
+   {:id "NewGame"
+    :class "Button"
+    :command "new-game"
+    :texture "Label 30 New 00000088 FFFFFFFF"
+    :width "150 px" 
+    :height "50 px" 
+    :top "Continue 10 px" 
+    :center-x "Edge 50 %"}
+
+   {:id "Options"
+    :class "Button"
+    :command "options"
+    :texture "Label 30 Options 000000888 FFFFFFFF"
+    :width "150 px" 
+    :height "50 px" 
+    :top "NewGame 10 px" 
+    :center-x "Edge 50 %"}
+
+   {:id "Donate"
+    :class "Button"
+    :command "donate"
+    :texture "Label 30 Donate 00000088 FFFFFFFF"
+    :width "150 px" 
+    :height "50 px" 
+    :top "Options 10 px" 
+    :center-x "Edge 50 %"}
+
+   {:id "Exit"
+    :class "Button"
+    :command "exit"
+    :texture "Label 30 Exit 00000088 FFFFFFFF"
+    :width "150 px" 
+    :height "50 px" 
+    :top "Donate 10 px" 
+    :center-x "Edge 50 %"}])

@@ -104,14 +104,19 @@
 (defn create-actors
   "add actors, infos, guns and enpoint to scene based on pivot points in svg"
   [state pivots]
-  (reduce (fn [{:keys [actors guns infos] :as state1} {id :id path :path}]         
+  (reduce (fn [{:keys [actors guns infos] :as oldstate} {id :id path :path}]         
             (let [pos (nth path 3)
                   toks (clojure.string/split id #"_")
                   type (first (second toks))]
-              (cond (= type "l") (assoc state1 :actors (concat actors (map #(actor/init (first pos) (second pos)) (repeat 1 2))))
-                    (= type "g") (assoc state1 :guns (conj guns {:pos pos}))
-                    (= type "e") (assoc state1 :endpos pos)
-                    (= type "i") (assoc state1 :infos (conj infos {:pos pos :index (js/parseInt (second type))})))     
+              
+              (cond (= type "l")
+                    (do
+                      (println "create actor" id type pos)
+                      (assoc oldstate :actors (conj actors (actor/init (first pos) (second pos))))
+                      )
+                    (= type "g") (assoc oldstate :guns (conj guns {:pos pos}))
+                    (= type "e") (assoc oldstate :endpos pos)
+                    (= type "i") (assoc oldstate :infos (conj infos {:pos pos :index (js/parseInt (second type))})))     
               )) state pivots))
 
 
@@ -175,6 +180,33 @@
                               (actor/basemetrics-normalize :height))
                     nmetrics (actor/generate-metrics nbase)]
                 (-> oldstate (assoc-in [:world :actors 0 :metrics] nmetrics) (update-gen-sliders)))
+              (= text "show-menu") 
+              (let [views (ui/gen-from-desc {} layouts/menu)
+                    baseviews (ui/get-base-ids layouts/menu)
+                    viewids (ui/collect-visible-ids views baseviews  "")]
+                (assoc oldstate :views views :baseviews baseviews :viewids viewids))
+              (= text "continue") 
+              (let [uidesc layouts/generator
+                    views (ui/gen-from-desc {} uidesc)
+                    baseviews (ui/get-base-ids uidesc)
+                    viewids (ui/collect-visible-ids views baseviews  "")]
+                (assoc oldstate :views views :baseviews baseviews :viewids viewids))
+
+              (= text "start-game")
+              (let [level-file "level1.svg"]
+                (load-level! (:svgch oldstate) level-file)
+                (-> oldstate
+                    (assoc :world {:inited false
+                                   :actors [] ; (actor/init 580.0 300.0)]
+                                   :guns []
+                                   :infos []
+                                   :endpos [0 0]
+                                   :masses {:0 (phys2/mass2 500.0 300.0 1.0 1.0 0.9)}
+                                   :dguards []
+                                   :aguards []
+                                   :surfaces []
+                                   :surfacelines []})
+                    (assoc :level-file level-file)))
 
               :else oldstate))
           state
@@ -238,8 +270,8 @@
       
       (doall (map (fn [act]
                     (webgl/drawtriangles! newgfx projection (actorskin/get-skin-triangles act variation))
-                                        ;(webgl/drawpoints! gfx projection (actorskin/getpoints act))
-                                        ;(webgl/drawlines! gfx projection (actorskin/getlines act))
+                    ;(webgl/drawpoints! gfx projection (actorskin/getpoints act))
+                    ;(webgl/drawlines! gfx projection (actorskin/getlines act))
                     ) actors))
       
       (webgl/drawpoints! newgfx projection (map :p (vals (:masses world))))
@@ -278,7 +310,7 @@
           (let [points (map :path (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) svglevel ))
                 pivots (filter #(clojure.string/includes? (:id %) "Pivot") svglevel)
                 surfaces (phys2/surfaces-from-pointlist points)
-                lines (reduce (fn [result {t :t b :b}] (conj result t (math2/add-v2 t b))) [] surfaces)]       
+                lines (reduce (fn [result {t :t b :b}] (conj result t (math2/add-v2 t b))) [] surfaces)]
             (-> world
                 (create-actors pivots)
                 (assoc :inited true)
@@ -329,6 +361,10 @@
   "entering point"
   (let [gfx (webgl/init)
         gui (uiwebgl/init)
+        svgch (chan) ;; level svg channel
+        imgch (chan) ;; texture image channel
+        tchch (chan) ;; touch channel
+        keych (chan) ;; key press channel
         views (ui/gen-from-desc {} layouts/generator) ; viewmap contains all visible views as id-desc pairs
         baseviews (ui/get-base-ids layouts/generator)
         viewids (ui/collect-visible-ids views baseviews  "")
@@ -352,12 +388,9 @@
                :texfile "font.png"
                :keycodes {}
                :trans [500.0 300.0]
-               :speed [0.0 0.0]}
-        svgch (chan) ;; level svg channel
-        imgch (chan) ;; texture image channel
-        tchch (chan) ;; touch channel
-        keych (chan)];; key press channel
-    
+               :speed [0.0 0.0]
+               :svgch svgch}]
+  
     (resize-context!)
     (init-events! keych tchch)
     (load-image! imgch (:texfile state))
