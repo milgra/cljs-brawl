@@ -15,7 +15,8 @@
             [brawl.actorskin :as actorskin]
             [mpd.phys2 :as phys2]
             [mpd.math2 :as math2]
-            [brawl.layouts :as layouts])
+            [brawl.layouts :as layouts]
+            [brawl.floatbuffer :as floatbuf])
   (:import [goog.events EventType]))
   
 
@@ -242,7 +243,7 @@
     ))
 
 
-(defn draw-world [{:keys [world gfx trans] :as state} frame svglevel]
+(defn draw-world [{:keys [world gfx trans floatbuffer] :as state} frame svglevel]
   "draws background, actors, masses with projection"
   (if (:inited world)
     (let [actors (:actors world)
@@ -263,21 +264,23 @@
                       -1.0 1.0)
           
           variation (Math/floor (mod (/ frame 20.0) 3.0 ))
-          newgfx (if svglevel (webgl/loadshapes gfx svglevel) gfx)]
+          newgfx (if svglevel (webgl/loadshapes gfx svglevel) gfx)
+          newbuf (floatbuf/empty! floatbuffer)
+          newbuf1 (reduce (fn [oldbuf actor] (actorskin/get-skin-triangles actor oldbuf variation)) newbuf actors)]
 
       (webgl/clear! newgfx)
       (webgl/drawshapes! newgfx projection trans variation)
-      
-      (doall (map (fn [act]
-                    (webgl/drawtriangles! newgfx projection (actorskin/get-skin-triangles act variation))
-                    ;(webgl/drawpoints! gfx projection (actorskin/getpoints act))
-                    ;(webgl/drawlines! gfx projection (actorskin/getlines act))
-                    ) actors))
-      
-      (webgl/drawpoints! newgfx projection (map :p (vals (:masses world))))
-      (webgl/drawlines! newgfx projection (:surfacelines world))
+      (webgl/drawtriangles! newgfx projection newbuf1)
 
-      (assoc state :gfx newgfx))
+      ;;(webgl/drawpoints! gfx projection (actorskin/getpoints act))
+      ;;(webgl/drawlines! gfx projection (actorskin/getlines act))
+
+      ;(webgl/drawpoints! newgfx projection (map :p (vals (:masses world))))
+      ;(webgl/drawlines! newgfx projection (:surfacelines world))
+      (-> state
+          (assoc :gfx newgfx)
+          (assoc :floatbuffer newbuf1)
+          ))
     state))
 
 
@@ -386,6 +389,7 @@
                :viewids viewids
                :level_file "level0.svg"
                :texfile "font.png"
+               :floatbuffer (floatbuf/create!)
                :keycodes {}
                :trans [500.0 300.0]
                :speed [0.0 0.0]
@@ -405,11 +409,11 @@
                        tchevent (poll! tchch)
                        
                        newstate (-> prestate
-                                        ; world
+                                    ;; world
                                     (update-keycodes keyevent)
                                     (update-world svglevel)
                                     (draw-world frame svglevel)
-                                        ; ui
+                                    ;; ui
                                     (update-ui tchevent)
                                     (draw-ui frame)
                                     (execute-commands)

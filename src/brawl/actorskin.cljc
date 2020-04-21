@@ -1,4 +1,5 @@
 (ns brawl.actorskin
+  (:require [brawl.floatbuffer :as fb])
   (:use [mpd.math2 :only [resize-v2 scale-v2 rotate-90-cw rotate-90-ccw add-v2 sub-v2]]))
 
 (defn getpoints [{masses :masses}]
@@ -20,10 +21,10 @@
    (:A step-zone) (:C step-zone)])
   
 
-(defn gen-tube-triangles [points sizes]
+(defn gen-tube-triangles [buf points sizes [x y z w]]
   (loop [rempts points
          remszs sizes
-         result []]
+         oldbuf buf]
     (if (= 2 (count rempts))
       ;; close tube
       (let [pa (nth rempts 0)
@@ -31,66 +32,72 @@
             sa (nth remszs 0)
             sb (nth remszs 1)
             ab (sub-v2 pb pa)
-            nlsa (add-v2 pa (resize-v2( rotate-90-ccw ab) sa))
-            nrsa (add-v2 pa (resize-v2( rotate-90-cw ab) sa))
-            nlea (add-v2 pb (resize-v2( rotate-90-ccw ab) sb))
-            nrea (add-v2 pb (resize-v2( rotate-90-cw ab) sb))]
-        (conj result
-              nlsa nrsa nrea
-              nlsa nrea nlea))
+            [a b :as nlsa] (add-v2 pa (resize-v2( rotate-90-ccw ab) sa))
+            [c d :as nrsa] (add-v2 pa (resize-v2( rotate-90-cw ab) sa))
+            [e f :as nlea] (add-v2 pb (resize-v2( rotate-90-ccw ab) sb))
+            [g h :as nrea] (add-v2 pb (resize-v2( rotate-90-cw ab) sb))]
+        ;; nlsa nrsa nrea
+        ;; nlsa nrea nlea
+        (fb/append! oldbuf (array a b x y z w c d x y z w g h x y z w a b x y z w g h x y z w e f x y z w)))
       ;; add rect and joint triangle
       (let [pa (nth rempts 0)
-            pb (nth rempts 1)
+            [m n :as pb] (nth rempts 1)
             pc (nth rempts 2)
             sa (nth remszs 0)
             sb (nth remszs 1)
             ab (sub-v2 pb pa)
             bc (sub-v2 pc pb)
-            nlsa (add-v2 pa (resize-v2( rotate-90-ccw ab) sa))
-            nrsa (add-v2 pa (resize-v2( rotate-90-cw ab) sa))
-            nlea (add-v2 pb (resize-v2( rotate-90-ccw ab) sb))
-            nrea (add-v2 pb (resize-v2( rotate-90-cw ab) sb))
-            nlsb (add-v2 pb (resize-v2( rotate-90-ccw bc) sb))
-            nrsb (add-v2 pb (resize-v2( rotate-90-cw bc) sb))]
+            [a b :as nlsa] (add-v2 pa (resize-v2( rotate-90-ccw ab) sa))
+            [c d :as nrsa] (add-v2 pa (resize-v2( rotate-90-cw ab) sa))
+            [e f :as nlea] (add-v2 pb (resize-v2( rotate-90-ccw ab) sb))
+            [g h :as nrea] (add-v2 pb (resize-v2( rotate-90-cw ab) sb))
+            [i j :as nlsb] (add-v2 pb (resize-v2( rotate-90-ccw bc) sb))
+            [k l :as nrsb] (add-v2 pb (resize-v2( rotate-90-cw bc) sb))]
+        ;; nlsa nrsa nrea
+        ;; nlsa nrea nlea
+        ;; nlea nlsb pb
+        ;; nrea nrsb pb
         (recur (rest rempts)
                (rest remszs)
-               (conj result
-                     nlsa nrsa nrea
-                     nlsa nrea nlea
-                     nlea nlsb pb
-                     nrea nrsb pb))))))
+               (fb/append! oldbuf (array a b x y z w c d x y z w g h x y z w a b x y z w g h x y z w e f x y z w
+                                         e f x y z w i j x y z w m n x y z w g h x y z w k l x y z w m n x y z w)))
+
+               ))))
 
 
-(defn gen-foot-triangles [pa pb size facing]
+(defn gen-foot-triangles [buf pa pb size facing [x y z w]]
   (let [ab (resize-v2 (sub-v2 pb pa) 20.0)
         abbig pb ;;(add-v2 pb (scale-v2 ab 1.2))
-        leftp (if (= facing -1)
+        [a b :as leftp] (if (= facing -1)
                 (add-v2 abbig (resize-v2 (rotate-90-cw ab) -1.0))
                 (add-v2 abbig (resize-v2 (rotate-90-cw ab) 30.0)))
-        rightp (if (= facing -1)
+        [c d :as rightp] (if (= facing -1)
                 (add-v2 abbig (resize-v2 (rotate-90-ccw ab) 30.0))
                 (add-v2 abbig (resize-v2 (rotate-90-ccw ab) -1.0)))
-        topp (if (= facing -1)
+        [e f :as topp] (if (= facing -1)
                 (add-v2 leftp (resize-v2 ab -15.0))
                 (add-v2 rightp (resize-v2 ab -15.0)))]
-    [topp leftp rightp]))
+    (fb/append! buf (array e f x y z w a b x y z w c d x y z w))))
 
 
-(defn gen-head-triangles [pa pb facing stroke]
+(defn gen-head-triangles [buf pa pb facing stroke [x y z w]]
   (let [ab (sub-v2 pb pa)
         ba (sub-v2 pa pb)
         npa (add-v2 pa (resize-v2 ba stroke))
-        nlsa (add-v2 npa (resize-v2 (rotate-90-ccw ab) (+ 10.0 stroke)))
-        nrsa (add-v2 npa (resize-v2 (rotate-90-cw ab) (+ 10.0 stroke)))
-        nlea (add-v2 pb (resize-v2 (rotate-90-ccw ab) (+ 11.0 stroke)))
-        nrea (add-v2 pb (resize-v2 (rotate-90-cw ab) (+ 11.0 stroke)))
+        [a b :as nlsa] (add-v2 npa (resize-v2 (rotate-90-ccw ab) (+ 10.0 stroke)))
+        [c d :as nrsa] (add-v2 npa (resize-v2 (rotate-90-cw ab) (+ 10.0 stroke)))
+        [e f :as nlea] (add-v2 pb (resize-v2 (rotate-90-ccw ab) (+ 11.0 stroke)))
+        [g h :as nrea] (add-v2 pb (resize-v2 (rotate-90-cw ab) (+ 11.0 stroke)))
         ab23 (add-v2 npa (scale-v2 ab 0.66))
-        nose (if (= -1 facing)
+        [i j :as nose] (if (= -1 facing)
                (add-v2 ab23 (resize-v2 (rotate-90-ccw ab) (+ 15.0 stroke)))
                (add-v2 ab23 (resize-v2 (rotate-90-cw ab) (+ 15.0 stroke))))]
     (if (= -1 facing)
-      [nlsa nrsa nrea nlsa nrea nose nose nlea nrea]
-      [nlsa nrsa nose nlsa nose nlea nose nrea nlea])))
+      (fb/append! buf (array a b x y z w c d x y z w g h x y z w a b x y z w g h x y z w i j x y z w i j x y z w e f x y z w g h x y z w))
+      (fb/append! buf (array a b x y z w c d x y z w i j x y z w a b x y z w i j x y z w e f x y z w i j x y z w g h x y z w e f x y z w))
+      ;;[nlsa nrsa nrea nlsa nrea nose nose nlea nrea]
+      ;;[nlsa nrsa nose nlsa nose nlea nose nrea nlea]
+      )))
 
 
 (defn get-skin-triangles
@@ -100,46 +107,34 @@
     {as :active ps :passive} :base-surfaces
     facing :facing
     randoms :randoms}
+   floatbuffer
    variation]
   (let [[r0 r1 r2 r3 r4 r5 r6 r7 r8 r9] (subvec randoms (* variation 10))] ; I just love clojure because of this!
-    (concat []
-            ;; legs
-            (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)] [5.0 (+ hipw 5 r0) (+ legw 5 r1) (+ legw 5 r2)])) ; stroke
-            (map #(concat % colb) (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)]  [1.0 (+ hipw r3) (+ legw r4) (+ legw r5)]))
-            ; feet
-            (if (and (= pf :base_r) (not= ps nil))
-              (map #(concat % colb)
-                   (gen-foot-triangles (add-v2 (:p foot_r) (rotate-90-cw (:b ps)))
-                                       (:p foot_r)
-                                       (+ r6 5.0)
-                                       facing))
-              (map #(concat % colb)
-                   (gen-foot-triangles (:p knee_r) (:p foot_r) (+ r6 5.0) facing)))
-            
-            (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [6.0 (+ hipw 5 r7 ) (+ legw 5 r8) (+ legw 5 r9)])) ; stroke
-            (map #(concat % cola) (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [1.0 (+ hipw r0) (+ legw r1) (+ legw r2)]))
-            ;; feet
-            (if (and (= pf :base_l) (not= ps nil))
-              (map #(concat % cola)
-                   (gen-foot-triangles (add-v2 (:p foot_l) (rotate-90-cw (:b ps)))
-                                       (:p foot_l)
-                                       (+ r3 5.0)
-                                       facing))
-              (map #(concat % cola)
-                   (gen-foot-triangles (:p knee_l) (:p foot_l) (+ r3 5.0) facing)))
-            
-            (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [(+ armw 5.0 r4) (+ armw 5.0 r5) (+ armw 5.0 r6)])) ; stroke
-            (map #(concat % colb) (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [(+ armw r7) (+ armw r8) (+ armw r9)]))
-
-            ;; body
-            (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [(+ neckw 5.0 r0) (+ neckw 5.0 r1) (+ hipw 5.0 r2)]))
-            (map #(concat % colc) (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [(+ neckw r3) (+ neckw r4) (+ hipw r5)]))
-            
-            ;; head
-            (map #(concat % [0.0 0.0 0.0 1.0]) (gen-head-triangles (:p head) (:p neck) facing (+ 5.0 r6)))
-            (map #(concat % [0.8 0.5 0.5 1.0]) (gen-head-triangles (:p head) (:p neck) facing r7))
-            
-            ;; arms
-            (map #(concat % [0.0 0.0 0.0 1.0]) (gen-tube-triangles [(:p neck) (:p elbow_r) (:p hand_r)] [(+ armw 5.0 r8) (+ armw 5.0 r9) (+ armw 5.0 r0)])) ; stroke
-            (map #(concat % cola) (gen-tube-triangles [(:p neck) (:p elbow_r) (:p hand_r)] [(+ armw r1) (+ armw r2) (+ armw r3)])))))
+    (cond-> floatbuffer
+    ;; legs
+    true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)] [5.0 (+ hipw 5 r0) (+ legw 5 r1) (+ legw 5 r2)] [0.0 0.0 0.0 1.0]) ; stroke
+    true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)] [1.0 (+ hipw r3) (+ legw r4) (+ legw r5)] colb)
+    ;; feet
+    (and (= pf :base_r) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_r) (rotate-90-cw (:b ps))) (:p foot_r) (+ r6 5.0) facing colb)
+    (and (= pf :base_l) (not= ps nil)) (gen-foot-triangles (:p knee_r) (:p foot_r) (+ r6 5.0) facing colb)
+    
+    true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [6.0 (+ hipw 5 r7 ) (+ legw 5 r8) (+ legw 5 r9)] [0.0 0.0 0.0 1.0]) ; stroke
+    true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [1.0 (+ hipw r0) (+ legw r1) (+ legw r2)] cola)
+    ;; feet
+    (and (= pf :base_l) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_l) (rotate-90-cw (:b ps))) (:p foot_l) (+ r3 5.0) facing cola)
+    (and (= pf :base_r) (not= ps nil)) (gen-foot-triangles (:p knee_l) (:p foot_l) (+ r3 5.0) facing cola)
   
+    true (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [(+ armw 5.0 r4) (+ armw 5.0 r5) (+ armw 5.0 r6)] [0.0 0.0 0.0 1.0]) ; stroke
+    true (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [(+ armw r7) (+ armw r8) (+ armw r9)] colb)
+    
+    ;; body
+    true (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [(+ neckw 5.0 r0) (+ neckw 5.0 r1) (+ hipw 5.0 r2)] [0.0 0.0 0.0 1.0])
+    true (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [(+ neckw r3) (+ neckw r4) (+ hipw r5)] colc)
+    
+    ;; head
+    true (gen-head-triangles (:p head) (:p neck) facing (+ 5.0 r6) [0.0 0.0 0.0 1.0])
+    true (gen-head-triangles (:p head) (:p neck) facing r7 [0.8 0.5 0.5 1.0])
+    
+    ;; arms
+    true (gen-tube-triangles [(:p neck) (:p elbow_r) (:p hand_r)] [(+ armw 5.0 r8) (+ armw 5.0 r9) (+ armw 5.0 r0)] [0.0 0.0 0.0 1.0]) ; stroke
+    true (gen-tube-triangles [(:p neck) (:p elbow_r) (:p hand_r)] [(+ armw r1) (+ armw r2) (+ armw r3)] cola))))

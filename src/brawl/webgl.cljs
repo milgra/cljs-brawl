@@ -10,7 +10,8 @@
             [cljs-webgl.constants.texture-target :as texture-target]
             [cljs-webgl.buffers :as buffers]
             [cljs-webgl.typed-arrays :as ta]
-            [brawl.shape :as shape]))
+            [brawl.shape :as shape]
+            [brawl.floatbuffer :as floatbuf]))
   
 (def vertex-source
   "attribute highp vec2 position;
@@ -168,14 +169,14 @@
   state)
 
 
-(defn drawtriangles! [ {:keys [context shader location_pos location_col actor_buffer] :as state } projection points ]
+(defn drawtriangles! [ {:keys [context shader location_pos location_col actor_buffer] :as state } projection floatbuffer ]
     
   (.bindBuffer context buffer-object/array-buffer actor_buffer)
-  (.bufferData context buffer-object/array-buffer (ta/float32 (flatten points)) buffer-object/dynamic-draw)
+  (.bufferData context buffer-object/array-buffer (:data floatbuffer) buffer-object/dynamic-draw)
   
   (buffers/draw!
    context
-   :count (count points)
+   :count (/ (:index floatbuffer) 6)
    :shader shader
    :draw-mode draw-mode/triangles
    :attributes [{:buffer actor_buffer
