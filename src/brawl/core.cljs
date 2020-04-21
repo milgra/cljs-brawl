@@ -46,6 +46,7 @@
 
 
 (def keycodes (atom {}))
+(def mousedown (atom false))
 
 (defn init-events! [keych tchch]
   "start event listening"
@@ -78,13 +79,21 @@
    js/document
    EventType.MOUSEDOWN
    (fn [event]
+     (swap! mousedown not)
      (put! tchch {:type "down" :point [(.-clientX event) (.-clientY event)]})))
 
   (events/listen
    js/document
    EventType.MOUSEUP
    (fn [event]
+     (swap! mousedown not)
      (put! tchch {:type "up" :point [(.-clientX event) (.-clientY event)]})))
+
+  (events/listen
+   js/document
+   EventType.MOUSEMOVE
+   (fn [event]
+     (if @mousedown (put! tchch {:type "down" :point [(.-clientX event) (.-clientY event)]}))))
 
   (events/listen
    js/window
@@ -99,11 +108,27 @@
             (let [pos (nth path 3)
                   toks (clojure.string/split id #"_")
                   type (first (second toks))]
-              (cond (= type "l") (assoc state1 :actors (conj actors (actor/init (first pos) (second pos))))
+              (cond (= type "l") (assoc state1 :actors (concat actors (map #(actor/init (first pos) (second pos)) (repeat 1 2))))
                     (= type "g") (assoc state1 :guns (conj guns {:pos pos}))
                     (= type "e") (assoc state1 :endpos pos)
                     (= type "i") (assoc state1 :infos (conj infos {:pos pos :index (js/parseInt (second type))})))     
               )) state pivots))
+
+
+(defn update-gen-sliders [{:keys [views world] :as state}]
+  (let [{:keys [height hitpower hitrate stamina speed]} (get-in world [:actors 0 :metrics :base])
+        hpsl (:Hitpower views)
+        hrsl (:Hitrate views)
+        hesl (:Height views)
+        spsl (:Speed views)
+        stsl (:Stamina views)
+        newv (-> views
+                 (ui/set-slider-value hpsl hitpower)
+                 (ui/set-slider-value hrsl hitrate)
+                 (ui/set-slider-value hesl height)
+                 (ui/set-slider-value spsl speed)
+                 (ui/set-slider-value stsl stamina))]
+    (assoc state :views newv)))
 
 
 (defn execute-commands [{commands :commands :as state}]
@@ -115,35 +140,41 @@
                               (assoc :hitpower (:ratio command))
                               (actor/basemetrics-normalize :hitpower))
                     nmetrics (actor/generate-metrics nbase)]
-                (assoc-in oldstate [:world :actors 0 :metrics] nmetrics))
+                (-> oldstate (assoc-in [:world :actors 0 :metrics] nmetrics) (update-gen-sliders)))
               (= text "set-hitrate") ; update base metrics and generate new metrics for actor
               (let [actor (get-in oldstate [:world :actors 0])
                     nbase (-> (get-in actor [:metrics :base])
                               (assoc :hitrate (:ratio command))
                               (actor/basemetrics-normalize :hitrate))
                     nmetrics (actor/generate-metrics nbase)]
-                (assoc-in oldstate [:world :actors 0 :metrics] nmetrics))
+                (-> oldstate (assoc-in [:world :actors 0 :metrics] nmetrics) (update-gen-sliders)))
               (= text "set-height") ; update base metrics and generate new metrics for actor
               (let [actor (get-in oldstate [:world :actors 0])
                     nbase (-> (get-in actor [:metrics :base])
                               (assoc :height (:ratio command))
                               (actor/basemetrics-normalize :height))
                     nmetrics (actor/generate-metrics nbase)]
-                (assoc-in oldstate [:world :actors 0 :metrics] nmetrics))
+                (-> oldstate (assoc-in [:world :actors 0 :metrics] nmetrics) (update-gen-sliders)))
               (= text "set-speed") ; update base metrics and generate new metrics for actor
               (let [actor (get-in oldstate [:world :actors 0])
                     nbase (-> (get-in actor [:metrics :base])
                               (assoc :speed (:ratio command))
                               (actor/basemetrics-normalize :speed))
                     nmetrics (actor/generate-metrics nbase)]
-                (assoc-in oldstate [:world :actors 0 :metrics] nmetrics))
+                (-> oldstate (assoc-in [:world :actors 0 :metrics] nmetrics) (update-gen-sliders)))
               (= text "set-stamina") ; update base metrics and generate new metrics for actor
               (let [actor (get-in oldstate [:world :actors 0])
                     nbase (-> (get-in actor [:metrics :base])
                               (assoc :stamina (:ratio command))
                               (actor/basemetrics-normalize :stamina))
                     nmetrics (actor/generate-metrics nbase)]
-                (assoc-in oldstate [:world :actors 0 :metrics] nmetrics))
+                (-> oldstate (assoc-in [:world :actors 0 :metrics] nmetrics) (update-gen-sliders)))
+              (= text "randomize") 
+              (let [actor (get-in oldstate [:world :actors 0])
+                    nbase (-> (actor/basemetrics-random)
+                              (actor/basemetrics-normalize :height))
+                    nmetrics (actor/generate-metrics nbase)]
+                (-> oldstate (assoc-in [:world :actors 0 :metrics] nmetrics) (update-gen-sliders)))
 
               :else oldstate))
           state
@@ -163,6 +194,7 @@
                      (fn [result {:keys [class] :as view}]
                        (cond
                          (= class "Slider") (conj result (ui/touch-slider view views (:point touchevent)))
+                         (= class "Button") (conj result (ui/touch-button view views (:point touchevent)))
                          :else result))
                      []
                      (map views touched-views)))

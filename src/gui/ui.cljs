@@ -180,3 +180,16 @@
   (let [subview (-> (get viewmap (first subviews))
                     (assoc :width {:pixel (- px x)}))]
     {:views [subview] :command {:text command :ratio (/ (- px x) w)}}))
+
+
+(defn set-slider-value 
+  [viewmap {:keys [id command subviews x y w h] :as view} ratio]
+  (let [subview (-> (get viewmap (first subviews))
+                    (assoc :width {:pixel (* w ratio)}))]
+    (assoc viewmap (:id subview) subview)))
+
+
+(defn touch-button
+  "touch event for button"
+  [{:keys [command subviews x y w h] :as view} viewmap [px py]]
+    {:views [] :command {:text command}})

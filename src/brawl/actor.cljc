@@ -14,14 +14,14 @@
 
 (defn basemetrics-normalize [ {:keys [hitpower hitrate stamina speed height color_a color_b] :as base} mkey]
   (let [half (- 1.25 (* height 0.5)) 
-        hp (if (= mkey :hitrate) (- half hitrate) hitpower) 
-        hr (if (= mkey :hitpower) (- half hitpower) hitrate)
-        st (if (= mkey :speed) (- half speed) stamina)
-        sp (if (= mkey :stamina) (- half stamina) speed)
-        nhp (if (< hr 0) (- hp hr) hp) ; check overflow
-        nhr (if (< hp 0) (- hr hp) hr)
-        nst (if (< sp 0) (- st sp) st)
-        nsp (if (< st 0) (- sp st) sp)]
+        hp (if (or (= mkey :hitrate) (= mkey :height)) (- half hitrate) hitpower) 
+        hr (if (or (= mkey :hitpower) (= mkey :height)) (- half hitpower) hitrate)
+        st (if (or (= mkey :speed) (= mkey :height)) (- half speed) stamina)
+        sp (if (or (= mkey :stamina) (= mkey :height)) (- half stamina) speed)
+        nhp (cond (< hr 0) (- hp hr) (> hr 1.0) (+ hp (- hr 1.0)) :else hp) ; check overflow
+        nhr (cond (< hp 0) (- hr hp) (> hp 1.0) (+ hr (- hp 1.0)) :else hr)
+        nst (cond (< sp 0) (- st sp) :else st)
+        nsp (cond (< st 0) (- sp st) :else sp)]
     (assoc base :hitpower nhp :hitrate nhr :stamina nst :speed nsp)))
 
 
