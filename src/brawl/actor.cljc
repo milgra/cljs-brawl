@@ -28,12 +28,12 @@
 (defn basemetrics-default []
   (basemetrics-normalize
    {:height 0.5
-   :hitpower 0.5
-   :hitrate 0.5
-   :stamina 0.5
-   :speed 0.5
-   :color_a [1.0 0.0 0.0 1.0]
-   :color_b [0.0 0.0 1.0 1.0]} :height))
+    :hitpower 0.5
+    :hitrate 0.5
+    :stamina 0.5
+    :speed 0.5
+    :color_a [1.0 0.0 0.0 1.0]
+    :color_b [0.0 0.0 1.0 1.0]} :height))
 
 
 (defn basemetrics-random []
@@ -48,14 +48,14 @@
 
 
 (defn generate-metrics [{:keys [hitpower hitrate stamina speed height color_a color_b] :as base}]
-  (println "generate metrics" base)
   (let [hp (cond (> hitpower 1.0) 1.0 (< hitpower 0.0) 0.0 :else hitpower)
         hr (cond (> hitrate 1.0) 1.0 (< hitrate 0.0) 0.0 :else hitrate)
         st (cond (> stamina 1.0) 1.0 (< stamina 0.0) 0.0 :else stamina)
         sp (cond (> speed 1.0) 1.0 (< speed 0.0) 0.0 :else speed)
 
-        delta (-(- 2.5 height) (+ st sp hp hr))
-        size (cond (> (+ height delta) 1.0) 1.0 (< (+ height delta) 0.0) 0.0 :else (+ height delta))
+        size (cond (> height 1.0) 1.0
+                   (< height 0.0) 0.0
+                   :else height)
 
         headl (+ 16.0 (* size 8.0))
         bodyl (+ 50.0 (* size 20.0)) 
@@ -117,8 +117,6 @@
    :kick-press false
    :jump-state 0
    :step-length 0
-   ; command collector
-   :commands []
    ; masses
    :masses {:head (phys2/mass2 x y 4.0 1.0 1.0)
             :neck (phys2/mass2 x y 4.0 1.0 1.0)
@@ -352,8 +350,7 @@
         (-> state
           (assoc-in [:masses :foot_l :p] foot_l) 
           (assoc-in [:masses :foot_r :p] foot_r)
-          (assoc state :base-target nil))
-    ))
+          (assoc :base-target nil))))
 
 
 (defn move-feet-walk

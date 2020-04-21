@@ -26,21 +26,24 @@
     :texture "Label 30 Height 000000AA FFFFFFFF"
     :width "150 px"
     :height "50 px"
-    :center-x "Edge 50 %"}
+    :center-x "Edge 50 %"
+    :command "set-height"}
    
    {:id "Stamina"
     :class "Slider"
     :texture "Label 30 Stamina 000000AA FFFFFFFF"
     :width "150 px"
     :height "50 px"
-    :right "Edge 0 px"}
+    :right "Edge 0 px"
+    :command "set-stamina"}
    
    {:id "Hitrate"
     :class "Slider"
     :texture "Label 30 Hitrate 000000AA FFFFFFFF"
     :width "150 px"
     :height "50 px"
-    :bottom "Edge 0 px"}
+    :bottom "Edge 0 px"
+    :command "set-hitrate"}
    
    {:id "Speed"
     :class "Slider"
@@ -48,7 +51,8 @@
     :width "150 px"
     :height "50 px"
     :right "Edge 0 px"
-    :bottom "Edge 0 px"}])
+    :bottom "Edge 0 px"
+    :command "set-speed"}])
   
 
 (def generator

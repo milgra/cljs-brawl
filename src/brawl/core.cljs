@@ -107,13 +107,47 @@
 
 
 (defn execute-commands [{commands :commands :as state}]
-  (reduce (fn [oldstate command]
+  (reduce (fn [oldstate {text :text :as command}]
             (cond
-              (= command "set-hitpower") oldstate
-              :else oldstate
-              ))
-            state
-            commands))
+              (= text "set-hitpower") ; update base metrics and generate new metrics for actor
+              (let [actor (get-in oldstate [:world :actors 0])
+                    nbase (-> (get-in actor [:metrics :base])
+                              (assoc :hitpower (:ratio command))
+                              (actor/basemetrics-normalize :hitpower))
+                    nmetrics (actor/generate-metrics nbase)]
+                (assoc-in oldstate [:world :actors 0 :metrics] nmetrics))
+              (= text "set-hitrate") ; update base metrics and generate new metrics for actor
+              (let [actor (get-in oldstate [:world :actors 0])
+                    nbase (-> (get-in actor [:metrics :base])
+                              (assoc :hitrate (:ratio command))
+                              (actor/basemetrics-normalize :hitrate))
+                    nmetrics (actor/generate-metrics nbase)]
+                (assoc-in oldstate [:world :actors 0 :metrics] nmetrics))
+              (= text "set-height") ; update base metrics and generate new metrics for actor
+              (let [actor (get-in oldstate [:world :actors 0])
+                    nbase (-> (get-in actor [:metrics :base])
+                              (assoc :height (:ratio command))
+                              (actor/basemetrics-normalize :height))
+                    nmetrics (actor/generate-metrics nbase)]
+                (assoc-in oldstate [:world :actors 0 :metrics] nmetrics))
+              (= text "set-speed") ; update base metrics and generate new metrics for actor
+              (let [actor (get-in oldstate [:world :actors 0])
+                    nbase (-> (get-in actor [:metrics :base])
+                              (assoc :speed (:ratio command))
+                              (actor/basemetrics-normalize :speed))
+                    nmetrics (actor/generate-metrics nbase)]
+                (assoc-in oldstate [:world :actors 0 :metrics] nmetrics))
+              (= text "set-stamina") ; update base metrics and generate new metrics for actor
+              (let [actor (get-in oldstate [:world :actors 0])
+                    nbase (-> (get-in actor [:metrics :base])
+                              (assoc :stamina (:ratio command))
+                              (actor/basemetrics-normalize :stamina))
+                    nmetrics (actor/generate-metrics nbase)]
+                (assoc-in oldstate [:world :actors 0 :metrics] nmetrics))
+
+              :else oldstate))
+          state
+          commands))
 
 
 (defn draw-ui [{:keys [gui views viewids] :as state} frame]
