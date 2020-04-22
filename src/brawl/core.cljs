@@ -270,7 +270,7 @@
           variation (Math/floor (mod (/ frame 20.0) 3.0 ))
           newgfx (if svglevel (webgl/loadshapes gfx svglevel) gfx)
           newbuf (floatbuf/empty! floatbuffer)
-          newbuf1 (reduce (fn [oldbuf actor] (actorskin/get-skin-triangles actor oldbuf variation)) newbuf actors)]
+          newbuf1 (reduce (fn [oldbuf actor] (actorskin/get-skin-triangles actor oldbuf variation)) newbuf (rseq actors))]
 
       (webgl/clear! newgfx)
       (webgl/drawshapes! newgfx projection trans variation)
