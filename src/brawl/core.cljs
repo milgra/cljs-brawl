@@ -113,8 +113,13 @@
               (cond (= type "l")
                     (do
                       (println "create actor" id type pos)
-                      (assoc oldstate :actors (conj actors (actor/init (first pos) (second pos))))
-                      )
+                      (assoc oldstate :actors (conj
+                                               actors
+                                               (actor/init
+                                                (first pos)
+                                                (second pos)
+                                                (if (= id "Pivot_l0_t0") :hero (keyword (str (rand))))
+                                                ))))
                     (= type "g") (assoc oldstate :guns (conj guns {:pos pos}))
                     (= type "e") (assoc oldstate :endpos pos)
                     (= type "i") (assoc oldstate :infos (conj infos {:pos pos :index (js/parseInt (second type))})))     
@@ -299,7 +304,8 @@
                            :run (keycodes 32)
                            :kick (keycodes 83)
                            :block (keycodes 68)}
-                newactors (vec (map #(actor/update-actor % currcodes surfaces 1.0) actors))
+                newhero (actor/update-actor (first actors) currcodes surfaces 1.0)
+                newactors (concat [ newhero ] (vec (map (fn [ actor ] (actor/update-actor actor {} surfaces 1.0)) (rest actors))))
                 newmasses (-> masses
                               (phys2/add-gravity [0.0 0.2])
                               ;;(phys2/keep-angles (:aguards state))

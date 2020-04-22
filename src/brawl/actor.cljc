@@ -99,8 +99,9 @@
     result))
   
 
-(defn init [x y]
-  {:next nil ; next mode walk / jump / idle
+(defn init [x y id]
+  {:id id
+   :next nil ; next mode walk / jump / idle
    :speed 0.0
    :power 100.0
    :health 100.0

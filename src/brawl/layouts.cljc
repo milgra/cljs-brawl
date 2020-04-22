@@ -63,7 +63,7 @@
 ;;|     StartGame      |
   [{:id "Menu"
     :class "Button"
-    :texture "Label 30 Menu FFFFFF11 FFFFFFFF"
+    :texture "Label 25 MENU FFFFFF11 FFFFFFFF"
     :command "show-menu" 
     :width "150 px" 
     :height "50 px" 
@@ -80,7 +80,7 @@
 
    {:id "Randomize"
     :class "Button" 
-    :texture "Label 30 Randomize FFFFFF11 FFFFFFFF"
+    :texture "Label 25 RANDOMIZE FFFFFF11 FFFFFFFF"
     :command "randomize" 
     :width "200 px" 
     :height "50 px" 
@@ -89,7 +89,7 @@
    
    {:id "StartGame"
     :class "Button" 
-    :texture "Label 30 Startgame FFFFFF11 FFFFFFFF"
+    :texture "Label 25 STARTGAME FFFFFF11 FFFFFFFF"
     :command "start-game" 
     :width "200 px" 
     :height "50 px"
@@ -140,8 +140,8 @@ E CLDebug TA0 LA0 WI300 HE300")
    {:id "Continue"
     :class "Button"
     :command "continue"
-    :texture "Label 30 Continue 00000088 FFFFFFFF"
-    :width "150 px" 
+    :texture "Label 25 CONTINUE 00000088 FFFFFFFF"
+    :width "220 px" 
     :height "50 px" 
     :center-y "Edge 40 %" 
     :center-x "Edge 50 %"}
@@ -149,8 +149,8 @@ E CLDebug TA0 LA0 WI300 HE300")
    {:id "NewGame"
     :class "Button"
     :command "new-game"
-    :texture "Label 30 New 00000088 FFFFFFFF"
-    :width "150 px" 
+    :texture "Label 25 NEW 00000088 FFFFFFFF"
+    :width "220 px" 
     :height "50 px" 
     :top "Continue 10 px" 
     :center-x "Edge 50 %"}
@@ -158,8 +158,8 @@ E CLDebug TA0 LA0 WI300 HE300")
    {:id "Options"
     :class "Button"
     :command "options"
-    :texture "Label 30 Options 000000888 FFFFFFFF"
-    :width "150 px" 
+    :texture "Label 25 OPTIONS 000000888 FFFFFFFF"
+    :width "220 px" 
     :height "50 px" 
     :top "NewGame 10 px" 
     :center-x "Edge 50 %"}
@@ -167,8 +167,8 @@ E CLDebug TA0 LA0 WI300 HE300")
    {:id "Donate"
     :class "Button"
     :command "donate"
-    :texture "Label 30 Donate 00000088 FFFFFFFF"
-    :width "150 px" 
+    :texture "Label 25 DONATE 00000088 FFFFFFFF"
+    :width "220 px" 
     :height "50 px" 
     :top "Options 10 px" 
     :center-x "Edge 50 %"}
@@ -176,8 +176,8 @@ E CLDebug TA0 LA0 WI300 HE300")
    {:id "Exit"
     :class "Button"
     :command "exit"
-    :texture "Label 30 Exit 00000088 FFFFFFFF"
-    :width "150 px" 
+    :texture "Label 25 EXIT 00000088 FFFFFFFF"
+    :width "220 px" 
     :height "50 px" 
     :top "Donate 10 px" 
     :center-x "Edge 50 %"}])
