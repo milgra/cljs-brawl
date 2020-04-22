@@ -256,16 +256,15 @@
           [fax fay] (:p (get-in actor [:masses :base_l]))
           [fbx fby] (:p (get-in actor [:masses :base_r]))
           [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2))  ]
-          [sx sy] (:speed state)
-          ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
+          ratio (+ 1 (/ (min (Math/abs (:speed actor)) 40.0) 40.0))
           r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
-          h 300.0
+          h (* 300.0 ratio)
           w (* h r)
           projection (math4/proj_ortho
-                      (- tx (+ w (* ratio 50.0)))
-                      (+ tx (+ w (* ratio 50.0)))
-                      (+ ty (+ h (* ratio 50.0)))
-                      (- ty (+ h (* ratio 50.0)))
+                      (- tx w)
+                      (+ tx w)
+                      (+ ty h)
+                      (- ty h)
                       -1.0 1.0)
           
           variation (Math/floor (mod (/ frame 20.0) 3.0 ))
@@ -306,6 +305,10 @@
                            :block (keycodes 68)}
                 newhero (actor/update-actor (first actors) currcodes surfaces 1.0)
                 newactors (vec (concat [ newhero ] (map (fn [ actor ] (actor/update-actor actor {} surfaces 1.0)) (rest actors))))
+                ;newcommands (remove nil? (map :commands actors))
+                ;newactors1 (map (fn [actor] (-> actor
+                ;                                (assoc :commands nil)
+                ;                                (assoc :action-sent true))
                 newmasses (-> masses
                               (phys2/add-gravity [0.0 0.2])
                               ;;(phys2/keep-angles (:aguards state))

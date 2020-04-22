@@ -109,6 +109,7 @@
    :update-fn update-jump
    :idle-angle 0
    :action-sent false
+   :commands []
    ; walk state
    :squat-size 0
    :base-order {:active :base_l :passive :base_r}
@@ -170,7 +171,7 @@
 
 (defn move-hand-walk
   "move head point"
-  [{:keys [facing punch-pressed punch-hand action-sent] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r {[nx ny :as neck] :p} :neck } :masses { arml :arml } :metrics angle :idle-angle :as state}
+  [{:keys [facing punch-pressed punch-hand action-sent commands] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r {[nx ny :as neck] :p} :neck } :masses { arml :arml } :metrics angle :idle-angle :as state}
    {:keys [down up left right punch block]}]
   (let [nlx (+ (* facing (+ (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
         nrx (- (* facing (- (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
@@ -188,6 +189,7 @@
         elbow_r (triangle_with_bases neck hand_r (* arml 0.5) facing)
         command (if (and punch-pressed (not action-sent)) {:text "attack" :base neck :target (if (= punch-hand :hand_l) hand_l hand_r)}) ]
     (-> state
+        (assoc :commands (if command (conj command command) commands))
         (assoc-in [:masses :hand_l :p] hand_l)
         (assoc-in [:masses :hand_r :p] hand_r)
         (assoc-in [:masses :elbow_l :p] elbow_l)
