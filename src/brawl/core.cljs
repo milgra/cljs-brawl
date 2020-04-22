@@ -225,7 +225,7 @@
     (assoc state :gui newgui)))
 
   
-(defn update-ui [{:keys [views baseviews] :as state} touchevent]
+(defn update-ui [{:keys [views baseviews commands] :as state} touchevent]
   (let [results (if touchevent
                   (let [touched-views (ui/collect-pressed-views views (:point touchevent))]
                     (reduce
@@ -244,8 +244,7 @@
         newcommands (map :command results)]
     (-> state
         (assoc :views (ui/align newviews baseviews 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
-        (assoc :commands newcommands))
-    ))
+        (assoc :commands (concat commands newcommands)))))
 
 
 (defn draw-world [{:keys [world gfx trans floatbuffer] :as state} frame svglevel]
@@ -290,48 +289,58 @@
 
 (defn update-world
   "updates phyisics and actors"
-  [{{:keys [actors surfaces masses inited] :as world} :world keycodes :keycodes :as state} svglevel]
-  (let [newworld
-        (cond
-          
-          inited ; create new state
-          (let [currcodes {:left (keycodes 37)
-                           :right (keycodes 39)
-                           :up (keycodes 38)
-                           :down (keycodes 40)
-                           :punch (keycodes 70)
-                           :run (keycodes 32)
-                           :kick (keycodes 83)
-                           :block (keycodes 68)}
-                newhero (actor/update-actor (first actors) currcodes surfaces 1.0)
-                newactors (vec (concat [ newhero ] (map (fn [ actor ] (actor/update-actor actor {} surfaces 1.0)) (rest actors))))
-                ;newcommands (remove nil? (map :commands actors))
-                ;newactors1 (map (fn [actor] (-> actor
-                ;                                (assoc :commands nil)
-                ;                                (assoc :action-sent true))
-                newmasses (-> masses
-                              (phys2/add-gravity [0.0 0.2])
-                              ;;(phys2/keep-angles (:aguards state))
-                              ;;(phys2/keep-distances (:dguards state))
-                              (phys2/move-masses surfaces))]
-            (-> world
-                (assoc :actors newactors)
-                (assoc :masses newmasses)))
-          
-          svglevel ; load new level
-          (let [points (map :path (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) svglevel ))
-                pivots (filter #(clojure.string/includes? (:id %) "Pivot") svglevel)
-                surfaces (phys2/surfaces-from-pointlist points)
-                lines (reduce (fn [result {t :t b :b}] (conj result t (math2/add-v2 t b))) [] surfaces)]
-            (-> world
-                (create-actors pivots)
-                (assoc :inited true)
-                (assoc :surfaces surfaces)
-                (assoc :surfacelines lines)))
-          :else ; return unchanged
-          world)]
+  [{{:keys [actors surfaces masses inited] :as world} :world keycodes :keycodes commands :commands :as state} svglevel]
+
+  (cond
     
-    (assoc state :world newworld)))
+    inited ; create new state
+    (let [currcodes {:left (keycodes 37)
+                     :right (keycodes 39)
+                     :up (keycodes 38)
+                     :down (keycodes 40)
+                     :punch (keycodes 70)
+                     :run (keycodes 32)
+                     :kick (keycodes 83)
+                     :block (keycodes 68)}
+          newhero (actor/update-actor (first actors) currcodes surfaces 1.0)
+          newactors (vec (concat [ newhero ] (map (fn [ actor ] (actor/update-actor actor {} surfaces 1.0)) (rest actors))))
+
+          ;; extract commands
+          newcommands (reduce (fn [result {comms :commands :as actor}] (if (empty? comms) result (concat result comms))) commands actors)
+
+          ;; remove commands if needed
+          newnewactors (if (empty? newcommands)
+                         newactors
+                         (mapv (fn [{comms :commands :as actor}] (if (empty? comms) actor (-> actor (assoc :commands []) (assoc :action-sent true)))) newactors)) 
+          
+          newmasses (-> masses
+                        (phys2/add-gravity [0.0 0.2])
+                        ;;(phys2/keep-angles (:aguards state))
+                        ;;(phys2/keep-distances (:dguards state))
+                        (phys2/move-masses surfaces))
+
+          newworld (-> world
+                       (assoc :actors newnewactors)
+                       (assoc :masses newmasses))]
+
+      (-> state
+          (assoc :commands newcommands)
+          (assoc :world newworld)))
+    
+    svglevel ; load new level
+    (let [points (map :path (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) svglevel ))
+          pivots (filter #(clojure.string/includes? (:id %) "Pivot") svglevel)
+          surfaces (phys2/surfaces-from-pointlist points)
+          lines (reduce (fn [result {t :t b :b}] (conj result t (math2/add-v2 t b))) [] surfaces)
+          newworld (-> world
+                       (create-actors pivots)
+                       (assoc :inited true)
+                       (assoc :surfaces surfaces)
+                       (assoc :surfacelines lines))]
+      (assoc state :world newworld))
+      
+    :else ; return unchanged
+    state))
 
 
 (defn update-keycodes [state keyevent]           
@@ -400,6 +409,7 @@
                :texfile "font.png"
                :floatbuffer (floatbuf/create!)
                :keycodes {}
+               :commands []
                :trans [500.0 300.0]
                :speed [0.0 0.0]
                :svgch svgch}]
@@ -418,6 +428,7 @@
                        tchevent (poll! tchch)
                        
                        newstate (-> prestate
+                                    (assoc :commands [])
                                     ;; world
                                     (update-keycodes keyevent)
                                     (update-world svglevel)

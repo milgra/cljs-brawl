@@ -506,7 +506,7 @@
 (defn update-idle [state] state)
 
 
-(defn update-attack [{:keys [punch-pressed punch-hand kick-pressed] :as state} {:keys [left right up down punch kick block] :as control}]
+(defn update-attack [{:keys [punch-pressed punch-hand kick-pressed action-sent] :as state} {:keys [left right up down punch kick block] :as control}]
   (let [p-pressed (cond
                   (and (not punch-pressed) punch) true
                   (and punch-pressed (not punch)) false
@@ -519,6 +519,7 @@
                (if (= punch-hand :hand_l) :hand_r :hand_l)
                punch-hand)]
     (-> state
+        (assoc :action-sent (if (and (not p-pressed) (not k-pressed)) false action-sent))
         (assoc :punch-pressed p-pressed)
         (assoc :punch-hand p-hand)
         (assoc :kick-pressed k-pressed))))
