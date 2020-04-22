@@ -180,7 +180,7 @@
                               (actor/basemetrics-normalize :stamina))
                     nmetrics (actor/generate-metrics nbase)]
                 (-> oldstate (assoc-in [:world :actors 0 :metrics] nmetrics) (update-gen-sliders)))
-              (= text "randomize") 
+              (= text "randomize")
               (let [actor (get-in oldstate [:world :actors 0])
                     nbase (-> (actor/basemetrics-random)
                               (actor/basemetrics-normalize :height))
@@ -305,7 +305,7 @@
                            :kick (keycodes 83)
                            :block (keycodes 68)}
                 newhero (actor/update-actor (first actors) currcodes surfaces 1.0)
-                newactors (concat [ newhero ] (vec (map (fn [ actor ] (actor/update-actor actor {} surfaces 1.0)) (rest actors))))
+                newactors (vec (concat [ newhero ] (map (fn [ actor ] (actor/update-actor actor {} surfaces 1.0)) (rest actors))))
                 newmasses (-> masses
                               (phys2/add-gravity [0.0 0.2])
                               ;;(phys2/keep-angles (:aguards state))

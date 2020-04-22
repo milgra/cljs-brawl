@@ -4,7 +4,7 @@
             [clojure.spec.alpha :as spec]))
 
 (def MPI2 (* Math/PI 2))
-(spec/def ::norm (spec/and #(> % 0.0) #(< % 1.0)))        
+
 
 (declare update-jump)
 (declare update-walk)
@@ -108,6 +108,7 @@
    :facing 1.0
    :update-fn update-jump
    :idle-angle 0
+   :action-sent false
    ; walk state
    :squat-size 0
    :base-order {:active :base_l :passive :base_r}
@@ -137,7 +138,8 @@
    ; body metrics
    :randoms (vec (repeatedly 40 #(+ -1.5 (rand 3)))); random sizes for skin phasing
    :metrics (generate-metrics (basemetrics-random))})
-        
+
+
 (defn triangle_with_bases
   "calculates third point of triangle based on the two base points, side length and direction, used for knee and elbow"
   [a b size dir]
@@ -168,7 +170,7 @@
 
 (defn move-hand-walk
   "move head point"
-  [{:keys [facing punch-pressed punch-hand] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r {[nx ny :as neck] :p} :neck } :masses { arml :arml } :metrics angle :idle-angle :as state}
+  [{:keys [facing punch-pressed punch-hand action-sent] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r {[nx ny :as neck] :p} :neck } :masses { arml :arml } :metrics angle :idle-angle :as state}
    {:keys [down up left right punch block]}]
   (let [nlx (+ (* facing (+ (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
         nrx (- (* facing (- (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
@@ -183,7 +185,8 @@
                  (and punch-pressed (= punch-hand :hand_r)) [(+ nx (* facing arml 0.99)) ny]                 
                  :else [(+ nx nrx) (+ ny nry)])
         elbow_l (triangle_with_bases neck hand_l (* arml 0.5) facing)
-        elbow_r (triangle_with_bases neck hand_r (* arml 0.5) facing)]
+        elbow_r (triangle_with_bases neck hand_r (* arml 0.5) facing)
+        command (if (and punch-pressed (not action-sent)) {:text "attack" :base neck :target (if (= punch-hand :hand_l) hand_l hand_r)}) ]
     (-> state
         (assoc-in [:masses :hand_l :p] hand_l)
         (assoc-in [:masses :hand_r :p] hand_r)
