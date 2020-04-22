@@ -153,25 +153,27 @@
       (math2/add-v2 a ab2))))
 
 
-(defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses} hitt hitd]
-  (let [headv (math2/sub-v2 neck head)
-        bodyv (math2/sub-v2 hip neck)
-        footav (math2/sub-v2 knee_l hip)
-        footbv (math2/sub-v2 knee_r hip)
-        headisp (math2/isp-v2-v2 hitt hitd head headv 0.0)
-        bodyisp (math2/isp-v2-v2 hitt hitd neck bodyv 0.0)
-        footaisp (math2/isp-v2-v2 hitt hitd hip footav 0.0)
-        footbisp (math2/isp-v2-v2 hitt hitd hip footbv 0.0)
+(defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses :as actor} {:keys [id base target]}]
+  (println "hit" (:id actor) "from" id base target)
+  ;; check distance from nect first
+  (let [headv (math2/sub-v2 (:p neck) (:p head))
+        bodyv (math2/sub-v2 (:p hip) (:p neck))
+        footav (math2/sub-v2 (:p knee_l) (:p hip))
+        footbv (math2/sub-v2 (:p knee_r) (:p hip))
+        headisp (math2/isp-v2-v2 base target (:p head) headv 0.0)
+        bodyisp (math2/isp-v2-v2 base target (:p neck) bodyv 0.0)
+        footaisp (math2/isp-v2-v2 base target (:p hip) footav 0.0)
+        footbisp (math2/isp-v2-v2 base target (:p hip) footbv 0.0)
         result [(if headisp "head" nil)
                 (if bodyisp "body" nil)
                 (if footaisp "foota" nil)
                 (if footbisp "footb" nil)]]
-    result))
+    actor))
 
 
 (defn move-hand-walk
   "move head point"
-  [{:keys [facing punch-pressed punch-hand action-sent commands] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r {[nx ny :as neck] :p} :neck } :masses { arml :arml } :metrics angle :idle-angle :as state}
+  [{:keys [id facing punch-pressed punch-hand action-sent commands] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r {[nx ny :as neck] :p} :neck } :masses { arml :arml } :metrics angle :idle-angle :as state}
    {:keys [down up left right punch block]}]
   (let [nlx (+ (* facing (+ (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
         nrx (- (* facing (- (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
@@ -187,7 +189,7 @@
                  :else [(+ nx nrx) (+ ny nry)])
         elbow_l (triangle_with_bases neck hand_l (* arml 0.5) facing)
         elbow_r (triangle_with_bases neck hand_r (* arml 0.5) facing)
-        command (if (and punch-pressed (not action-sent)) {:text "attack" :base neck :target (if (= punch-hand :hand_l) hand_l hand_r)}) ]
+        command (if (and punch-pressed (not action-sent)) {:id id :text "attack" :base neck :target (if (= punch-hand :hand_l) hand_l hand_r)}) ]
     (-> state
         (assoc :commands (if command (conj command command) commands))
         (assoc-in [:masses :hand_l :p] hand_l)
@@ -339,7 +341,7 @@
 
 (defn move-feet-walk-still 
   "do kick if needed"
-  [{:keys [masses speed base-order base-target step-length facing kick-pressed] {legl :legl runs :runs walks :walks} :metrics :as state}
+  [{:keys [id masses speed base-order base-target step-length facing kick-pressed action-sent commands] {legl :legl runs :runs walks :walks} :metrics :as state}
    {:keys [left right up down run] :as control} 
    surfaces
    time]
@@ -353,8 +355,10 @@
                    pas) ; final position
           foot_r (if (= :base_r (:active base-order))
                    (if kick-pressed kick-point act)
-                   pas)]
-        (-> state
+                   pas)
+          command (if (and kick-pressed (not action-sent)) {:id id :text "attack" :base (:p (:hip masses)) :target kick-point})]
+      (-> state
+          (assoc :commands (if command (conj command command) commands))
           (assoc-in [:masses :foot_l :p] foot_l) 
           (assoc-in [:masses :foot_r :p] foot_r)
           (assoc :base-target nil))))

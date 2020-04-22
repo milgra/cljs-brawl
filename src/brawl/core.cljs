@@ -142,9 +142,20 @@
     (assoc state :views newv)))
 
 
+(defn execute-attack [{ {actors :actors} :world :as state} command]
+  ;; hittest other actors
+  (assoc-in state [:world :actors] (vec (map (fn [actor] (actor/hit actor command)) actors))))
+
+
 (defn execute-commands [{commands :commands :as state}]
   (reduce (fn [oldstate {text :text :as command}]
             (cond
+
+              (= text "attack")
+              (execute-attack oldstate command)
+
+              ;; ui
+              
               (= text "set-hitpower") ; update base metrics and generate new metrics for actor
               (let [actor (get-in oldstate [:world :actors 0])
                     nbase (-> (get-in actor [:metrics :base])
@@ -306,7 +317,7 @@
           newactors (vec (concat [ newhero ] (map (fn [ actor ] (actor/update-actor actor {} surfaces 1.0)) (rest actors))))
 
           ;; extract commands
-          newcommands (reduce (fn [result {comms :commands :as actor}] (if (empty? comms) result (concat result comms))) commands actors)
+          newcommands (reduce (fn [result {comms :commands :as actor}] (if (empty? comms) result (conj result comms))) commands actors)
 
           ;; remove commands if needed
           newnewactors (if (empty? newcommands)
