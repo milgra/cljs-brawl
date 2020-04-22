@@ -213,13 +213,14 @@
 
 (defn move-head-walk
   "move head point"
-  [{:keys [facing squat-size] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r } :masses { legl :legl bodyl :bodyl headl :headl } :metrics :as state}
+  [{:keys [facing squat-size punch-pressed speed] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r } :masses { legl :legl bodyl :bodyl headl :headl } :metrics :as state}
    {:keys [down up left right]}]
-  (let [nx (* facing (/ (Math/abs (- bx ax )) 8.0 )) ; head move forward and backwards when stepping
+  (let [nx (* facing (+ (* (Math/abs speed) 1.0) (/ (Math/abs (- bx ax )) 15.0 ))) ; head move forward and backwards when stepping
         nnx (* facing squat-size 0.5) ; head move even forward when squatting
         ny (* squat-size 0.25) ; head should move lower when squatting
-        neck [(+ hx nx nnx) (- (+ hy ny) bodyl)]
-        head [(+ hx nx nnx) (- (+ hy ny) (+ bodyl headl))]]
+        pnx (if punch-pressed (* facing 10.0) 0.0)
+        neck [(+ hx nx nnx pnx) (- (+ hy ny) bodyl)]
+        head [(+ hx nx nnx pnx) (- (+ hy ny) (+ bodyl headl))]]
     (-> state
         (assoc-in [:masses :neck :p] neck)
         (assoc-in [:masses :head :p] head))))
@@ -243,7 +244,7 @@
                  
         cy (+ ly (/ (- ry ly) 2)) ; y center of bases
         sty (- cy (+ (* legl 0.85) ; standing y pos, starting position is 0.85 leglength
-                     (/ (Math/abs (- rx lx)) 10.0) ; if legs are closer hip is higher
+                     (/ (Math/abs (- rx lx)) 20.0) ; if legs are closer hip is higher
                      (* (Math/sin idle-angle) 2.0) ; breathing movement
                      (if (< (Math/abs speed) 3.0) (- (* (- 3.0 (Math/abs speed)) 2.0) (/ (Math/abs (- rx lx)) 5.0)) 0))) ; if stangind stand up more with straight back
         sqy (- cy (* legl 0.5)) ; squatting y pos

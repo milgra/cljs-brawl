@@ -10,7 +10,6 @@ run :
 
 ## Todo
 
-* aspect ratio!
 * working punch
 * ground check fix
 * up/down ground selection
