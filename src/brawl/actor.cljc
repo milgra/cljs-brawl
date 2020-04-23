@@ -154,9 +154,9 @@
 
 
 (defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses :as actor} {:keys [id base target]}]
-  (println "hit" (:id actor) "from" id base target)
   ;; check distance from nect first
-  (let [headv (math2/sub-v2 (:p neck) (:p head))
+  (let [dist (math2/length-v2 (math2/sub-v2 target (:p hip)))
+        headv (math2/sub-v2 (:p neck) (:p head))
         bodyv (math2/sub-v2 (:p hip) (:p neck))
         footav (math2/sub-v2 (:p knee_l) (:p hip))
         footbv (math2/sub-v2 (:p knee_r) (:p hip))
@@ -168,7 +168,11 @@
                 (if bodyisp "body" nil)
                 (if footaisp "foota" nil)
                 (if footbisp "footb" nil)]]
-    actor))
+    (if (and (not= id (:id actor)) (< dist 50.0))
+      (do
+        (println "dist" dist)
+        (update actor :speed + 10.0))
+      actor)))
 
 
 (defn move-hand-walk
