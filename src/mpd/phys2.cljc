@@ -92,13 +92,17 @@
      surfaces))
 
 
-(defn move-mass-back [[tx ty][bx by][mx my][mbx mby] radius]
+(defn move-mass-back [surface-trans surface-dir vector-trans vector-dir radius]
   "moves mass back to the point where radius doesn't touch the line"
-  (let [[cx cy] (math2/isp-l2-l2 [tx ty][bx by][mx my][by (- bx)])
-        [dx dy] [(- mx cx)(- my cy)]
+  (let [[a b] surface-trans
+        [c d] surface-dir
+        [e f] vector-trans
+        [g h] vector-dir
+        [cx cy] (math2/isp-l2-l2 [a b] [c d] [e f] [d (- c)]) ; get intersection point
+        [dx dy] [(- e cx)(- f cy)] ; vector from isp to vector trans
         [nx ny] (math2/resize-v2 [dx dy] radius)
-        [fx fy] (math2/add-v2 [cx cy] [nx ny])]
-    (math2/isp-l2-l2 [fx fy] [bx by] [mx my] [mbx mby])))
+        [fx fy] (math2/add-v2 [cx cy] [nx ny])] ; move back isp towards vector trans with radius
+    (math2/isp-l2-l2 [fx fy] [c d] [e f] [g h])))
 
 
 (defn keep-distances [masses dguards]
@@ -180,29 +184,29 @@
 (defn move-mass [{:keys [p d r e] :as mass}
                  surfaces]
   "check collision of mass dir with all surfaces, moves mass to next iteration point based on time"
-  (loop [ppos p ;; previous position
-         pdir d ;; previous direction
-         fdir d ;; final direction
+  (loop [prevpos p ;; previous position
+         prevdir d ;; previous direction
+         fulldir d ;; final direction
          done false ;; movement done
          iter 0 ] ;; iterations
     (if done
       (-> mass
-          (assoc :p ppos)
-          (assoc :d fdir))          
-      (let [segments (map #(nth % 2) (sort-by first < (get-colliding-surfaces ppos pdir r surfaces)))
-            {strans :t sbasis :b :as segment} (first segments)]
+          (assoc :p prevpos)
+          (assoc :d fulldir))          
+      (let [results (sort-by first < (get-colliding-surfaces prevpos prevdir r surfaces))
+           [dest isp {strans :t sbasis :b :as segment}] (first results)]
         (if segment
-          (let [newpos (move-mass-back strans sbasis ppos pdir (* 1.5 r))
-                fullsize (math2/length-v2 pdir)
-                currsize (math2/length-v2 (math2/sub-v2 newpos ppos))
+          (let [newpos (move-mass-back strans sbasis prevpos prevdir (* 1.1 r))
+                fullsize (math2/length-v2 prevdir)
+                currsize (math2/length-v2 (math2/sub-v2 newpos prevpos))
                 usedsize (if (< currsize r)
                            r
                            (- fullsize currsize))
-                newfdir (math2/scale-v2 (math2/mirror-v2-bases sbasis fdir) e)
-                newdir (math2/resize-v2 newfdir usedsize)
+                newfulldir (math2/scale-v2 (math2/mirror-v2-bases sbasis fulldir) e)
+                newdir (math2/resize-v2 newfulldir usedsize)
                 ready (or (> iter 4) (not segment))]
-            (recur newpos newdir newfdir ready (inc iter)))
-          (recur (math2/add-v2 ppos pdir) pdir fdir true (inc iter)))))))
+            (recur newpos newdir newfulldir ready (inc iter)))
+          (recur (math2/add-v2 prevpos prevdir) prevdir fulldir true (inc iter)))))))
 
 
 (defn move-masses [masses surfaces]

@@ -130,10 +130,10 @@
             :elbow_r (phys2/mass2 x y 4.0 1.0 1.0)
             :knee_l (phys2/mass2 x y 4.0 1.0 1.0)
             :knee_r (phys2/mass2 x y 4.0 1.0 1.0)
-            :foot_l (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
-            :foot_r (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
-            :base_l (phys2/mass2 (+ x 20.0) y 4.0 10.0 0.0)
-            :base_r (phys2/mass2 (- x 20.0) y 4.0 10.0 0.0)}
+            :foot_l (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.0)
+            :foot_r (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.0)
+            :base_l (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.0)
+            :base_r (phys2/mass2 (- x 20.0) y 4.0 1.0 0.0)}
    ; debug
    :step-zone [x y]
    ; body metrics
