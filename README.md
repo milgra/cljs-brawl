@@ -10,7 +10,7 @@ run :
 
 ## Todo
 
-* working punch
+* working hit ragdoll
 * lejtorol elrugaszkodas bug
 * up/down ground selection
 * slider 3 layer, button 2 layer, 2 state

@@ -405,7 +405,7 @@
                :guns []
                :infos []
                :endpos [0 0]
-               :masses {};{:0 (phys2/mass2 500.0 300.0 1.0 1.0 0.9)}
+               :masses {} ;:0 (phys2/mass2 500.0 300.0 1.0 1.0 0.9)}
                :dguards []
                :aguards []
                :surfaces []
