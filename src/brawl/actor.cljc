@@ -190,11 +190,13 @@
             result (-> actor
                        (assoc :hittime time)
                        (assoc :next "rag")
-                                        ;(update :speed + (* (/ hvx (Math/abs hvx)) 10.0))
+                       (update :speed + (* (/ hvx (Math/abs hvx)) 5.0))
                        (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) (if bodyisp hitbg hitsm)))
                        (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) (if bodyisp hitbg hitsm)))
                        (assoc-in [:masses :knee_l :d] (math2/add-v2 (:d knee_l) (if footaisp hitbg hitsm)))
                        (assoc-in [:masses :knee_r :d] (math2/add-v2 (:d knee_r) (if footbisp hitbg hitsm)))
+                       (assoc-in [:masses :foot_l :d] (math2/add-v2 (:d foot_l) hitsm))
+                       (assoc-in [:masses :foot_r :d] (math2/add-v2 (:d foot_r) hitbg))
                        (assoc-in [:masses :hand_l :d] (math2/add-v2 (:d hand_l) (if bodyisp hitbg hitsm)))
                        (assoc-in [:masses :hand_r :d] (math2/add-v2 (:d hand_r) (if bodyisp hitbg hitsm))))]
         result)
@@ -500,8 +502,8 @@
               (= update-fn update-walk) (assoc-in [:masses :base_r :p] (math2/add-v2 (:p bb) [0 -5]))
               (= update-fn update-walk) (assoc-in [:masses :base_l :d] [(/ speed 2) -10])
               (= update-fn update-walk) (assoc-in [:masses :base_r :d] [(/ speed 2) -10])         
-              (= update-fn update-rag) (assoc-in [:masses :base_l :p] (math2/add-v2 (:p fl) [0 -5]))
-              (= update-fn update-rag) (assoc-in [:masses :base_r :p] (math2/add-v2 (:p fr) [0 -5]))
+              (= update-fn update-rag) (assoc-in [:masses :base_l :p] (math2/add-v2 (:p fl) [0 -1]))
+              (= update-fn update-rag) (assoc-in [:masses :base_r :p] (math2/add-v2 (:p fr) [0 -1]))
               ;(= update-fn update-rag) (assoc-in [:masses :base_l] (update (:foot_l masses) :p math2/add-v2 [0 -25]))
               ;(= update-fn update-rag) (assoc-in [:masses :base_r] (update (:foot_r masses) :p math2/add-v2 [0 -25]))
               true (assoc :next nil)
@@ -570,11 +572,11 @@
 
 (defn update-rag [{:keys [masses dguards hittime next] :as state } control surfaces time]
   (let [newmasses (-> masses
-                      ;;(phys2/add-gravity [0.0 0.2])
+                      (phys2/add-gravity [0.0 0.1])
                       ;;(phys2/keep-angles (:aguards state))
                       (phys2/keep-distances (:dguards state))
                       (phys2/move-masses surfaces))
-        newnext (if (= hittime 30) "jump" next) 
+        newnext (if (= hittime 20) "jump" next) 
         result (-> state
                    (assoc :next newnext)
                    (assoc :masses newmasses)
