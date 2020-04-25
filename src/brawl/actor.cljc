@@ -102,7 +102,7 @@
 
 (defn init [x y id]
   (let [masses {:head (phys2/mass2 x y 4.0 1.0 0.2)
-                :neck (phys2/mass2 x y 4.0 1.0 10.2)
+                :neck (phys2/mass2 x y 4.0 1.0 0.2)
                 :hip (phys2/mass2 x y 4.0 1.0 0.2)
                 :hand_l (phys2/mass2 x y 4.0 1.0 0.2)
                 :hand_r (phys2/mass2 x y 4.0 1.0 0.2)
@@ -138,14 +138,23 @@
    :step-length 0
    ; masses
    :masses masses
+   :metrics metrics
+   :dguards [(phys2/dguard2 masses :head :neck (:headl metrics) 0.9)
+             (phys2/dguard2 masses :neck :hip (:bodyl metrics) 0.9)
+             (phys2/dguard2 masses :hip :knee_l (* 0.5 (:legl metrics)) 0.9)
+             (phys2/dguard2 masses :hip :knee_r (* 0.5 (:legl metrics)) 0.9)
+             (phys2/dguard2 masses :knee_l :foot_l (* 0.5 (:legl metrics)) 0.9)
+             (phys2/dguard2 masses :knee_r :foot_r (* 0.5 (:legl metrics)) 0.9)
+             (phys2/dguard2 masses :neck :elbow_l (* 0.5 (:arml metrics)) 0.9)
+             (phys2/dguard2 masses :neck :elbow_r (* 0.5 (:arml metrics)) 0.9)
+             (phys2/dguard2 masses :elbow_l :hand_l (* 0.5 (:arml metrics)) 0.9)
+             (phys2/dguard2 masses :elbow_r :hand_r (* 0.5 (:arml metrics)) 0.9)
+             ]
    ; debug
    :step-zone [x y]
    ; body metrics
-   :randoms (vec (repeatedly 40 #(+ -1.5 (rand 3)))); random sizes for skin phasing
-   :metrics metrics
+   :randoms (vec (repeatedly 40 #(+ -1.5 (rand 3))))})); random sizes for skin phasing
 
-   :dguards [(phys2/dguard2 masses :head :neck (:headl metrics) 0.9)
-             (phys2/dguard2 masses :neck :hip (:bodyl metrics) 0.9)]}))
 
 
 (defn triangle_with_bases
@@ -160,11 +169,13 @@
       (math2/add-v2 a ab2))))
 
 
-(defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses :as actor} {:keys [id base target]}]
+(defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses :as actor} {:keys [id base target time]}]
   ;; check distance from nect first
   (let [dist (math2/length-v2 (math2/sub-v2 target (:p hip)))]
     (if (and (not= id (:id actor)) (< dist 80.0))
       (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
+            hitsm (math2/resize-v2 hitv 2.0)
+            hitbg (math2/resize-v2 hitv 4.0)
             
             headv (math2/sub-v2 (:p neck) (:p head))
             bodyv (math2/sub-v2 (:p hip) (:p neck))
@@ -175,24 +186,27 @@
             bodyisp (math2/isp-v2-v2 base target (:p neck) bodyv 0.0)
             footaisp (math2/isp-v2-v2 base target (:p hip) footav 0.0)
             footbisp (math2/isp-v2-v2 base target (:p hip) footbv 0.0)
-            
-            result [(if headisp "head" nil)
-                    (if bodyisp "body" nil)
-                    (if footaisp "foota" nil)
-                    (if footbisp "footb" nil)]]
 
-        (println "dist" dist headisp bodyisp footaisp footbisp)
-
-        (-> actor
-            (assoc :next "rag")
-            (update :speed + (* (/ hvx (Math/abs hvx)) 10.0))))
+            result (-> actor
+                       (assoc :hittime time)
+                       (assoc :next "rag")
+                                        ;(update :speed + (* (/ hvx (Math/abs hvx)) 10.0))
+                       (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) (if bodyisp hitbg hitsm)))
+                       (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) (if bodyisp hitbg hitsm)))
+                       (assoc-in [:masses :knee_l :d] (math2/add-v2 (:d knee_l) (if footaisp hitbg hitsm)))
+                       (assoc-in [:masses :knee_r :d] (math2/add-v2 (:d knee_r) (if footbisp hitbg hitsm)))
+                       (assoc-in [:masses :hand_l :d] (math2/add-v2 (:d hand_l) (if bodyisp hitbg hitsm)))
+                       (assoc-in [:masses :hand_r :d] (math2/add-v2 (:d hand_r) (if bodyisp hitbg hitsm))))]
+        result)
       actor)))
 
 
 (defn move-hand-walk
   "move head point"
   [{:keys [id facing punch-pressed punch-hand action-sent commands] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r {[nx ny :as neck] :p} :neck } :masses { arml :arml } :metrics angle :idle-angle :as state}
-   {:keys [down up left right punch block]}]
+   {:keys [down up left right punch block]}
+   surface
+   time]
   (let [nlx (+ (* facing (+ (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
         nrx (- (* facing (- (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
         nly (+ (* arml 0.1 ) (* (Math/cos angle ) 5.0))
@@ -207,7 +221,7 @@
                  :else [(+ nx nrx) (+ ny nry)])
         elbow_l (triangle_with_bases neck hand_l (* arml 0.5) facing)
         elbow_r (triangle_with_bases neck hand_r (* arml 0.5) facing)
-        command (if (and punch-pressed (not action-sent)) {:id id :text "attack" :base neck :target (if (= punch-hand :hand_l) hand_l hand_r)}) ]
+        command (if (and punch-pressed (not action-sent)) {:id id :text "attack" :base neck :target (if (= punch-hand :hand_l) hand_l hand_r) :time time}) ]
     (-> state
         (assoc :commands (if command (conj command command) commands))
         (assoc-in [:masses :hand_l :p] hand_l)
@@ -363,23 +377,23 @@
    {:keys [left right up down run] :as control} 
    surfaces
    time]
-    (let [active-base (:active base-order)
-          passive-base (:passive base-order)
-          [apx apy :as act] (:p (masses active-base)) ; active position
-          [ppx ppy :as pas] (:p (masses passive-base)) ; passive position
-          kick-point [(+ ppx (* legl facing)) (- ppy (* legl 1.5))]
-          foot_l (if (= :base_l (:active base-order))
-                   (if kick-pressed kick-point act)
-                   pas) ; final position
-          foot_r (if (= :base_r (:active base-order))
-                   (if kick-pressed kick-point act)
-                   pas)
-          command (if (and kick-pressed (not action-sent)) {:id id :text "attack" :base (:p (:hip masses)) :target kick-point})]
-      (-> state
-          (assoc :commands (if command (conj command command) commands))
-          (assoc-in [:masses :foot_l :p] foot_l) 
-          (assoc-in [:masses :foot_r :p] foot_r)
-          (assoc :base-target nil))))
+  (let [active-base (:active base-order)
+        passive-base (:passive base-order)
+        [apx apy :as act] (:p (masses active-base)) ; active position
+        [ppx ppy :as pas] (:p (masses passive-base)) ; passive position
+        kick-point [(+ ppx (* legl facing)) (- ppy (* legl 1.5))]
+        foot_l (if (= :base_l (:active base-order))
+                 (if kick-pressed kick-point act)
+                 pas) ; final position
+        foot_r (if (= :base_r (:active base-order))
+                 (if kick-pressed kick-point act)
+                 pas)
+        command (if (and kick-pressed (not action-sent)) {:id id :text "attack" :base (:p (:hip masses)) :target kick-point :time time})]
+    (-> state
+        (assoc :commands (if command (conj command command) commands))
+        (assoc-in [:masses :foot_l :p] foot_l) 
+        (assoc-in [:masses :foot_r :p] foot_r)
+        (assoc :base-target nil))))
 
 
 (defn move-feet-walk
@@ -460,37 +474,53 @@
 
 (defn update-mode
   "if next mode is set, switch to that mode"
-  [{:keys [next speed] {ba :base_l bb :base_r} :masses :as state}]
-  (cond
-    (= next nil) state
-    (= next "walk")
-    (do
-      ; reset walk state
-      (println "switching to walk mode")
-      (-> state
-          (update-in [:masses :hip :p] math2/add-v2 [0 25]) ; squat when reaching ground
-          (assoc :jump-state 0) ; reset jump state
-          (assoc :next nil)
-          (assoc :base-target nil) ; reset stepping
-          (assoc :update-fn update-walk)))
-    (= next "jump")
-    (do
-      ; reset jump state
-      (println "switching to jump mode")
-      (-> state
-          (assoc-in [:masses :base_l :p] (math2/add-v2 (:p ba) [0 -5]))
-          (assoc-in [:masses :base_r :p] (math2/add-v2 (:p bb) [0 -5]))
-          (assoc-in [:masses :base_l :d] [(/ speed 2) -10])
-          (assoc-in [:masses :base_r :d] [(/ speed 2) -10])          
-          (assoc :next nil)
-          (assoc :update-fn update-jump)))
-    (= next "rag")
-    (do
-      ; reset jump state
-      (println "switching to rag mode")
-      (-> state
-          (assoc :next nil)
-          (assoc :update-fn update-rag)))))
+  [{:keys [next speed update-fn] {ba :base_l bb :base_r fl :foot_l fr :foot_r :as masses} :masses :as state}]
+  (let [result
+        (cond
+          (= next nil) state
+          (= next "walk")
+          (do
+            (let [newmasses (reduce (fn [res [id mass]] ; reset mass directions for next rag
+                                      (assoc res id (assoc mass :d [0 0])))
+                                    masses
+                                    masses)]
+                                        ; reset walk state
+              (cond-> state
+                (= update-fn update-jump) (update-in [:masses :hip :p] math2/add-v2 [0 25]) ; squat when reaching ground
+                true (assoc :jump-state 0) ; reset jump state
+                true (assoc :next nil)
+                true (assoc :base-target nil) ; reset stepping
+                true (assoc :update-fn update-walk)
+                true (assoc :masses newmasses))))
+          (= next "jump")
+          (do
+            ;; reset jump state
+            (cond-> state
+              (= update-fn update-walk) (assoc-in [:masses :base_l :p] (math2/add-v2 (:p ba) [0 -5]))
+              (= update-fn update-walk) (assoc-in [:masses :base_r :p] (math2/add-v2 (:p bb) [0 -5]))
+              (= update-fn update-walk) (assoc-in [:masses :base_l :d] [(/ speed 2) -10])
+              (= update-fn update-walk) (assoc-in [:masses :base_r :d] [(/ speed 2) -10])         
+              (= update-fn update-rag) (assoc-in [:masses :base_l :p] (math2/add-v2 (:p fl) [0 -5]))
+              (= update-fn update-rag) (assoc-in [:masses :base_r :p] (math2/add-v2 (:p fr) [0 -5]))
+              ;(= update-fn update-rag) (assoc-in [:masses :base_l] (update (:foot_l masses) :p math2/add-v2 [0 -25]))
+              ;(= update-fn update-rag) (assoc-in [:masses :base_r] (update (:foot_r masses) :p math2/add-v2 [0 -25]))
+              true (assoc :next nil)
+              true (assoc :update-fn update-jump)))
+
+          (= next "rag")
+            ;; reset jump state
+          (-> state
+              (assoc :next nil)
+              (assoc :update-fn update-rag))
+          
+          :else
+          (do
+            (println "bad mode" next)
+            state)
+          )]
+    (if (= result nil) println "UPDATEMODE ERROR!!!")
+    result
+    ))
 
 
 (defn update-jump
@@ -506,7 +536,7 @@
         ground (every? #(and (= % 0.0)) (flatten (map :d (vals newbases))))
         next (cond
                ground "walk"
-               (< speed -15) "idle"
+               ;(< speed -15) "idle"
                :else nil)
         result (cond-> state
                  next (assoc :next next)
@@ -516,32 +546,41 @@
                  true (move-feet-jump control)
                  true (move-knee-walk control)
                  true (move-head-jump control)
-                 true (move-hand-walk control))]
+                 true (move-hand-walk control surfaces time))]
+    (if (= result nil) println "UPDATEJUMP ERROR!!!")
     result))
 
 
 (defn update-walk
   "update walk state"
   [state control surfaces time]
-  (-> state
-      (update-speed control time)
-      (move-feet-walk control surfaces time)
-      (move-hip-walk control)
-      (move-knee-walk control)
-      (move-head-walk control)
-      (move-hand-walk control)))
+  (let [result (-> state
+                  (update-speed control time)
+                  (move-feet-walk control surfaces time)
+                  (move-hip-walk control)
+                  (move-knee-walk control)
+                  (move-head-walk control)
+                  (move-hand-walk control surfaces time))]
+    (if (= result nil) println "UPDATEWALK ERROR!!!")
+    result))
 
 
 (defn update-idle [state] state)
 
 
-(defn update-rag [{:keys [masses dguards] :as state } control surfaces time]
+(defn update-rag [{:keys [masses dguards hittime next] :as state } control surfaces time]
   (let [newmasses (-> masses
-                      (phys2/add-gravity [0.0 0.2])
+                      ;;(phys2/add-gravity [0.0 0.2])
                       ;;(phys2/keep-angles (:aguards state))
                       (phys2/keep-distances (:dguards state))
-                      (phys2/move-masses surfaces))]
-    (assoc state :masses newmasses)))
+                      (phys2/move-masses surfaces))
+        newnext (if (= hittime 30) "jump" next) 
+        result (-> state
+                   (assoc :next newnext)
+                   (assoc :masses newmasses)
+                   (update :hittime inc))]
+    (if (= result nil) println "UPDATERAG ERROR!!!")
+    result))
   
 
 (defn update-attack [{:keys [punch-pressed punch-hand kick-pressed action-sent] :as state} {:keys [left right up down punch kick block] :as control}]
@@ -572,8 +611,12 @@
 
 (defn update-actor [{mode :mode update-fn :update-fn :as state} control surfaces time]
   "update actor state"
-  (-> state
-      (update-angle)
-      (update-attack control)
-      (update-fn control surfaces time)
-      (update-mode)))
+  ;;(if (= (:id state) :enemy) (println "BEFORE UPDATE" (:version state) (get-in state [:masses :knee_l :d] )))
+  (let [result (-> state
+                   (update-angle)
+                   (update-attack control)
+                   (update-fn control surfaces time)
+                   (update-mode)
+                   )]
+    ;;(if (= (:id state) :enemy) (println "AFTER UPDATE" (:version result) (get-in result [:masses :knee_l :d] )))
+    result))

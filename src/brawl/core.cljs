@@ -113,13 +113,19 @@
               (cond (= type "l")
                     (do
                       (println "create actor" id type pos)
-                      (assoc oldstate :actors (conj
-                                               actors
-                                               (actor/init
-                                                (first pos)
-                                                (second pos)
-                                                (if (= id "Pivot_l0_t0") :hero (keyword (str (rand))))
-                                                ))))
+                      (-> oldstate
+                      (assoc :actors (conj
+                                      actors
+                                      (actor/init
+                                       (first pos)
+                                       (second pos)
+                                       (if (= id "Pivot_l0_t0") :hero (keyword (str (rand)))))
+
+                                      (actor/init
+                                       (first pos)
+                                       (second pos)
+                                       (if (= id "Pivot_l0_t0") :enemy (keyword (str (rand)))))))
+                      ))
                     (= type "g") (assoc oldstate :guns (conj guns {:pos pos}))
                     (= type "e") (assoc oldstate :endpos pos)
                     (= type "i") (assoc oldstate :infos (conj infos {:pos pos :index (js/parseInt (second type))})))     
@@ -210,7 +216,7 @@
                 (assoc oldstate :views views :baseviews baseviews :viewids viewids))
 
               (= text "start-game")
-              (let [level-file "level1.svg"]
+              (let [level-file "level0.svg"]
                 (load-level! (:svgch oldstate) level-file)
                 (-> oldstate
                     (assoc :world {:inited false
@@ -286,8 +292,9 @@
       (webgl/drawshapes! newgfx projection trans variation)
       (webgl/drawtriangles! newgfx projection newbuf1)
 
-      ;;(webgl/drawpoints! gfx projection (actorskin/getpoints act))
-      ;;(webgl/drawlines! gfx projection (actorskin/getlines act))
+      (doall (map (fn [act]
+             (webgl/drawpoints! gfx projection (actorskin/getpoints act))
+             (webgl/drawlines! gfx projection (actorskin/getlines act))) actors))
 
       ;;(webgl/drawpoints! newgfx projection (map :p (vals (:masses world))))
       ;;(webgl/drawlines! newgfx projection (:surfacelines world))
@@ -317,7 +324,7 @@
           newactors (vec (concat [ newhero ] (map (fn [ actor ] (actor/update-actor actor {} surfaces 1.0)) (rest actors))))
 
           ;; extract commands
-          newcommands (reduce (fn [result {comms :commands :as actor}] (if (empty? comms) result (conj result comms))) commands actors)
+          newcommands (reduce (fn [result {comms :commands :as actor}] (if (empty? comms) result (conj result comms))) commands newactors)
 
           ;; remove commands if needed
           newnewactors (if (empty? newcommands)
