@@ -1,6 +1,6 @@
 # cljs-brawl
 
-[Live Demo](https://milgra.github.io/cljs-brawl/index.html)
+[Live Demo](https://milgra.github.io/cljs-brawl/index.html) ( Used keys : ARROWS SPACE F D S )
 
 ## Mass Brawl Simulator
 
