@@ -216,7 +216,7 @@
                 (assoc oldstate :views views :baseviews baseviews :viewids viewids))
 
               (= text "start-game")
-              (let [level-file "level0.svg"]
+              (let [level-file "level1.svg"]
                 (load-level! (:svgch oldstate) level-file)
                 (-> oldstate
                     (assoc :world {:inited false
@@ -292,9 +292,9 @@
       (webgl/drawshapes! newgfx projection trans variation)
       (webgl/drawtriangles! newgfx projection newbuf1)
 
-      (doall (map (fn [act]
-             (webgl/drawpoints! gfx projection (actorskin/getpoints act))
-             (webgl/drawlines! gfx projection (actorskin/getlines act))) actors))
+      ;;(doall (map (fn [act]
+      ;;       (webgl/drawpoints! gfx projection (actorskin/getpoints act))
+      ;;       (webgl/drawlines! gfx projection (actorskin/getlines act))) actors))
 
       ;;(webgl/drawpoints! newgfx projection (map :p (vals (:masses world))))
       ;;(webgl/drawlines! newgfx projection (:surfacelines world))

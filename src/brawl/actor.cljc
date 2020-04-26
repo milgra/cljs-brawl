@@ -169,13 +169,13 @@
       (math2/add-v2 a ab2))))
 
 
-(defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses :as actor} {:keys [id base target time]}]
+(defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health :as actor} {:keys [id base target time]}]
   ;; check distance from nect first
   (let [dist (math2/length-v2 (math2/sub-v2 target (:p hip)))]
     (if (and (not= id (:id actor)) (< dist 80.0))
       (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
-            hitsm (math2/resize-v2 hitv 2.0)
-            hitbg (math2/resize-v2 hitv 4.0)
+            hitsm (math2/resize-v2 hitv (if (< health 20) 10 2))
+            hitbg (math2/resize-v2 hitv (if (< health 20) 20 4))
             
             headv (math2/sub-v2 (:p neck) (:p head))
             bodyv (math2/sub-v2 (:p hip) (:p neck))
@@ -190,6 +190,7 @@
             result (-> actor
                        (assoc :hittime time)
                        (assoc :next "rag")
+                       (update :health - 15) 
                        (update :speed + (* (/ hvx (Math/abs hvx)) 5.0))
                        (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) (if bodyisp hitbg hitsm)))
                        (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) (if bodyisp hitbg hitsm)))
@@ -199,6 +200,7 @@
                        (assoc-in [:masses :foot_r :d] (math2/add-v2 (:d foot_r) hitbg))
                        (assoc-in [:masses :hand_l :d] (math2/add-v2 (:d hand_l) (if bodyisp hitbg hitsm)))
                        (assoc-in [:masses :hand_r :d] (math2/add-v2 (:d hand_r) (if bodyisp hitbg hitsm))))]
+        (println "HEALTH" (:health result))
         result)
       actor)))
 
@@ -514,7 +516,13 @@
           (-> state
               (assoc :next nil)
               (assoc :update-fn update-rag))
-          
+
+          (= next "idle")
+          ;; reset jump state
+          (-> state
+              (assoc :next nil)
+              (assoc :update-fn update-idle))
+
           :else
           (do
             (println "bad mode" next)
@@ -570,19 +578,32 @@
 (defn update-idle [state] state)
 
 
-(defn update-rag [{:keys [masses dguards hittime next] :as state } control surfaces time]
-  (let [newmasses (-> masses
-                      (phys2/add-gravity [0.0 0.1])
-                      ;;(phys2/keep-angles (:aguards state))
-                      (phys2/keep-distances (:dguards state))
-                      (phys2/move-masses surfaces))
-        newnext (if (= hittime 20) "jump" next) 
-        result (-> state
-                   (assoc :next newnext)
-                   (assoc :masses newmasses)
-                   (update :hittime inc))]
-    (if (= result nil) println "UPDATERAG ERROR!!!")
-    result))
+(defn update-rag [{:keys [masses dguards hittime next health] :as state } control surfaces time]
+  (if (> health 0)
+    (let [newmasses (-> masses
+                        (phys2/add-gravity [0.0 0.1])
+                        ;;(phys2/keep-angles (:aguards state))
+                        (phys2/keep-distances (:dguards state))
+                        (phys2/move-masses surfaces))
+          newnext (if (= hittime 20) "jump" next) 
+          result (-> state
+                     (assoc :next newnext)
+                     (assoc :masses newmasses)
+                     (update :hittime inc))]
+      (if (= result nil) println "UPDATERAG ERROR!!!")
+      result)
+    (let [newmasses (-> masses
+                        (phys2/add-gravity [0.0 0.4])
+                        ;;(phys2/keep-angles (:aguards state))
+                        (phys2/keep-distances (:dguards state))
+                        (phys2/move-masses surfaces))
+          newnext (if (= hittime 150) "idle" next) 
+          result (-> state
+                     (assoc :next newnext)
+                     (assoc :masses newmasses)
+                     (update :hittime inc))]
+      (if (= result nil) println "UPDATERAG ERROR!!!")
+      result)))
   
 
 (defn update-attack [{:keys [punch-pressed punch-hand kick-pressed action-sent] :as state} {:keys [left right up down punch kick block] :as control}]

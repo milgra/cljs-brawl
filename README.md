@@ -10,9 +10,11 @@ run :
 
 ## Todo
 
-* working hit ragdoll
-* lejtorol elrugaszkodas bug
 * up/down ground selection
+* lejtorol elrugaszkodas bug
+* dead body drag
+* gun drag
+* AI
 * slider 3 layer, button 2 layer, 2 state
 * menu black background
 * "loading" screen
