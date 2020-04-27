@@ -10,8 +10,6 @@ run :
 
 ## Todo
 
-* up/down ground selection
-* lejtorol elrugaszkodas bug
 * dead body drag
 * gun drag
 * AI

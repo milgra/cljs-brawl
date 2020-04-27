@@ -133,6 +133,7 @@
    :base-surfaces {:active nil :passive nil}
    :punch-hand :hand_l
    :punch-press false
+   :vert-direction 1
    :kick-press false
    :jump-state 0
    :step-length 0
@@ -275,9 +276,9 @@
 
 (defn move-hip-walk
   "move hip points, handle jumping"
-  [{:keys [next jump-state idle-angle facing speed base-order kick-pressed] {{[hx hy] :p} :hip {[lx ly] :p} :base_l {[rx ry] :p} :base_r } :masses { legl :legl } :metrics :as state}
+  [{:keys [next jump-state idle-angle facing speed base-order kick-pressed squat-size] {{[hx hy] :p} :hip {[lx ly] :p} :base_l {[rx ry] :p} :base_r } :masses { legl :legl } :metrics :as state}
    {:keys [down up left right run]}]
-  (let [cx (if (not kick-pressed) (+ lx (/ (- rx lx) 2)) ; x center of bases when walking
+  (let [cx (if (or (< speed -0.5) (> speed 0.5) (not kick-pressed)) (+ lx (/ (- rx lx) 2)) ; x center of bases when walking
                (if (= :base_l (:active base-order)) rx lx)) ; passive foot when kic
                  
         cy (+ ly (/ (- ry ly) 2)) ; y center of bases
@@ -285,25 +286,28 @@
                      (/ (Math/abs (- rx lx)) 20.0) ; if legs are closer hip is higher
                      (* (Math/sin idle-angle) 2.0) ; breathing movement
                      (if (< (Math/abs speed) 3.0) (- (* (- 3.0 (Math/abs speed)) 2.0) (/ (Math/abs (- rx lx)) 5.0)) 0))) ; if stangind stand up more with straight back
-        sqy (- cy (* legl 0.5)) ; squatting y pos
+
+        squat-size (cond
+                     (or down (and up (= jump-state 0)))
+                     (+ squat-size (/ (- (* legl 0.5) squat-size) 3)) ; move to standing pos 
+                     (or (not down) (and up (= jump-state 1)))
+                     (+ squat-size (/ (- squat-size) 3))) ; move to squatting pos
+
         fx (cond ; final x
              run (+ cx (* facing 10.0)) ; head is in front of body when running
              :else (+ cx (* facing 2.0))) ; when waling
-        dy (cond
-             (or down (and up (= jump-state 0)))
-             (/ (- sqy hy) 3) ; move to standing pos 
-             (or (not down) (and up (= jump-state 1)))
-             (/ (- sty hy) 3)) ; move to squatting pos
-        fy (+ hy dy) ; final y
+
+        fy (+ sty squat-size) ; final y
+
         newstate (cond
-                (and up (= jump-state 0) (< (Math/abs dy) 0.5)) 1
-                (and up (= jump-state 1) (< (Math/abs dy) 1.0)) 2
+                (and up (= jump-state 0) (> squat-size (* legl 0.4))) 1
+                (and up (= jump-state 1) (< squat-size 1.0)) 2
                 :else jump-state)
         newnext (if (= newstate 2) "jump" next)]
     (-> state
         (assoc-in [:masses :hip :p] [fx fy])
         (assoc :next newnext)
-        (assoc :squat-size (- fy sty))
+        (assoc :squat-size squat-size)
         (assoc :jump-state newstate))))
 
 
@@ -332,13 +336,16 @@
 
 (defn step-feet-walk
   "puts a triangle from the passive base on the surfaces, collision ponit is the new base target for the active base"
-  [{ :keys [masses speed base-surfaces] :as state} surfaces]
+  [{ :keys [masses speed base-surfaces vert-direction] :as state} surfaces]
   ; speed must not be 0
   (let [base-order (get-base-order masses speed)
         step-zone (get-step-zone (:p (masses (:passive base-order))) speed)
-        collided (sort-by first < (concat
-                                   (phys2/get-colliding-surfaces (:A step-zone) (:B step-zone) 10.0 surfaces)
-                                   (phys2/get-colliding-surfaces (:A step-zone) (:C step-zone) 10.0 surfaces)))
+        collided-top (sort-by first < (phys2/get-colliding-surfaces (:A step-zone) (:B step-zone) 10.0 surfaces))
+        collided-bot (sort-by first < (phys2/get-colliding-surfaces (:A step-zone) (:C step-zone) 10.0 surfaces))
+        collided (cond
+                   (and (= vert-direction -1) (not (empty? collided-top))) collided-top
+                   (and (= vert-direction 1) (not (empty? collided-bot))) collided-bot
+                   :else (concat collided-top collided-bot))
         surf (first collided)
         base-target (if surf (nth surf 1) (:A step-zone))
         newpassivesurf (:active base-surfaces)
@@ -406,7 +413,7 @@
    {:keys [left right up down run] :as control} 
    surfaces
    time]
-  (if (> (Math/abs speed) 0.1)
+  (if (> (Math/abs speed) 0.5)
     (if base-target
       (let [active-base (:active base-order)
             passive-base (:passive base-order)
@@ -436,12 +443,11 @@
                           1.0)
             lift-active (+ (* speed-ratio walk-lift-active) (* (- 1.0 speed-ratio) run-lift-active)) ; merge walk and run states
             lift-passive (+ (* speed-ratio walk-lift-passive) (* (- 1.0 speed-ratio) run-lift-passive))
-            kick-point [(+ cpx legl) (- cpy (* legl 0.5))]
             foot_l (if (= :base_l (:active base-order))
-                     (if kick-pressed kick-point [cpx (- cpy lift-active)])
+                     [cpx (- cpy lift-active)]
                      [ppx (- ppy lift-passive)]) ; final position
             foot_r (if (= :base_r (:active base-order))
-                     (if kick-pressed kick-point [cpx (- cpy lift-active)])
+                     [cpx (- cpy lift-active)]
                      [ppx (- ppy lift-passive)])
             step? (if (< actual-size current-size) true false)] ; do we need step
         (cond-> state
@@ -461,11 +467,11 @@
   (let [max (if (or (not run) down) (:walks metrics) (:runs metrics))
         nsx (cond
               right (if (> speed max)
-                      (- speed (* 0.3 time))
-                      (+ speed (* 0.3 time)))
+                      (- speed (* 0.2 time))
+                      (+ speed (* 0.2 time)))
               left (if (< speed (- max))
-                      (+ speed (* 0.3 time))
-                      (- speed (* 0.3 time)))
+                      (+ speed (* 0.2 time))
+                      (- speed (* 0.2 time)))
               :else (* speed (- 1.0 (* 0.08 time))))
         dir (cond
               (and (> nsx 0.0 ) right) 1
@@ -490,7 +496,7 @@
                                     masses)]
                                         ; reset walk state
               (cond-> state
-                (= update-fn update-jump) (update-in [:masses :hip :p] math2/add-v2 [0 25]) ; squat when reaching ground
+                (= update-fn update-jump) (assoc :squat-size (* 0.5 (get-in state [:metrics :legl]))) ; squat when reaching ground
                 true (assoc :jump-state 0) ; reset jump state
                 true (assoc :next nil)
                 true (assoc :base-target nil) ; reset stepping
@@ -500,8 +506,8 @@
           (do
             ;; reset jump state
             (cond-> state
-              (= update-fn update-walk) (assoc-in [:masses :base_l :p] (math2/add-v2 (:p ba) [0 -5]))
-              (= update-fn update-walk) (assoc-in [:masses :base_r :p] (math2/add-v2 (:p bb) [0 -5]))
+              (= update-fn update-walk) (update-in [:masses :base_l :p] math2/add-v2 [0 -10])
+              (= update-fn update-walk) (update-in [:masses :base_r :p] math2/add-v2 [0 -10])
               (= update-fn update-walk) (assoc-in [:masses :base_l :d] [(/ speed 2) -10])
               (= update-fn update-walk) (assoc-in [:masses :base_r :d] [(/ speed 2) -10])         
               (= update-fn update-rag) (assoc-in [:masses :base_l :p] (math2/add-v2 (:p fl) [0 -1]))
@@ -606,7 +612,7 @@
       result)))
   
 
-(defn update-attack [{:keys [punch-pressed punch-hand kick-pressed action-sent] :as state} {:keys [left right up down punch kick block] :as control}]
+(defn update-attack [{:keys [punch-pressed punch-hand kick-pressed action-sent vert-direction] :as state} {:keys [left right up down punch kick block] :as control}]
   (let [p-pressed (cond
                   (and (not punch-pressed) punch) true
                   (and punch-pressed (not punch)) false
@@ -622,7 +628,12 @@
         (assoc :action-sent (if (and (not p-pressed) (not k-pressed)) false action-sent))
         (assoc :punch-pressed p-pressed)
         (assoc :punch-hand p-hand)
-        (assoc :kick-pressed k-pressed))))
+        (assoc :kick-pressed k-pressed)
+        (assoc :vert-direction (cond
+                                 down -1
+                                 up 1
+                                 :else vert-direction))
+        )))
 
 
 (defn update-angle

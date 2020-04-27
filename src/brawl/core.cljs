@@ -121,11 +121,11 @@
                                        (second pos)
                                        (if (= id "Pivot_l0_t0") :hero (keyword (str (rand)))))
 
-                                      (actor/init
-                                       (first pos)
-                                       (second pos)
-                                       (if (= id "Pivot_l0_t0") :enemy (keyword (str (rand)))))))
-                      ))
+                                      ;; (actor/init
+                                      ;;  (first pos)
+                                      ;;  (second pos)
+                                      ;;  (if (= id "Pivot_l0_t0") :enemy (keyword (str (rand)))))
+                                      ))))
                     (= type "g") (assoc oldstate :guns (conj guns {:pos pos}))
                     (= type "e") (assoc oldstate :endpos pos)
                     (= type "i") (assoc oldstate :infos (conj infos {:pos pos :index (js/parseInt (second type))})))     
@@ -272,7 +272,7 @@
           [fax fay] (:p (get-in actor [:masses :base_l]))
           [fbx fby] (:p (get-in actor [:masses :base_r]))
           [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2))  ]
-          ratio (+ 1 (/ (min (Math/abs (:speed actor)) 40.0) 40.0))
+          ratio (/ (+ 40.0 (Math/abs (:speed actor))) 40.0)
           r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
           h (* 300.0 ratio)
           w (* h r)
