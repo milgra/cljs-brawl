@@ -20,10 +20,10 @@
   (:import [goog.events EventType]))
   
 
-(defn load-level! [channel name]
+(defn load-level! [channel curr-level]
   "load level svg's"
   (go
-    (let [response (<! (http/get name
+    (let [response (<! (http/get (str "level" curr-level ".svg")
                                  {:with-credentials? false}))
           xmlstr (xml->clj (:body response) {:strict false})
           shapes (svg/psvg xmlstr "")]
@@ -153,6 +153,28 @@
   (assoc-in state [:world :actors] (vec (map (fn [actor] (actor/hit actor command)) actors))))
 
 
+(defn load-next-level [{:keys [curr-level] :as state}]
+  (let [next-level (min (inc curr-level) 6)
+        views (ui/gen-from-desc {} layouts/hud)
+        baseviews (ui/get-base-ids layouts/hud)
+        viewids (ui/collect-visible-ids views baseviews "")]
+    (println "next-level" next-level)
+    (load-level! (:svgch state) next-level)
+    (-> state
+        (assoc :views views :baseviews baseviews :viewids viewids)
+        (assoc :world {:inited false
+                       :actors [] ; (actor/init 580.0 300.0)]
+                       :guns []
+                       :infos []
+                       :endpos [0 0]
+                       :masses {:0 (phys2/mass2 500.0 300.0 1.0 1.0 0.9)}
+                       :dguards []
+                       :aguards []
+                       :surfaces []
+                       :surfacelines []})
+        (assoc :curr-level next-level))))
+
+
 (defn execute-commands [{commands :commands :as state}]
   (reduce (fn [oldstate {text :text :as command}]
             (cond
@@ -209,7 +231,7 @@
                     viewids (ui/collect-visible-ids views baseviews "")]
                 (assoc oldstate :views views :baseviews baseviews :viewids viewids))
               (= text "continue") 
-              (let [uidesc (if (= (:level-file oldstate) "level0.svg") layouts/generator layouts/hud)
+              (let [uidesc (if (= (:curr-level oldstate) 0) layouts/generator layouts/hud)
                     views (ui/gen-from-desc {} uidesc)
                     baseviews (ui/get-base-ids uidesc)
                     viewids (ui/collect-visible-ids views baseviews "")]
@@ -243,24 +265,9 @@
               (assoc-in oldstate [:keycodes 68] true)
               
               (= text "start-game")
-              (let [level-file "level1.svg"
-                    views (ui/gen-from-desc {} layouts/hud)
-                    baseviews (ui/get-base-ids layouts/hud)
-                    viewids (ui/collect-visible-ids views baseviews "")]
-                (load-level! (:svgch oldstate) level-file)
-                (-> oldstate
-                    (assoc :views views :baseviews baseviews :viewids viewids)
-                    (assoc :world {:inited false
-                                   :actors [] ; (actor/init 580.0 300.0)]
-                                   :guns []
-                                   :infos []
-                                   :endpos [0 0]
-                                   :masses {:0 (phys2/mass2 500.0 300.0 1.0 1.0 0.9)}
-                                   :dguards []
-                                   :aguards []
-                                   :surfaces []
-                                   :surfacelines []})
-                    (assoc :level-file level-file)))
+              (load-next-level oldstate)
+              (= text "next-level")
+              (load-next-level oldstate)
 
               :else oldstate))
           state
@@ -314,7 +321,7 @@
                       (- ty h)
                       -1.0 1.0)
           
-          variation (Math/floor (mod (/ frame 20.0) 3.0 ))
+          variation (Math/floor (mod (/ frame 10.0) 3.0 ))
           newgfx (if svglevel (webgl/loadshapes gfx (filter #(not (clojure.string/includes? (:id %) "Pivot")) svglevel)) gfx)
           newbuf (floatbuf/empty! floatbuffer)
           newbuf1 (reduce (fn [oldbuf actor] (actorskin/get-skin-triangles actor oldbuf variation)) newbuf (rseq actors))]
@@ -338,7 +345,7 @@
 
 (defn update-world
   "updates phyisics and actors"
-  [{{:keys [actors surfaces masses inited] :as world} :world keycodes :keycodes commands :commands :as state} svglevel]
+  [{{:keys [actors surfaces masses inited endpos] :as world} :world keycodes :keycodes commands :commands :as state} svglevel]
 
   (cond
     
@@ -368,12 +375,21 @@
                         ;;(phys2/keep-distances (:dguards state))
                         (phys2/move-masses surfaces))
 
+          ;; check finish sign
+          newnewcommands (let [[ex ey] endpos
+                          [bx by] (get-in newhero [:masses :base_l :p])
+                          dx (- bx ex)
+                          dy (- by ey)]
+                           (if (and (< (Math/abs dx) 50.0) (< (Math/abs dy) 50))
+                             (conj newcommands {:text "next-level"})
+                             newcommands))
+          
           newworld (-> world
                        (assoc :actors newnewactors)
                        (assoc :masses newmasses))]
 
       (-> state
-          (assoc :commands newcommands)
+          (assoc :commands newnewcommands)
           (assoc :world newworld)))
     
     svglevel ; load new level
@@ -456,7 +472,7 @@
                :views views
                :baseviews baseviews
                :viewids viewids
-               :level-file "level0.svg"
+               :curr-level 0
                :texfile "font.png"
                :floatbuffer (floatbuf/create!)
                :keycodes {}
@@ -468,7 +484,7 @@
     (resize-context!)
     (init-events! keych tchch)
     (load-image! imgch (:texfile state))
-    (load-level! svgch (:level-file state))
+    (load-level! svgch (:curr-level state))
     
     (animate state
              (fn [prestate frame time]
