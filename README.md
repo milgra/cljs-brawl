@@ -10,12 +10,11 @@ run :
 
 ## Todo
 
-* menu black background
 * "loading" screen
-* disappearing generator, appearing hud
 * dead body drag
 * gun drag
 * AI
+* in case of big hit/kick, body should fall and rise again
 * sometimes rear leg stuck when jumping
 * time scaling
 * kickable trash cans

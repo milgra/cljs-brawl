@@ -214,7 +214,34 @@
                     baseviews (ui/get-base-ids uidesc)
                     viewids (ui/collect-visible-ids views baseviews "")]
                 (assoc oldstate :views views :baseviews baseviews :viewids viewids))
+              (= text "options") 
+              (let [views (ui/gen-from-desc {} layouts/options)
+                    baseviews (ui/get-base-ids layouts/options)
+                    viewids (ui/collect-visible-ids views baseviews "")]
+                (assoc oldstate :views views :baseviews baseviews :viewids viewids))
+              (= text "options back") 
+              (let [views (ui/gen-from-desc {} layouts/menu)
+                    baseviews (ui/get-base-ids layouts/menu)
+                    viewids (ui/collect-visible-ids views baseviews "")]
+                (assoc oldstate :views views :baseviews baseviews :viewids viewids))
 
+              (= text "left")
+              (assoc-in oldstate [:keycodes 37] true)
+              (= text "right")
+              (assoc-in oldstate [:keycodes 39] true)
+              (= text "jump")
+              (assoc-in oldstate [:keycodes 38] true)
+              (= text "down")
+              (assoc-in oldstate [:keycodes 40] true)
+              (= text "run")
+              (assoc-in oldstate [:keycodes 32] true)
+              (= text "punch")
+              (assoc-in oldstate [:keycodes 70] true)
+              (= text "kick")
+              (assoc-in oldstate [:keycodes 83] true)
+              (= text "block")
+              (assoc-in oldstate [:keycodes 68] true)
+              
               (= text "start-game")
               (let [level-file "level1.svg"
                     views (ui/gen-from-desc {} layouts/hud)

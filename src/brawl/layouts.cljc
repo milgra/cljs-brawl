@@ -311,3 +311,70 @@
       :height "50 px" 
       :top "Donate 4 px" 
       :center-x "Edge 50 %"}]}])
+
+
+(def options
+  ;;
+  ;;    BRAWL
+  ;;    Continue
+  ;;    New Game
+  ;;    Options
+  ;;    Donate
+  ;;    Exit
+  ;;
+  [{:id "Options"
+    :class ""
+    :texture "Color 0x000000EE"
+    :width "100 %" 
+    :height "100 %" 
+    :subviews
+    
+    [{:id "Music"
+      :class "Slider"
+      :command "set music volume"
+      :texture "Color 0xFFFFFF0F"
+      :label "Label 25 MusicVolume 00000000 FFFFFFFF"
+      :width "350 px" 
+      :height "50 px" 
+      :center-y "Edge 40 %" 
+      :center-x "Edge 50 %"}
+
+     {:id "Sound"
+      :class "Slider"
+      :command "set sound volume"
+      :texture "Color 0xFFFFFF0F"
+      :label "Label 25 SoundVolume 00000000 FFFFFFFF"
+      :width "350 px" 
+      :height "50 px" 
+      :top "Music 4 px" 
+      :center-x "Edge 50 %"}
+
+     {:id "Physics"
+      :class "Button"
+      :command "show physics"
+      :texture "Color 0xFFFFFF0F"
+      :label "Label 25 Show/HidePhysics 00000000 FFFFFFFF"
+      :width "350 px" 
+      :height "50 px" 
+      :top "Sound 4 px" 
+      :center-x "Edge 50 %"}
+
+     {:id "Fullscreen"
+      :class "Button"
+      :command "donate"
+      :texture "Color 0xFFFFFF0F"
+      :label "Label 25 ToggleFullscreen 00000000 FFFFFFFF"
+      :width "350 px" 
+      :height "50 px" 
+      :top "Physics 4 px" 
+      :center-x "Edge 50 %"}
+
+     {:id "OptBack"
+      :class "Button"
+      :command "options back"
+      :texture "Color 0xFFFFFF0F"
+      :label "Label 25 Back 00000000 FFFFFFFF"
+      :width "350 px" 
+      :height "50 px" 
+      :top "Fullscreen 4 px" 
+      :center-x "Edge 50 %"}]}])
