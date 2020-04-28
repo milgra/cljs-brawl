@@ -18,7 +18,7 @@
    :subviews []})
 
   
-(defn gen-id [length]
+(defn gen-id! [length]
   "generates fixed length alfanumeric hash"
    (let [chars (map char (concat (range 48 57) (range 65 90) (range 97 122)))
          id (take length (repeatedly #(rand-nth chars)))]
@@ -44,11 +44,23 @@
 
 (defn setup-view [{:keys [class] :as view}]
   "setup view and create subviews if needed"
-  (if (= class "Slider")
-    (let [subview (create-view (gen-id 5) "None" {:pixel 10.0} {:ratio 1.0} "Color 0xFF000055")
-          newview (add-subview view subview)]
-      [newview subview]) ; return the modified view and the new view
-    [view])) ; return the view only
+  (cond
+    (= class "Slider")
+    (let [sldview (create-view (gen-id! 5) "None" {:pixel 10.0} {:ratio 1.0} "Color 0xFF0000FF")
+          lblview (create-view (gen-id! 5) "Label" {:ratio 1.0} {:ratio 1.0} (:label view))
+          newview (-> view
+                      (add-subview sldview)
+                      (add-subview lblview))]
+      [newview sldview lblview]) ; return the modified view and the new view
+    (= class "Button")
+    (let [indview (create-view (gen-id! 5) "None" {:pixel 0.0} {:ratio 1.0} "Color 0xFF0000FF")
+          lblview (create-view (gen-id! 5) "Label" {:ratio 1.0} {:ratio 1.0} (:texture view))
+          newview (-> view
+                      (add-subview indview)
+                      (add-subview lblview))]
+      (println "newview" [newview indview lblview])
+      [newview indview lblview]) ; return the modified view and the new view
+    :else [view])) ; return the view only
 
 
 (defn get-value [text]
@@ -70,7 +82,7 @@
    (fn [oldmap viewdesc]
      (let [subviews   (:subviews viewdesc)
            subids     (if subviews (map (fn [desc] (keyword (:id desc))) subviews) []) ; finalsubviews property needs ids only
-           subviewmap (if subviews (gen-from-desc oldmap subviews) oldmap) ; generate subviews unto viewmap
+           subviewmap (if subviews (gen-from-desc oldmap subviews) oldmap) ; generate subviews into viewmap
            view (reduce
                  (fn [result pair]
                    (let [k (key pair)
@@ -176,10 +188,12 @@
 
 (defn touch-slider
   "touch event for slider"
-  [{:keys [command subviews x y w h] :as view} viewmap [px py]]
+  [{:keys [command subviews x y w h] :as view} viewmap {type :type  [px py] :point }]
   (let [subview (-> (get viewmap (first subviews))
                     (assoc :width {:pixel (- px x)}))]
-    {:views [subview] :command {:text command :ratio (/ (- px x) w)}}))
+    (if (= type "up")
+      {:views [] :command {:text command :ratio (/ (- px x) w)}}
+      {:views [subview] :command nil})))
 
 
 (defn set-slider-value 
@@ -191,5 +205,12 @@
 
 (defn touch-button
   "touch event for button"
-  [{:keys [command subviews x y w h] :as view} viewmap [px py]]
-    {:views [] :command {:text command}})
+  [{:keys [command subviews x y w h] :as view} viewmap {type :type [px py] :point}]
+  (let [subview (if (= type "down")
+                  (-> (get viewmap (first subviews))
+                      (assoc :width {:pixel w}))
+                  (-> (get viewmap (first subviews))
+                      (assoc :width {:pixel 0})))]
+    (if (= type "up")
+      {:views [subview] :command {:text command}}
+      {:views [subview] :command nil})))

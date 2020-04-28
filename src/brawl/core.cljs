@@ -248,8 +248,8 @@
                     (reduce
                      (fn [result {:keys [class] :as view}]
                        (cond
-                         (= class "Slider") (conj result (ui/touch-slider view views (:point touchevent)))
-                         (= class "Button") (conj result (ui/touch-button view views (:point touchevent)))
+                         (= class "Slider") (conj result (ui/touch-slider view views touchevent))
+                         (= class "Button") (conj result (ui/touch-button view views touchevent))
                          :else result))
                      []
                      (map views touched-views)))
