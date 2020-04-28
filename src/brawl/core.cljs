@@ -209,7 +209,7 @@
                     viewids (ui/collect-visible-ids views baseviews "")]
                 (assoc oldstate :views views :baseviews baseviews :viewids viewids))
               (= text "continue") 
-              (let [uidesc layouts/generator
+              (let [uidesc (if (= (:level-file oldstate) "level0.svg") layouts/generator layouts/hud)
                     views (ui/gen-from-desc {} uidesc)
                     baseviews (ui/get-base-ids uidesc)
                     viewids (ui/collect-visible-ids views baseviews "")]
@@ -429,7 +429,7 @@
                :views views
                :baseviews baseviews
                :viewids viewids
-               :level_file "level0.svg"
+               :level-file "level0.svg"
                :texfile "font.png"
                :floatbuffer (floatbuf/create!)
                :keycodes {}
@@ -441,7 +441,7 @@
     (resize-context!)
     (init-events! keych tchch)
     (load-image! imgch (:texfile state))
-    (load-level! svgch (:level_file state))
+    (load-level! svgch (:level-file state))
     
     (animate state
              (fn [prestate frame time]

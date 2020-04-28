@@ -58,7 +58,6 @@
           newview (-> view
                       (add-subview indview)
                       (add-subview lblview))]
-      (println "newview" [newview indview lblview])
       [newview indview lblview]) ; return the modified view and the new view
     :else [view])) ; return the view only
 
