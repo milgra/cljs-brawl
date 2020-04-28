@@ -13,6 +13,7 @@ run :
 * dead body drag
 * gun drag
 * AI
+* sometimes rear leg stuck when jumping
 * slider 3 layer, button 2 layer, 2 state
 * menu black background
 * "loading" screen

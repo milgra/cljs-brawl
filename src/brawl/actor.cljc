@@ -373,13 +373,17 @@
 
 (defn move-feet-jump
   "move active base towards target point"
-  [{:keys [speed base-order base-target step-length facing kick-pressed] {{[hx hy] :p} :hip base_l :base_l base_r :base_r :as masses } :masses {legl :legl runs :runs walks :walks} :metrics :as state}
-   {:keys [left right up down run]}]
+  [{:keys [id speed base-order base-target step-length facing kick-pressed action-sent commands] {{[hx hy] :p} :hip base_l :base_l base_r :base_r :as masses } :masses {legl :legl runs :runs walks :walks} :metrics :as state}
+   {:keys [left right up down run]}
+   surfaces
+   time]
   (let [foot_l (if kick-pressed [(+ hx (* legl facing)) (+ hy (* legl 0.5))] (:p base_l))
-        foot_r (if kick-pressed [(+ hx (* legl facing)) (+ hy (* legl 0.5))] (:p base_r))]
+        foot_r (if kick-pressed [(+ hx (* legl facing)) (+ hy (* legl 0.5))] (:p base_r))
+        command (if (and kick-pressed (not action-sent)) {:id id :text "attack" :base [hx hy] :target foot_l :time time})]
     (-> state
-      (assoc-in [:masses :foot_l :p] foot_l) 
-      (assoc-in [:masses :foot_r :p] foot_r))))
+        (assoc :commands (if command (conj command command) commands))
+        (assoc-in [:masses :foot_l :p] foot_l) 
+        (assoc-in [:masses :foot_r :p] foot_r))))
 
 
 (defn move-feet-walk-still 
@@ -559,7 +563,7 @@
                  true (assoc-in [:masses :base_l] (:base_l newbases))
                  true (assoc-in [:masses :base_r] (:base_r newbases))
                  true (move-hip-jump control)
-                 true (move-feet-jump control)
+                 true (move-feet-jump control surfaces time)
                  true (move-knee-walk control)
                  true (move-head-jump control)
                  true (move-hand-walk control surfaces time))]
