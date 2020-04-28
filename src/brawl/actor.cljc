@@ -149,8 +149,7 @@
              (phys2/dguard2 masses :neck :elbow_l (* 0.5 (:arml metrics)) 0.9)
              (phys2/dguard2 masses :neck :elbow_r (* 0.5 (:arml metrics)) 0.9)
              (phys2/dguard2 masses :elbow_l :hand_l (* 0.5 (:arml metrics)) 0.9)
-             (phys2/dguard2 masses :elbow_r :hand_r (* 0.5 (:arml metrics)) 0.9)
-             ]
+             (phys2/dguard2 masses :elbow_r :hand_r (* 0.5 (:arml metrics)) 0.9)]
    ; debug
    :step-zone [x y]
    ; body metrics

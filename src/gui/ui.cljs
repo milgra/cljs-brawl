@@ -46,7 +46,7 @@
   "setup view and create subviews if needed"
   (cond
     (= class "Slider")
-    (let [sldview (create-view (gen-id! 5) "None" {:pixel 10.0} {:ratio 1.0} "Color 0xFF0000FF")
+    (let [sldview (create-view (gen-id! 5) "None" {:pixel 10.0} {:ratio 1.0} "Color 0x009900FF")
           lblview (create-view (gen-id! 5) "Label" {:ratio 1.0} {:ratio 1.0} (:label view))
           newview (-> view
                       (add-subview sldview)
@@ -54,7 +54,7 @@
       [newview sldview lblview]) ; return the modified view and the new view
     (= class "Button")
     (let [indview (create-view (gen-id! 5) "None" {:pixel 0.0} {:ratio 1.0} "Color 0xFF0000FF")
-          lblview (create-view (gen-id! 5) "Label" {:ratio 1.0} {:ratio 1.0} (:texture view))
+          lblview (create-view (gen-id! 5) "Label" {:ratio 1.0} {:ratio 1.0} (:label view))
           newview (-> view
                       (add-subview indview)
                       (add-subview lblview))]

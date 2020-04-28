@@ -206,19 +206,23 @@
               (= text "show-menu") 
               (let [views (ui/gen-from-desc {} layouts/menu)
                     baseviews (ui/get-base-ids layouts/menu)
-                    viewids (ui/collect-visible-ids views baseviews  "")]
+                    viewids (ui/collect-visible-ids views baseviews "")]
                 (assoc oldstate :views views :baseviews baseviews :viewids viewids))
               (= text "continue") 
               (let [uidesc layouts/generator
                     views (ui/gen-from-desc {} uidesc)
                     baseviews (ui/get-base-ids uidesc)
-                    viewids (ui/collect-visible-ids views baseviews  "")]
+                    viewids (ui/collect-visible-ids views baseviews "")]
                 (assoc oldstate :views views :baseviews baseviews :viewids viewids))
 
               (= text "start-game")
-              (let [level-file "level1.svg"]
+              (let [level-file "level1.svg"
+                    views (ui/gen-from-desc {} layouts/hud)
+                    baseviews (ui/get-base-ids layouts/hud)
+                    viewids (ui/collect-visible-ids views baseviews "")]
                 (load-level! (:svgch oldstate) level-file)
                 (-> oldstate
+                    (assoc :views views :baseviews baseviews :viewids viewids)
                     (assoc :world {:inited false
                                    :actors [] ; (actor/init 580.0 300.0)]
                                    :guns []
@@ -284,7 +288,7 @@
                       -1.0 1.0)
           
           variation (Math/floor (mod (/ frame 20.0) 3.0 ))
-          newgfx (if svglevel (webgl/loadshapes gfx svglevel) gfx)
+          newgfx (if svglevel (webgl/loadshapes gfx (filter #(not (clojure.string/includes? (:id %) "Pivot")) svglevel)) gfx)
           newbuf (floatbuf/empty! floatbuffer)
           newbuf1 (reduce (fn [oldbuf actor] (actorskin/get-skin-triangles actor oldbuf variation)) newbuf (rseq actors))]
 
@@ -355,7 +359,9 @@
                        (assoc :inited true)
                        (assoc :surfaces surfaces)
                        (assoc :surfacelines lines))]
-      (assoc state :world newworld))
+      (-> state
+          (assoc :world newworld)
+          (update-gen-sliders)))
       
     :else ; return unchanged
     state))

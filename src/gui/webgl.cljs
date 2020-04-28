@@ -98,11 +98,11 @@
     (.clearRect context 0 0 (.-width canvas) (.-height canvas))
     (set! (.-fillStyle context) backcol)
     (.fillRect context 0 0 (.-width canvas) (.-height canvas))
-    (set! (.-font context) (str "italic small-caps bold " size "px monospace"))
+    (set! (.-font context) (str "bolder " size "px Impact"))
     (set! (.-fillStyle context) forecol)
     (set! (.-textBaseline context) "middle")
     (let [itemwth (int (.-width (.measureText context label)))]
-      (.fillText context label (int (* (- width itemwth) 0.5)) (int (/ height 1.6)))
+      (.fillText context label (int (* (- width itemwth) 0.5)) (int (/ height 1.8)))
       {:data (.-data (.getImageData context 0 0 width height))
        :width width
        :height height})))

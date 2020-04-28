@@ -10,13 +10,13 @@ run :
 
 ## Todo
 
+* menu black background
+* "loading" screen
+* disappearing generator, appearing hud
 * dead body drag
 * gun drag
 * AI
 * sometimes rear leg stuck when jumping
-* slider 3 layer, button 2 layer, 2 state
-* menu black background
-* "loading" screen
 * time scaling
 * kickable trash cans
 * rain with particles

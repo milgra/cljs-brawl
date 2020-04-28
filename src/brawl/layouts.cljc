@@ -16,25 +16,25 @@
 ;; |Hitrate         Speed  |
   [{:id "Hitpower"
     :class "Slider"
-    :texture "Color 0x000000AA"
-    :label "Label 25 HITPOWER 00000000 FFFFFFFF"
+    :texture "Color 0x555555FF"
+    :label "Label 25 Hitpower 00000000 FFFFFFFF"
     :width "150 px"
     :height "50 px"
     :command "set-hitpower"}
 
    {:id "Height"
     :class "Slider"
-    :texture "Color 0x000000AA"
-    :label "Label 25 HEIGHT 00000000 FFFFFFFF"
+    :texture "Color 0x555555FF"
+    :label "Label 25 Height 00000000 FFFFFFFF"
     :width "150 px"
     :height "50 px"
     :center-x "Edge 50 %"
-    :command "set-height"}
+    :command "set-heivght"}
    
    {:id "Stamina"
     :class "Slider"
-    :texture "Color 0x000000AA"
-    :label "Label 25 STAMINA 00000000 FFFFFFFF"
+    :texture "Color 0x555555FF"
+    :label "Label 25 Stamina 00000000 FFFFFFFF"
     :width "150 px"
     :height "50 px"
     :right "Edge 0 px"
@@ -42,8 +42,8 @@
    
    {:id "Hitrate"
     :class "Slider"
-    :texture "Color 0x000000AA"
-    :label "Label 25 HITRATE 00000000 FFFFFFFF"
+    :texture "Color 0x555555FF"
+    :label "Label 25 Hitrate 00000000 FFFFFFFF"
     :width "150 px"
     :height "50 px"
     :bottom "Edge 0 px"
@@ -51,8 +51,8 @@
    
    {:id "Speed"
     :class "Slider"
-    :texture "Color 0x000000AA"
-    :label "Label 25 SPEED 00000000 FFFFFFFF"
+    :texture "Color 0x555555FF"
+    :label "Label 25 Speed 00000000 FFFFFFFF"
     :width "150 px"
     :height "50 px"
     :right "Edge 0 px"
@@ -68,7 +68,8 @@
 ;;|     StartGame      |
   [{:id "Menu"
     :class "Button"
-    :texture "Label 25 MENU FFFFFF11 FFFFFFFF"
+    :texture "Color 0xFFFFFF09"
+    :label "Label 25 Menu FFFFFF11 FFFFFFFF"
     :command "show-menu" 
     :width "150 px" 
     :height "50 px" 
@@ -85,7 +86,8 @@
 
    {:id "Randomize"
     :class "Button" 
-    :texture "Label 25 RANDOMIZE FFFFFF11 FFFFFFFF"
+    :texture "Color 0xFFFFFF09"
+    :label "Label 25 Randomize FFFFFF09 FFFFFFFF"
     :command "randomize" 
     :width "200 px" 
     :height "50 px" 
@@ -93,8 +95,9 @@
     :bottom "StartGame 10 px"}
    
    {:id "StartGame"
-    :class "Button" 
-    :texture "Label 25 STARTGAME FFFFFF11 FFFFFFFF"
+    :class "Button"
+    :texture "Color 0xDD0000FF"
+    :label "Label 25 Startgame FFFFFF11 FFFFFFFF"
     :command "start-game" 
     :width "200 px" 
     :height "50 px"
@@ -108,21 +111,122 @@
 ;;Punch                                     |
 ;;Block Jump                      Left Right|
 ;;Kick  Shoot   Health Bullets Power    Down|
-"
-X CLIndicator TEXP BCFFFFFF55 FCFFFFFFFF TA0 LA0 WI150 HE50
-M CLButton TEMenu BCFF00FF55 FCFFFFFFFF TA0 RA0 WI150 HE50 COShowMenu
-H CLIndicator TEHealth BCFF000055 FCFFFFFFFF BA0 RAS WI200 HE50
-S CLLabel TEBullets BC00FF0055 FCFFFFFFFF BA0 HA0 WI50 HE50
-P CLIndicator TEPower BC0000FF55 FCFFFFFFFF BA0 LAS WI200 HE50
-B CLButton TEBlock BCFFFFFF55 FCFFFFFFFF BAK LA0 WI100 HE100
-K CLButton TEKick BCFFFFFF55 FCFFFFFFFF BA0 LA0 WI100 HE100
-C CLButton TEPunch BCFFFFFF55 FCFFFFFFFF BAB LA0 WI100 HE100
-G CLButton TEGun BCFFFFFF55 FCFFFFFFFF BA0 LAK WI100 HE100
-J CLButton TEJump BCFFFFFF55 FCFFFFFFFF BAG LAB WI100 HE100
-L CLButton TELeft BCFFFFFF55 FCFFFFFFFF BA0 RAR WI100 HE100
-R CLButton TERight BCFFFFFF55 FCFFFFFFFF BAD RA0 WI100 HE100
-D CLButton TEDown BCFFFFFF55 FCFFFFFFFF BA0 RA0 WI100 HE100
-E CLDebug TA0 LA0 WI300 HE300")
+  [{:id "Menu"
+    :class "Button"
+    :texture "Color 0xFFFFFF09"
+    :label "Label 25 Menu FFFFFF11 FFFFFFFF"
+    :command "show-menu" 
+    :width "150 px" 
+    :height "50 px" 
+    :top "Edge 0 px" 
+    :right "Edge 0 px"}
+
+   {:id "Kick"
+    :class "Button"
+    :texture "Color 0xFFFFFF09"
+    :label "Label 25 Kick(S) FFFFFF09 FFFFFFFF"
+    :command "kick"
+    :width "150 px"
+    :height "150 px"
+    :left "Edge 4 px"
+    :bottom "Edge 4 px"}
+
+   {:id "Block"
+    :class "Button" 
+    :texture "Color 0xFFFFFF09"
+    :label "Label 25 Block(D) FFFFFF09 FFFFFFFF"
+    :command "block" 
+    :width "150 px" 
+    :height "150 px" 
+    :left "Edge 4 px"
+    :bottom "Kick 4 px"}
+   
+   {:id "Punch"
+    :class "Button" 
+    :texture "Color 0xFFFFFF09"
+    :label "Label 25 Punch(F) FFFFFF09 FFFFFFFF"
+    :command "punch" 
+    :width "150 px" 
+    :height "150 px" 
+    :left "Edge 4 px"
+    :bottom "Block 4 px"}
+
+   {:id "Shoot"
+    :class "Button" 
+    :texture "Color 0xFFFFFF09"
+    :label "Label 25 Shoot(V) FFFFFF09 FFFFFFFF"
+    :command "shoot" 
+    :width "150 px" 
+    :height "150 px" 
+    :left "Kick 4 px"
+    :bottom "Edge 4 px"}
+   
+   {:id "Jump"
+    :class "Button" 
+    :texture "Color 0xFFFFFF09"
+    :label "Label 25 Jump(UP) FFFFFF09 FFFFFFFF"
+    :command "jump" 
+    :width "150 px" 
+    :height "150 px" 
+    :left "Kick 4 px"
+    :bottom "Shoot 4 px"}
+
+   {:id "Down"
+    :class "Button"
+    :texture "Color FFFFFF09"
+    :label "Label 25 DOWN FFFFFF09 FFFFFFFF"
+    :command "down"
+    :width "150 px"
+    :height "150 px"
+    :right "Edge 4 px"
+    :bottom "Edge 4 px"}
+
+   {:id "Right"
+    :class "Button"
+    :texture "Color FFFFFF09"
+    :label "Label 25 RIGHT FFFFFF09 FFFFFFFF"
+    :command "right"
+    :width "150 px"
+    :height "150 px"
+    :right "Edge 4 px"
+    :bottom "Down 4 px"}
+
+   {:id "Left"
+    :class "Button"
+    :texture "Color FFFFFF09"
+    :label "Label 25 LEFT FFFFFF09 FFFFFFFF"
+    :command "left"
+    :width "150 px"
+    :height "150 px"
+    :right "Right 4 px"
+    :bottom "Down 4 px"}
+  
+   {:id "Bullets"
+    :class "Button"
+    :texture "Color 0x88CC88FF"
+    :label "Label 25 0 FFFFFF09 FFFFFFFF"
+    :width "50 px"
+    :height "50 px"
+    :center-x "Edge 50 %"
+    :bottom "Edge 0 px"}
+
+   {:id "Health"
+    :class "Slider"
+    :texture "Color 0x555555FF"
+    :label "Label 25 Health 00000000 FFFFFFFF"
+    :width "250 px"
+    :height "50 px"
+    :bottom "Edge 0 px"
+    :right "Bullets 0 px"}
+
+  {:id "Power"
+    :class "Slider"
+    :texture "Color 0x555555FF"
+    :label "Label 25 Power 00000000 FFFFFFFF"
+    :width "250 px"
+    :height "50 px"
+    :bottom "Edge 0 px"
+    :left "Bullets 0 px"}])
 
 
 (def menu
@@ -134,55 +238,76 @@ E CLDebug TA0 LA0 WI300 HE300")
   ;;    Donate
   ;;    Exit
   ;;
-  [{:id "Brawl"
+  [{:id "Menu"
     :class ""
-    :texture "Label 50 BRAWL 00000088 FFFFFFFF"
-    :width "250 px" 
-    :height "70 px" 
-    :bottom "Continue 10 px" 
-    :center-x "Edge 50 %"}
+    :texture "Color 0x000000EE"
+    :width "100 %" 
+    :height "100 %" 
+    :subviews
+    
+    [{:id "Brawl"
+      :class "Button"
+      :texture "Color 0xFFFFFF0F"
+      :label "Label 50 BRAWL 00000000 FFFFFFFF"
+      :width "400 px" 
+      :height "140 px" 
+      :bottom "Continue 8 px" 
+      :center-x "Edge 50 %"
+      :subviews [{:id "By"
+                  :class "Button"
+                  :texture "Color 0x00000000"
+                  :label "Label 15 ByMilanToth 00000000 FFFFFFFF"
+                  :width "150 px" 
+                  :height "40 px" 
+                  :right "Edge 4 px" 
+                  :bottom "Edge 4 px"}]}
 
-   {:id "Continue"
-    :class "Button"
-    :command "continue"
-    :texture "Label 25 CONTINUE 00000088 FFFFFFFF"
-    :width "220 px" 
-    :height "50 px" 
-    :center-y "Edge 40 %" 
-    :center-x "Edge 50 %"}
+     {:id "Continue"
+      :class "Button"
+      :command "continue"
+      :texture "Color 0xFFFFFF0F"
+      :label "Label 25 CONTINUE 00000000 FFFFFFFF"
+      :width "350 px" 
+      :height "50 px" 
+      :center-y "Edge 40 %" 
+      :center-x "Edge 50 %"}
 
-   {:id "NewGame"
-    :class "Button"
-    :command "new-game"
-    :texture "Label 25 NEW 00000088 FFFFFFFF"
-    :width "220 px" 
-    :height "50 px" 
-    :top "Continue 10 px" 
-    :center-x "Edge 50 %"}
+     {:id "NewGame"
+      :class "Button"
+      :command "new-game"
+      :texture "Color 0xFFFFFF0F"
+      :label "Label 25 NEW 00000000 FFFFFFFF"
+      :width "350 px" 
+      :height "50 px" 
+      :top "Continue 4 px" 
+      :center-x "Edge 50 %"}
 
-   {:id "Options"
-    :class "Button"
-    :command "options"
-    :texture "Label 25 OPTIONS 000000888 FFFFFFFF"
-    :width "220 px" 
-    :height "50 px" 
-    :top "NewGame 10 px" 
-    :center-x "Edge 50 %"}
+     {:id "Options"
+      :class "Button"
+      :command "options"
+      :texture "Color 0xFFFFFF0F"
+      :label "Label 25 OPTIONS 00000000 FFFFFFFF"
+      :width "350 px" 
+      :height "50 px" 
+      :top "NewGame 4 px" 
+      :center-x "Edge 50 %"}
 
-   {:id "Donate"
-    :class "Button"
-    :command "donate"
-    :texture "Label 25 DONATE 00000088 FFFFFFFF"
-    :width "220 px" 
-    :height "50 px" 
-    :top "Options 10 px" 
-    :center-x "Edge 50 %"}
+     {:id "Donate"
+      :class "Button"
+      :command "donate"
+      :texture "Color 0xFFFFFF0F"
+      :label "Label 25 DONATE 00000000 FFFFFFFF"
+      :width "350 px" 
+      :height "50 px" 
+      :top "Options 4 px" 
+      :center-x "Edge 50 %"}
 
-   {:id "Exit"
-    :class "Button"
-    :command "exit"
-    :texture "Label 25 EXIT 00000088 FFFFFFFF"
-    :width "220 px" 
-    :height "50 px" 
-    :top "Donate 10 px" 
-    :center-x "Edge 50 %"}])
+     {:id "Exit"
+      :class "Button"
+      :command "exit"
+      :texture "Color 0xFFFFFF0F"
+      :label "Label 25 EXIT 00000000 FFFFFFFF"
+      :width "350 px" 
+      :height "50 px" 
+      :top "Donate 4 px" 
+      :center-x "Edge 50 %"}]}])
