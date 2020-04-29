@@ -71,7 +71,7 @@
    surfacepoints))
 
 
-(defn get-colliding-surfaces [pos dir radius surfaces]
+(defn get-colliding-surfaces [pos dir origin radius surfaces]
   "collect surfaces crossed by masspoint dir or nearby endpoint"
   (reduce
    (fn [result surface]
@@ -84,7 +84,7 @@
            end (math2/add-v2 pos dir)
            dst (math2/dist-p2-v2 end (:t surface) (:b surface))]
        (if (not= isp nil)
-         (conj result [(math2/dist-p2-p2-cubic pos isp) isp surface])
+         (conj result [(math2/dist-p2-p2-cubic origin isp) isp surface])
          (if (< dst radius)
            (conj result [dst isp surface])
            result))))
@@ -193,7 +193,7 @@
       (-> mass
           (assoc :p prevpos)
           (assoc :d fulldir))          
-      (let [results (sort-by first < (get-colliding-surfaces prevpos prevdir r surfaces))
+      (let [results (sort-by first < (get-colliding-surfaces prevpos prevdir prevpos r surfaces))
            [dest isp {strans :t sbasis :b :as segment}] (first results)]
         (if segment
           (let [newpos (move-mass-back strans sbasis prevpos prevdir (* 1.1 r))

@@ -338,9 +338,10 @@
   [{ :keys [masses speed base-surfaces vert-direction] :as state} surfaces]
   ; speed must not be 0
   (let [base-order (get-base-order masses speed)
-        step-zone (get-step-zone (:p (masses (:passive base-order))) speed)
-        collided-top (sort-by first < (phys2/get-colliding-surfaces (:A step-zone) (:B step-zone) 10.0 surfaces))
-        collided-bot (sort-by first < (phys2/get-colliding-surfaces (:A step-zone) (:C step-zone) 10.0 surfaces))
+        base-point (:p (masses (:passive base-order)))
+        step-zone (get-step-zone base-point speed)
+        collided-top (sort-by first < (phys2/get-colliding-surfaces (:A step-zone) (:B step-zone) base-point  10.0 surfaces))
+        collided-bot (sort-by first < (phys2/get-colliding-surfaces (:A step-zone) (:C step-zone) base-point 10.0 surfaces))
         collided (cond
                    (and (= vert-direction -1) (not (empty? collided-top))) collided-top
                    (and (= vert-direction 1) (not (empty? collided-bot))) collided-bot

@@ -199,34 +199,7 @@
     :width "150 px"
     :height "150 px"
     :right "Right 4 px"
-    :bottom "Down 4 px"}
-  
-   {:id "Bullets"
-    :class "Button"
-    :texture "Color 0x88CC88FF"
-    :label "Label 25 0 FFFFFF09 FFFFFFFF"
-    :width "50 px"
-    :height "50 px"
-    :center-x "Edge 50 %"
-    :bottom "Edge 0 px"}
-
-   {:id "Health"
-    :class "Slider"
-    :texture "Color 0x555555FF"
-    :label "Label 25 Health 00000000 FFFFFFFF"
-    :width "250 px"
-    :height "50 px"
-    :bottom "Edge 0 px"
-    :right "Bullets 0 px"}
-
-  {:id "Power"
-    :class "Slider"
-    :texture "Color 0x555555FF"
-    :label "Label 25 Power 00000000 FFFFFFFF"
-    :width "250 px"
-    :height "50 px"
-    :bottom "Edge 0 px"
-    :left "Bullets 0 px"}])
+    :bottom "Down 4 px"}])
 
 
 (def menu

@@ -109,7 +109,6 @@
             (let [pos (nth path 3)
                   toks (clojure.string/split id #"_")
                   type (first (second toks))]
-              
               (cond (= type "l")
                     (do
                       (println "create actor" id type pos)
@@ -314,7 +313,7 @@
           r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
           h (* 300.0 ratio)
           w (* h r)
-          projection (math4/proj_ortho
+          projection (math4/proj_ortho>
                       (- tx w)
                       (+ tx w)
                       (+ ty h)
@@ -322,7 +321,7 @@
                       -1.0 1.0)
           
           variation (Math/floor (mod (/ frame 10.0) 3.0 ))
-          newgfx (if svglevel (webgl/loadshapes gfx (filter #(not (clojure.string/includes? (:id %) "Pivot")) svglevel)) gfx)
+          newgfx (if svglevel (webgl/loadshapes gfx (filter #(if (:id %) (not (clojure.string/includes? (:id %) "Pivot")) true) svglevel)) gfx)
           newbuf (floatbuf/empty! floatbuffer)
           newbuf1 (reduce (fn [oldbuf actor] (actorskin/get-skin-triangles actor oldbuf variation)) newbuf (rseq actors))]
 
@@ -331,11 +330,12 @@
       (webgl/drawtriangles! newgfx projection newbuf1)
 
       ;;(doall (map (fn [act]
-      ;;       (webgl/drawpoints! gfx projection (actorskin/getpoints act))
-      ;;       (webgl/drawlines! gfx projection (actorskin/getlines act))) actors))
+             (webgl/drawpoints! gfx projection (actorskin/getpoints actor))
+             (webgl/drawlines! gfx projection (actorskin/getlines actor))
+             ;;) actors))
 
-      ;;(webgl/drawpoints! newgfx projection (map :p (vals (:masses world))))
-      ;;(webgl/drawlines! newgfx projection (:surfacelines world))
+      (webgl/drawpoints! newgfx projection (map :p (vals (:masses world))))
+      (webgl/drawlines! newgfx projection (:surfacelines world))
       (-> state
           (assoc :gfx newgfx)
           (assoc :floatbuffer newbuf1)
@@ -394,7 +394,7 @@
     
     svglevel ; load new level
     (let [points (map :path (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) svglevel ))
-          pivots (filter #(clojure.string/includes? (:id %) "Pivot") svglevel)
+          pivots (filter #(if (:id %) (clojure.string/includes? (:id %) "Pivot") false) svglevel)
           surfaces (phys2/surfaces-from-pointlist points)
           lines (reduce (fn [result {t :t b :b}] (conj result t (math2/add-v2 t b))) [] surfaces)
           newworld (-> world
@@ -472,7 +472,7 @@
                :views views
                :baseviews baseviews
                :viewids viewids
-               :curr-level 0
+               :curr-level 6
                :texfile "font.png"
                :floatbuffer (floatbuf/create!)
                :keycodes {}
