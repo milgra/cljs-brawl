@@ -298,11 +298,10 @@
         (assoc :commands (concat commands newcommands)))))
 
 
-(defn draw-world [{:keys [world gfx trans floatbuffer] :as state} frame svglevel]
+(defn draw-world [{:keys [gfx trans floatbuffer] {:keys [actors particles surfacelines] :as world} :world :as state} frame svglevel]
   "draws background, actors, masses with projection"
   (if (:inited world)
-    (let [actors (:actors world)
-          actor (first actors)
+    (let [actor (first actors)
           [fax fay] (:p (get-in actor [:masses :base_l]))
           [fbx fby] (:p (get-in actor [:masses :base_r]))
           [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2))  ]
@@ -311,32 +310,37 @@
           h (* 350.0 ratio)
           w (* h r)
           [l r b t :as vis-rect] [(- tx w) (+ tx w) (+ ty h) (- ty h)]
-          projection (math4/proj_ortho (+ l 50) (- r 50) (- b 50) (+ t 50) -1.0 1.0)
-          
+          projection (math4/proj_ortho (+ l 50) (- r 50) (- b 50) (+ t 50) -1.0 1.0)    
           variation (Math/floor (mod (/ frame 10.0) 3.0 ))
           newgfx (if svglevel (webgl/loadshapes gfx (filter #(if (:id %) (not (clojure.string/includes? (:id %) "Pivot")) true) svglevel)) gfx)
+
           newbuf (floatbuf/empty! floatbuffer)
           newbuf1 (reduce (fn [oldbuf actor] (actorskin/get-skin-triangles actor oldbuf variation vis-rect)) newbuf (rseq actors))]
+      ;; draw triangles
       (webgl/clear! newgfx)
       (webgl/drawshapes! newgfx projection trans variation)
       (webgl/drawtriangles! newgfx projection newbuf1)
 
-      ;;(doall (map (fn [act]
-             ;; (webgl/drawpoints! gfx projection (actorskin/getpoints actor vis-rect))
-             ;; (webgl/drawlines! gfx projection (actorskin/getlines actor vis-rect))
-             ;;) actors))
+      (let [newbuf3 (floatbuf/empty! newbuf1)
+            ;newbuf3 (reduce (fn [oldbuf particle] (particle/get-points particle oldbuf vis-rect)) newbuf2 particles) ;; particles
+            newbuf4 (reduce (fn [oldbuf actor] (actorskin/getpoints actor oldbuf vis-rect)) newbuf3 actors)]
+        ;; draw points
+        (webgl/drawpoints! newgfx projection newbuf4)
 
-      ;; (webgl/drawlines! newgfx projection (:surfacelines world) vis-rect)
+        (let [newbuf5 (floatbuf/empty! newbuf4)
+              newbuf6 (reduce (fn [oldbuf actor] (actorskin/getlines actor oldbuf vis-rect)) newbuf5 actors)
+              newbuf7 (floatbuf/append! newbuf6 surfacelines)]
+          ;; draw lines
+          (webgl/drawlines! newgfx projection newbuf7)
       (-> state
           (assoc :gfx newgfx)
-          (assoc :floatbuffer newbuf1)
-          ))
+          (assoc :floatbuffer newbuf7)))))
     state))
 
 
 (defn update-world
   "updates phyisics and actors"
-  [{{:keys [actors surfaces masses inited endpos] :as world} :world keycodes :keycodes commands :commands :as state} svglevel]
+  [{{:keys [actors surfaces particles inited endpos] :as world} :world keycodes :keycodes commands :commands :as state} svglevel]
 
   (cond
     
@@ -368,18 +372,21 @@
                            (if (and (< (Math/abs dx) 50.0) (< (Math/abs dy) 50))
                              (conj newcommands {:text "next-level"})
                              newcommands))
+
+          newparticles (map #(identity %) particles)
           
           newworld (assoc world :actors newnewactors)]
 
       (-> state
           (assoc :commands newnewcommands)
+          (assoc :particles newparticles)
           (assoc :world newworld)))
     
     svglevel ; load new level
     (let [points (map :path (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) svglevel ))
           pivots (filter #(if (:id %) (clojure.string/includes? (:id %) "Pivot") false) svglevel)
           surfaces (phys2/surfaces-from-pointlist points)
-          lines (reduce (fn [result {t :t b :b}] (conj result t (math2/add-v2 t b))) [] surfaces)
+          lines (clj->js (reduce (fn [result {[tx ty] :t [bx by] :b}] (concat result [tx ty 1.0 1.0 1.0 1.0 (+ tx bx) (+ ty by) 1.0 1.0 1.0 1.0])) [] surfaces))
           newworld (-> world
                        (create-actors pivots)
                        (assoc :inited true)

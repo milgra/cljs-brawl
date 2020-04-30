@@ -198,23 +198,14 @@
   state)
 
 
-(defn drawlines! [ {:keys [context shader line_buffer location_pos location_col] :as state} projection lines ]
+(defn drawlines! [ {:keys [context shader line_buffer location_pos location_col] :as state} projection floatbuffer ]
   
   (.bindBuffer context buffer-object/array-buffer line_buffer)
-    
-  (.bufferData context
-               buffer-object/array-buffer
-               (ta/float32
-                (vec
-                 (flatten
-                  (map
-                   (fn voxelize [[tx ty]]
-                     [tx ty 1.0 1.0 1.0 1.0]) lines))))
-               buffer-object/dynamic-draw)
+  (.bufferData context buffer-object/array-buffer (:data floatbuffer) buffer-object/dynamic-draw)
   
   (buffers/draw!
    context
-   :count (count lines)
+   :count (/ (:index floatbuffer) 6)
    :shader shader
    :draw-mode draw-mode/lines
    :attributes [{:buffer line_buffer
@@ -236,38 +227,30 @@
   state)
 
 
-(defn drawpoints! [{:keys [context shader mass_buffer location_pos location_col] :as state} projection points]
+(defn drawpoints! [{:keys [context shader mass_buffer location_pos location_col] :as state} projection floatbuffer]
 
   (.bindBuffer context buffer-object/array-buffer mass_buffer)
-  
-  (.bufferData context
-               buffer-object/array-buffer
-               (ta/float32
-                (vec
-                 (flatten
-                  (map
-                   (fn voxelize [[tx ty]]
-                     [tx ty 1.0 1.0 1.0 1.0]) points))))
-               buffer-object/dynamic-draw)
-  
+  (.bufferData context buffer-object/array-buffer (:data floatbuffer) buffer-object/dynamic-draw)
+
   (buffers/draw!
    context
-   :count (count points)
+   :count (/ (:index floatbuffer) 6)
    :shader shader
-            :draw-mode draw-mode/points               
-            :attributes [{:buffer mass_buffer
-                          :location location_pos
-                          :components-per-vertex 2
-                          :type data-type/float
-                          :offset 0
-                          :stride 24}                        {:buffer mass_buffer
-                          :location location_col
-                          :components-per-vertex 4
-                          :type data-type/float
-                          :offset 8
-                          :stride 24}]
-            :uniforms [{:name "projection"
-                        :type :mat4
-                        :values projection}])
-
+   :draw-mode draw-mode/points               
+   :attributes [{:buffer mass_buffer
+                 :location location_pos
+                 :components-per-vertex 2
+                 :type data-type/float
+                 :offset 0
+                 :stride 24}
+                {:buffer mass_buffer
+                 :location location_col
+                 :components-per-vertex 4
+                 :type data-type/float
+                 :offset 8
+                 :stride 24}]
+   :uniforms [{:name "projection"
+               :type :mat4
+               :values projection}])
+  
   state)

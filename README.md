@@ -10,22 +10,24 @@ run :
 
 ## Todo
 
-particles - blood, seed, dust, dx dy random, seed kerulje el embert
 
 * no punch when running
+
+* particles - blood, seed, dust, dx dy random, seed kerulje el embert
+* reccsenes animacio uteskor/rugaskor - csillag alakban reszecskek
+* tolgyfavirag
+* reszecske effekt ver, utes
+* bloods on face hit, one blood on heavy chest hit
+
 * use enemy counts from svg
 * load ui fuggveny
 * "loading" screen
-* tolgyfavirag
 * összeesett ember guggolasbol alljon fol
 * 50 százaléknál essen össze mindenki egyszer
 * fej piros legyen aztan lila
-* reszecske effekt ver, utes
 * kifordult lab masodik palyan
-* use vertexbuffer in case of lines/points
 * new game/show physics/fullscreen button should work
 * working control buttons down/up
-* blood on face hit
 * dead body drag
 * gun drag
 * hangok mp3-ba
@@ -43,4 +45,3 @@ particles - blood, seed, dust, dx dy random, seed kerulje el embert
 * mushrooms that change the size/metrics of the character
 * controls menu point in menu, remove exit in browser
 * label description should be map also to be able to set text with space
-* reccsenes animacio uteskor/rugaskor

@@ -2,24 +2,37 @@
   (:require [brawl.floatbuffer :as fb])
   (:use [mpd.math2 :only [resize-v2 scale-v2 rotate-90-cw rotate-90-ccw add-v2 sub-v2]]))
 
-(defn getpoints [{masses :masses}]
-  (concat (map :p (vals masses))))
+(defn getpoints [{{{[e f] :p} :hip :as masses} :masses} floatbuffer [l r b t]]
+  (if (and (< l e) (> r e) (< t f) (> b f)) 
+    (reduce (fn [oldbuf [mid {[x y] :p :as mass}]] (fb/append! oldbuf (array x y 1.0 1.0 1.0 1.0))) floatbuffer masses)
+    floatbuffer))
 
 
-(defn getlines [{{:keys [head neck hip elbow_l elbow_r hand_l hand_r knee_l knee_r foot_l foot_r]} :masses step-zone :step-zone}]
-  [(:p head) (:p neck)
-   (:p neck) (:p hip)
-   (:p hip) (:p knee_l)
-   (:p hip) (:p knee_r)
-   (:p knee_l ) (:p foot_l)
-   (:p knee_r ) (:p foot_r)
-   (:p neck ) (:p elbow_l)
-   (:p neck ) (:p elbow_r)
-   (:p elbow_l ) (:p hand_l)
-   (:p elbow_r ) (:p hand_r)
-   (:A step-zone) (:B step-zone)
-   (:A step-zone) (:C step-zone)])
-  
+(defn getlines [{{:keys [head neck hip elbow_l elbow_r hand_l hand_r knee_l knee_r foot_l foot_r] {[e f] :p} :hip} :masses} floatbuffer [l r b t]]
+  (if (and (< l e) (> r e) (< t f) (> b f)) 
+    (let [[a b] (:p head)
+          [c d] (:p neck)
+          [g h] (:p knee_l)
+          [i j] (:p foot_l)
+          [k l] (:p knee_r)
+          [m n] (:p foot_r)
+          [o p] (:p elbow_l)
+          [q r] (:p hand_l)
+          [u v] (:p elbow_r)
+          [x y] (:p hand_r)]
+      (fb/append! floatbuffer (array
+                  a b 1 1 1 1 c d 1 1 1 1 ;; head -> neck
+                  c d 1 1 1 1 e f 1 1 1 1 ;; neck -> hip
+                  e f 1 1 1 1 g h 1 1 1 1 ;; hip -> knee_l
+                  g h 1 1 1 1 i j 1 1 1 1 ;; knee_l -> foot_l
+                  e f 1 1 1 1 k l 1 1 1 1 ;; hip -> knee_r
+                  k l 1 1 1 1 m n 1 1 1 1 ;; knee_r -> foot_r
+                  c d 1 1 1 1 o p 1 1 1 1 ;; neck -> elbow_l
+                  o p 1 1 1 1 q r 1 1 1 1 ;; elbow_l -> hand_l
+                  c d 1 1 1 1 u v 1 1 1 1 ;; neck -> elbow_r
+                  u v 1 1 1 1 x y 1 1 1 1 ;; elbow_r -> hand_r
+                  )))
+    floatbuffer))
 
 (defn gen-tube-triangles [buf points sizes [x y z w]]
   (loop [rempts points
