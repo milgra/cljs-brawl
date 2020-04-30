@@ -101,40 +101,43 @@
 
 
 (defn get-skin-triangles
-  [{{:keys [head neck hip elbow_l elbow_r hand_l hand_r knee_l knee_r foot_l foot_r]} :masses
+  [{{:keys [head neck elbow_l elbow_r hand_l hand_r knee_l knee_r foot_l foot_r] {[x y] :p :as hip} :hip} :masses
     {:keys [headw neckw armw hipw legw cola colb colc cold]} :metrics
     {af :active pf :passive} :base-order
     {as :active ps :passive} :base-surfaces
     facing :facing
     randoms :randoms}
    floatbuffer
-   variation]
-  (let [[r0 r1 r2 r3 r4 r5 r6 r7 r8 r9] (subvec randoms (* variation 10))] ; I just love clojure because of this!
-    (cond-> floatbuffer
-    ;; legs
-    true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)] [5.0 (+ hipw 5 r0) (+ legw 5 r1) (+ legw 5 r2)] [0.0 0.0 0.0 1.0]) ; stroke
-    true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)] [1.0 (+ hipw r3) (+ legw r4) (+ legw r5)] colb)
-    ;; feet
-    (and (= pf :base_r) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_r) (rotate-90-cw (:b ps))) (:p foot_r) (+ r6 5.0) facing colb)
-    (and (= pf :base_l) (not= ps nil)) (gen-foot-triangles (:p knee_r) (:p foot_r) (+ r6 5.0) facing colb)
-    
-    true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [6.0 (+ hipw 5 r7 ) (+ legw 5 r8) (+ legw 5 r9)] [0.0 0.0 0.0 1.0]) ; stroke
-    true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [1.0 (+ hipw r0) (+ legw r1) (+ legw r2)] cola)
-    ;; feet
-    (and (= pf :base_l) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_l) (rotate-90-cw (:b ps))) (:p foot_l) (+ r3 5.0) facing cola)
-    (and (= pf :base_r) (not= ps nil)) (gen-foot-triangles (:p knee_l) (:p foot_l) (+ r3 5.0) facing cola)
-  
-    true (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [(+ armw 5.0 r4) (+ armw 5.0 r5) (+ armw 5.0 r6)] [0.0 0.0 0.0 1.0]) ; stroke
-    true (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [(+ armw r7) (+ armw r8) (+ armw r9)] colb)
-    
-    ;; body
-    true (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [(+ neckw 5.0 r0) (+ neckw 5.0 r1) (+ hipw 5.0 r2)] [0.0 0.0 0.0 1.0])
-    true (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [(+ neckw r3) (+ neckw r4) (+ hipw r5)] colc)
-    
-    ;; head
-    true (gen-head-triangles (:p head) (:p neck) facing (+ 5.0 r6) [0.0 0.0 0.0 1.0])
-    true (gen-head-triangles (:p head) (:p neck) facing r7 [0.8 0.5 0.5 1.0])
-    
-    ;; arms
-    true (gen-tube-triangles [(:p neck) (:p elbow_r) (:p hand_r)] [(+ armw 5.0 r8) (+ armw 5.0 r9) (+ armw 5.0 r0)] [0.0 0.0 0.0 1.0]) ; stroke
-    true (gen-tube-triangles [(:p neck) (:p elbow_r) (:p hand_r)] [(+ armw r1) (+ armw r2) (+ armw r3)] cola))))
+   variation
+   [l r b t]]
+  (if (and (< l x) (> r x) (< t y) (> b y)) 
+    (let [[r0 r1 r2 r3 r4 r5 r6 r7 r8 r9] (subvec randoms (* variation 10))] ; I just love clojure because of this!
+      (cond-> floatbuffer
+        ;; legs
+        true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)] [5.0 (+ hipw 5 r0) (+ legw 5 r1) (+ legw 5 r2)] [0.0 0.0 0.0 1.0]) ; stroke
+        true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)] [1.0 (+ hipw r3) (+ legw r4) (+ legw r5)] colb)
+        ;; feet
+        (and (= pf :base_r) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_r) (rotate-90-cw (:b ps))) (:p foot_r) (+ r6 5.0) facing colb)
+        (and (= pf :base_l) (not= ps nil)) (gen-foot-triangles (:p knee_r) (:p foot_r) (+ r6 5.0) facing colb)
+        
+        true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [6.0 (+ hipw 5 r7 ) (+ legw 5 r8) (+ legw 5 r9)] [0.0 0.0 0.0 1.0]) ; stroke
+        true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [1.0 (+ hipw r0) (+ legw r1) (+ legw r2)] cola)
+        ;; feet
+        (and (= pf :base_l) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_l) (rotate-90-cw (:b ps))) (:p foot_l) (+ r3 5.0) facing cola)
+        (and (= pf :base_r) (not= ps nil)) (gen-foot-triangles (:p knee_l) (:p foot_l) (+ r3 5.0) facing cola)
+        
+        true (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [(+ armw 5.0 r4) (+ armw 5.0 r5) (+ armw 5.0 r6)] [0.0 0.0 0.0 1.0]) ; stroke
+        true (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [(+ armw r7) (+ armw r8) (+ armw r9)] colb)
+        
+        ;; body
+        true (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [(+ neckw 5.0 r0) (+ neckw 5.0 r1) (+ hipw 5.0 r2)] [0.0 0.0 0.0 1.0])
+        true (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [(+ neckw r3) (+ neckw r4) (+ hipw r5)] colc)
+        
+        ;; head
+        true (gen-head-triangles (:p head) (:p neck) facing (+ 5.0 r6) [0.0 0.0 0.0 1.0])
+        true (gen-head-triangles (:p head) (:p neck) facing r7 [0.8 0.5 0.5 1.0])
+        
+        ;; arms
+        true (gen-tube-triangles [(:p neck) (:p elbow_r) (:p hand_r)] [(+ armw 5.0 r8) (+ armw 5.0 r9) (+ armw 5.0 r0)] [0.0 0.0 0.0 1.0]) ; stroke
+        true (gen-tube-triangles [(:p neck) (:p elbow_r) (:p hand_r)] [(+ armw r1) (+ armw r2) (+ armw r3)] cola)))
+    floatbuffer))

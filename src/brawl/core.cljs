@@ -166,9 +166,6 @@
                        :guns []
                        :infos []
                        :endpos [0 0]
-                       :masses {:0 (phys2/mass2 500.0 300.0 1.0 1.0 0.9)}
-                       :dguards []
-                       :aguards []
                        :surfaces []
                        :surfacelines []})
         (assoc :curr-level next-level))))
@@ -311,31 +308,25 @@
           [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2))  ]
           ratio (/ (+ 40.0 (Math/abs (:speed actor))) 40.0)
           r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
-          h (* 300.0 ratio)
+          h (* 350.0 ratio)
           w (* h r)
-          projection (math4/proj_ortho>
-                      (- tx w)
-                      (+ tx w)
-                      (+ ty h)
-                      (- ty h)
-                      -1.0 1.0)
+          [l r b t :as vis-rect] [(- tx w) (+ tx w) (+ ty h) (- ty h)]
+          projection (math4/proj_ortho (+ l 50) (- r 50) (- b 50) (+ t 50) -1.0 1.0)
           
           variation (Math/floor (mod (/ frame 10.0) 3.0 ))
           newgfx (if svglevel (webgl/loadshapes gfx (filter #(if (:id %) (not (clojure.string/includes? (:id %) "Pivot")) true) svglevel)) gfx)
           newbuf (floatbuf/empty! floatbuffer)
-          newbuf1 (reduce (fn [oldbuf actor] (actorskin/get-skin-triangles actor oldbuf variation)) newbuf (rseq actors))]
-
+          newbuf1 (reduce (fn [oldbuf actor] (actorskin/get-skin-triangles actor oldbuf variation vis-rect)) newbuf (rseq actors))]
       (webgl/clear! newgfx)
       (webgl/drawshapes! newgfx projection trans variation)
       (webgl/drawtriangles! newgfx projection newbuf1)
 
       ;;(doall (map (fn [act]
-             (webgl/drawpoints! gfx projection (actorskin/getpoints actor))
-             (webgl/drawlines! gfx projection (actorskin/getlines actor))
+             ;; (webgl/drawpoints! gfx projection (actorskin/getpoints actor vis-rect))
+             ;; (webgl/drawlines! gfx projection (actorskin/getlines actor vis-rect))
              ;;) actors))
 
-      (webgl/drawpoints! newgfx projection (map :p (vals (:masses world))))
-      (webgl/drawlines! newgfx projection (:surfacelines world))
+      ;; (webgl/drawlines! newgfx projection (:surfacelines world) vis-rect)
       (-> state
           (assoc :gfx newgfx)
           (assoc :floatbuffer newbuf1)
@@ -368,12 +359,6 @@
           newnewactors (if (empty? newcommands)
                          newactors
                          (mapv (fn [{comms :commands :as actor}] (if (empty? comms) actor (-> actor (assoc :commands []) (assoc :action-sent true)))) newactors)) 
-          
-          newmasses (-> masses
-                        (phys2/add-gravity [0.0 0.2])
-                        ;;(phys2/keep-angles (:aguards state))
-                        ;;(phys2/keep-distances (:dguards state))
-                        (phys2/move-masses surfaces))
 
           ;; check finish sign
           newnewcommands (let [[ex ey] endpos
@@ -384,9 +369,7 @@
                              (conj newcommands {:text "next-level"})
                              newcommands))
           
-          newworld (-> world
-                       (assoc :actors newnewactors)
-                       (assoc :masses newmasses))]
+          newworld (assoc world :actors newnewactors)]
 
       (-> state
           (assoc :commands newnewcommands)
@@ -461,11 +444,9 @@
                :guns []
                :infos []
                :endpos [0 0]
-               :masses {} ;:0 (phys2/mass2 500.0 300.0 1.0 1.0 0.9)}
-               :dguards []
-               :aguards []
                :surfaces []
-               :surfacelines []}
+               :surfacelines []
+               :particles []}
         state {:gfx gfx
                :gui gui
                :world world

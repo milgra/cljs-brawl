@@ -10,6 +10,8 @@ run :
 
 ## Todo
 
+particles - blood, seed, dust, dx dy random, seed kerulje el embert
+
 * no punch when running
 * use enemy counts from svg
 * load ui fuggveny
