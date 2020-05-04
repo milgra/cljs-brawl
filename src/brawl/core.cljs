@@ -15,6 +15,7 @@
             [brawl.actorskin :as actorskin]
             [mpd.phys2 :as phys2]
             [mpd.math2 :as math2]
+            [brawl.particle :as particle]
             [brawl.layouts :as layouts]
             [brawl.floatbuffer :as floatbuf])
   (:import [goog.events EventType]))
@@ -321,9 +322,10 @@
       (webgl/drawshapes! newgfx projection trans variation)
       (webgl/drawtriangles! newgfx projection newbuf1)
 
-      (let [newbuf3 (floatbuf/empty! newbuf1)
-            ;newbuf3 (reduce (fn [oldbuf particle] (particle/get-points particle oldbuf vis-rect)) newbuf2 particles) ;; particles
+      (let [newbuf2 (floatbuf/empty! newbuf1)
+            newbuf3 (reduce (fn [oldbuf particle] (particle/get-point particle oldbuf)) newbuf2 particles) ;; particles
             newbuf4 (reduce (fn [oldbuf actor] (actorskin/getpoints actor oldbuf vis-rect)) newbuf3 actors)]
+
         ;; draw points
         (webgl/drawpoints! newgfx projection newbuf4)
 
@@ -334,13 +336,14 @@
           (webgl/drawlines! newgfx projection newbuf7)
       (-> state
           (assoc :gfx newgfx)
+          (assoc-in [:world :vis-rect] vis-rect)
           (assoc :floatbuffer newbuf7)))))
     state))
 
 
 (defn update-world
   "updates phyisics and actors"
-  [{{:keys [actors surfaces particles inited endpos] :as world} :world keycodes :keycodes commands :commands :as state} svglevel]
+  [{{:keys [actors surfaces particles inited endpos vis-rect] :as world} :world keycodes :keycodes commands :commands :as state} svglevel]
 
   (cond
     
@@ -373,23 +376,25 @@
                              (conj newcommands {:text "next-level"})
                              newcommands))
 
-          newparticles (map #(identity %) particles)
+          newparticles (map (fn [particle] (particle/upd particle vis-rect)) particles)
           
-          newworld (assoc world :actors newnewactors)]
+          newworld (assoc world :actors newnewactors :particles newparticles)]
 
       (-> state
           (assoc :commands newnewcommands)
-          (assoc :particles newparticles)
           (assoc :world newworld)))
     
     svglevel ; load new level
-    (let [points (map :path (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) svglevel ))
+    (let [[ l r b t] vis-rect
+          points (map :path (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) svglevel ))
           pivots (filter #(if (:id %) (clojure.string/includes? (:id %) "Pivot") false) svglevel)
           surfaces (phys2/surfaces-from-pointlist points)
           lines (clj->js (reduce (fn [result {[tx ty] :t [bx by] :b}] (concat result [tx ty 1.0 1.0 1.0 1.0 (+ tx bx) (+ ty by) 1.0 1.0 1.0 1.0])) [] surfaces))
+          seeds (map #(particle/init (rand 500.0) (rand 500.0) [1.0 1.0 1.0 0.2] :seed) (take 20 (cycle "a")))
           newworld (-> world
                        (create-actors pivots)
                        (assoc :inited true)
+                       (assoc :particles seeds)
                        (assoc :surfaces surfaces)
                        (assoc :surfacelines lines))]
       (-> state
@@ -453,14 +458,15 @@
                :endpos [0 0]
                :surfaces []
                :surfacelines []
-               :particles []}
+               :particles []
+               :vis-rect [0 0 0 0]} ; visible rect in world
         state {:gfx gfx
                :gui gui
                :world world
                :views views
                :baseviews baseviews
                :viewids viewids
-               :curr-level 6
+               :curr-level 1
                :texfile "font.png"
                :floatbuffer (floatbuf/create!)
                :keycodes {}

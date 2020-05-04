@@ -10,6 +10,8 @@
             [cljs-webgl.constants.texture-target :as texture-target]
             [cljs-webgl.buffers :as buffers]
             [cljs-webgl.typed-arrays :as ta]
+            [cljs-webgl.constants.capability :as capability]
+            [cljs-webgl.constants.blending-factor-dest :as blend]
             [brawl.shape :as shape]
             [brawl.floatbuffer :as floatbuf]))
   
@@ -251,6 +253,8 @@
                  :stride 24}]
    :uniforms [{:name "projection"
                :type :mat4
-               :values projection}])
+               :values projection}]
+   :capabilities {capability/blend true}
+   :blend-function [[blend/src-alpha blend/one-minus-src-alpha]])
   
   state)
