@@ -70,7 +70,7 @@
         legw (+ 6.0 (* st 5.0)) 
         
         runs (+ 5.0 (* sp 4.0) height)
-        walks (* runs 0.6)
+        walks (* runs 0.5)
         punchs (+ 7.0 (* hr 2.0))
         kicks (+ 0.2 hr)
 
@@ -471,11 +471,11 @@
   (let [max (if (or (not run) down) (:walks metrics) (:runs metrics))
         nsx (cond
               right (if (> speed max)
-                      (- speed (* 0.2 time))
-                      (+ speed (* 0.2 time)))
+                      (+ max 0.1)
+                      (+ speed (* 0.8 time)))
               left (if (< speed (- max))
-                      (+ speed (* 0.2 time))
-                      (- speed (* 0.2 time)))
+                      (- (- max) 0.1)
+                      (- speed (* 0.8 time)))
               :else (* speed (- 1.0 (* 0.08 time))))
         dir (cond
               (and (> nsx 0.0 ) right) 1

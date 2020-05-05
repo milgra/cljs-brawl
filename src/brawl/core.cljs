@@ -306,7 +306,7 @@
           [fax fay] (:p (get-in actor [:masses :base_l]))
           [fbx fby] (:p (get-in actor [:masses :base_r]))
           [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2))  ]
-          ratio (/ (+ 40.0 (Math/abs (:speed actor))) 40.0)
+          ratio 1.0
           r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
           h (* 350.0 ratio)
           w (* h r)
