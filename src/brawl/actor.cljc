@@ -169,7 +169,28 @@
       (math2/add-v2 a ab2))))
 
 
-(defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health :as actor} {:keys [id base target time]}]
+(defn hitpoint [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health :as actor} {:keys [id base target time]}]
+  ;; check distance from nect first
+  (let [dist (math2/length-v2 (math2/sub-v2 target (:p hip)))]
+    (if (and (not= id (:id actor)) (< dist 80.0))
+      (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
+            hitsm (math2/resize-v2 hitv (if (< health 20) 10 2))
+            hitbg (math2/resize-v2 hitv (if (< health 20) 20 4))
+            
+            headv (math2/sub-v2 (:p neck) (:p head))
+            bodyv (math2/sub-v2 (:p hip) (:p neck))
+            footav (math2/sub-v2 (:p knee_l) (:p hip))
+            footbv (math2/sub-v2 (:p knee_r) (:p hip))
+
+            headisp (math2/isp-v2-v2 base target (:p head) headv 0.0)
+            bodyisp (math2/isp-v2-v2 base target (:p neck) bodyv 0.0)
+            footaisp (math2/isp-v2-v2 base target (:p hip) footav 0.0)
+            footbisp (math2/isp-v2-v2 base target (:p hip) footbv 0.0)]
+
+            (first (remove nil? [headisp bodyisp footaisp footbisp]))))))
+            
+
+(defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health :as actor} {:keys [id base target time] :as command}]
   ;; check distance from nect first
   (let [dist (math2/length-v2 (math2/sub-v2 target (:p hip)))]
     (if (and (not= id (:id actor)) (< dist 80.0))
@@ -200,7 +221,7 @@
                        (assoc-in [:masses :foot_r :d] (math2/add-v2 (:d foot_r) hitbg))
                        (assoc-in [:masses :hand_l :d] (math2/add-v2 (:d hand_l) (if bodyisp hitbg hitsm)))
                        (assoc-in [:masses :hand_r :d] (math2/add-v2 (:d hand_r) (if bodyisp hitbg hitsm))))]
-        (println "HEALTH" (:health result))
+
         result)
       actor)))
 

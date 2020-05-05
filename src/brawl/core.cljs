@@ -148,9 +148,19 @@
     (assoc state :views newv)))
 
 
-(defn execute-attack [{ {actors :actors} :world :as state} command]
+(defn execute-attack [{ {actors :actors particles :particles} :world :as state} command]
   ;; hittest other actors
-  (assoc-in state [:world :actors] (vec (map (fn [actor] (actor/hit actor command)) actors))))
+  (let [[dx dy] (math2/resize-v2 (math2/sub-v2 (:target command) (:base command)) 4.0)
+        contacts (remove nil? (map (fn [actor] (actor/hitpoint actor command)) actors))
+        newparticles (reduce (fn [ res [x y] ]
+                               (concat res
+                                       (repeatedly 10 #(particle/init x y [1.0 1.0 1.0 1.0] (math2/resize-v2 [(+ (- 1.0) (rand 2.0)) (+ (- 1.0) (rand 2.0))] (+ 1.0 (rand 2.0)))  :dust))
+                                       (repeatedly 5 #(particle/init x y [1.0 0.0 0.0 1.0]  [ (+ dx -2.0 (rand 2.0)) (+ dy -2.0 (rand 2.0)) ]  :blood))))
+                             [] contacts)
+        newactors (vec (map (fn [actor] (actor/hit actor command)) actors))]
+    (-> state
+        (assoc-in [:world :particles] (concat particles newparticles))
+        (assoc-in [:world :actors] newactors ))))
 
 
 (defn load-next-level [{:keys [curr-level] :as state}]
@@ -390,7 +400,7 @@
           pivots (filter #(if (:id %) (clojure.string/includes? (:id %) "Pivot") false) svglevel)
           surfaces (phys2/surfaces-from-pointlist points)
           lines (clj->js (reduce (fn [result {[tx ty] :t [bx by] :b}] (concat result [tx ty 1.0 1.0 1.0 1.0 (+ tx bx) (+ ty by) 1.0 1.0 1.0 1.0])) [] surfaces))
-          seeds (map #(particle/init (rand 500.0) (rand 500.0) [1.0 1.0 1.0 0.2] :seed) (take 20 (cycle "a")))
+          seeds (map #(particle/init (rand 500.0) (rand 500.0) [1.0 1.0 1.0 0.2] [(+ 0.1 (rand 0.6)) (+ 0.05 (rand 0.3))]  :seed) (take 20 (cycle "a")))
           newworld (-> world
                        (create-actors pivots)
                        (assoc :inited true)

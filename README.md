@@ -12,18 +12,14 @@ run :
 
 
 * no punch when running
-
-* particles - blood, seed, dust, dx dy random, seed kerulje el embert
-* reccsenes animacio uteskor/rugaskor - csillag alakban reszecskek
-* tolgyfavirag
-* reszecske effekt ver, utes
-* bloods on face hit, one blood on heavy chest hit
+* preciz hit test
+* összeesett ember guggolasbol alljon fol
+* 50 százaléknál essen össze mindenki egyszer
+* in case of kick without blocking, body should fall and rise again
 
 * use enemy counts from svg
 * load ui fuggveny
 * "loading" screen
-* összeesett ember guggolasbol alljon fol
-* 50 százaléknál essen össze mindenki egyszer
 * fej piros legyen aztan lila
 * kifordult lab masodik palyan
 * new game/show physics/fullscreen button should work
@@ -36,7 +32,6 @@ run :
 * szakadekrol lelepes csekk
 * auto aim at head after first punch
 * AI - standing enemy, walking towards enemy, running and jumping and kicking enemy
-* in case of kick without blocking, body should fall and rise again
 * attack power egyensulyozas
 * sometimes rear leg stuck when jumping
 * time scaling
