@@ -120,3 +120,6 @@
 
 (defn rotate-90-ccw [ [x y] ]
   [(- y) x])
+
+(defn rotate-up-v2 [ [x y] ]
+  (if (< x 0) [(- y) x] [y (- x)]))

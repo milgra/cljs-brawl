@@ -1,6 +1,8 @@
 (ns brawl.actorskin
   (:require [brawl.floatbuffer :as fb])
-  (:use [mpd.math2 :only [resize-v2 scale-v2 rotate-90-cw rotate-90-ccw add-v2 sub-v2]]))
+  (:use [mpd.math2 :only [rotate-up-v2 resize-v2 scale-v2 rotate-90-cw rotate-90-ccw add-v2 sub-v2]]))
+
+(def black [0.0 0.0 0.0 1.0])
 
 (defn getpoints [{{{[e f] :p} :hip :as masses} :masses} floatbuffer [l r b t]]
   (if (and (< l e) (> r e) (< t f) (> b f)) 
@@ -79,17 +81,17 @@
 
 
 (defn gen-foot-triangles [buf pa pb size facing [x y z w]]
-  (let [ab (resize-v2 (sub-v2 pb pa) 20.0)
-        abbig pb ;;(add-v2 pb (scale-v2 ab 1.2))
+  (let [ab (resize-v2 (sub-v2 pb pa) (+ 20.0 size))
+        npb (add-v2 pb (resize-v2 ab size))
         [a b :as leftp] (if (= facing -1)
-                (add-v2 abbig (resize-v2 (rotate-90-cw ab) -1.0))
-                (add-v2 abbig (resize-v2 (rotate-90-cw ab) 30.0)))
+                (add-v2 npb (resize-v2 (rotate-90-cw ab) (+ 2.0 size)))
+                (add-v2 pb (resize-v2 (rotate-90-cw ab) 30.0)))
         [c d :as rightp] (if (= facing -1)
-                (add-v2 abbig (resize-v2 (rotate-90-ccw ab) 30.0))
-                (add-v2 abbig (resize-v2 (rotate-90-ccw ab) -1.0)))
+                (add-v2 pb (resize-v2 (rotate-90-ccw ab) 30.0))
+                (add-v2 npb (resize-v2 (rotate-90-ccw ab) (+ 2.0 size))))
         [e f :as topp] (if (= facing -1)
-                (add-v2 leftp (resize-v2 ab -15.0))
-                (add-v2 rightp (resize-v2 ab -15.0)))]
+                (add-v2 leftp (resize-v2 ab (+ -15.0 size)))
+                (add-v2 rightp (resize-v2 ab (+ -15.0 size))))]
     (fb/append! buf (array e f x y z w a b x y z w c d x y z w))))
 
 
@@ -126,31 +128,42 @@
   (if (and (< l x) (> r x) (< t y) (> b y)) 
     (let [[r0 r1 r2 r3 r4 r5 r6 r7 r8 r9] (subvec randoms (* variation 10))] ; I just love clojure because of this!
       (cond-> floatbuffer
-        ;; legs
-        true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)] [5.0 (+ hipw 5 r0) (+ legw 5 r1) (+ legw 5 r2)] [0.0 0.0 0.0 1.0]) ; stroke
+
+        ;; right legs
+        true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)] [5.0 (+ hipw 5 r0) (+ legw 5 r1) (+ legw 5 r2)] black) ; stroke
         true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)] [1.0 (+ hipw r3) (+ legw r4) (+ legw r5)] colb)
-        ;; feet
-        (and (= pf :base_r) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_r) (rotate-90-cw (:b ps))) (:p foot_r) (+ r6 5.0) facing colb)
-        (and (= pf :base_l) (not= ps nil)) (gen-foot-triangles (:p knee_r) (:p foot_r) (+ r6 5.0) facing colb)
         
-        true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [6.0 (+ hipw 5 r7 ) (+ legw 5 r8) (+ legw 5 r9)] [0.0 0.0 0.0 1.0]) ; stroke
+        ;; passive right
+        (and (= pf :base_r) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_r) (rotate-up-v2 (:b ps))) (:p foot_r) (+ r6 5.0) facing black)
+        (and (= pf :base_r) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_r) (rotate-up-v2 (:b ps))) (:p foot_r) r6 facing colb)
+
+        ;; active right
+        (and (= af :base_r) (not= ps nil)) (gen-foot-triangles (:p knee_r) (:p foot_r) (+ r6 5.0) facing black)
+        (and (= af :base_r) (not= ps nil)) (gen-foot-triangles (:p knee_r) (:p foot_r) r6 facing colb)
+
+        true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [6.0 (+ hipw 5 r7 ) (+ legw 5 r8) (+ legw 5 r9)] black) ; stroke
         true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [1.0 (+ hipw r0) (+ legw r1) (+ legw r2)] cola)
-        ;; feet
-        (and (= pf :base_l) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_l) (rotate-90-cw (:b ps))) (:p foot_l) (+ r3 5.0) facing cola)
-        (and (= pf :base_r) (not= ps nil)) (gen-foot-triangles (:p knee_l) (:p foot_l) (+ r3 5.0) facing cola)
+
+        ;; passive left
+        (and (= pf :base_l) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_l) (rotate-up-v2 (:b ps))) (:p foot_l) (+ r3 5.0) facing black)
+        (and (= pf :base_l) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_l) (rotate-up-v2 (:b ps))) (:p foot_l) r3 facing cola)
+
+        ;; active left
+        (and (= af :base_l) (not= ps nil)) (gen-foot-triangles (:p knee_l) (:p foot_l) (+ r3 5.0) facing black)
+        (and (= af :base_l) (not= ps nil)) (gen-foot-triangles (:p knee_l) (:p foot_l) r3 facing cola)
         
-        true (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [(+ armw 5.0 r4) (+ armw 5.0 r5) (+ armw 5.0 r6)] [0.0 0.0 0.0 1.0]) ; stroke
+        true (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [(+ armw 5.0 r4) (+ armw 5.0 r5) (+ armw 5.0 r6)] black) ; stroke
         true (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [(+ armw r7) (+ armw r8) (+ armw r9)] colb)
         
         ;; body
-        true (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [(+ neckw 5.0 r0) (+ neckw 5.0 r1) (+ hipw 5.0 r2)] [0.0 0.0 0.0 1.0])
+        true (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [(+ neckw 5.0 r0) (+ neckw 5.0 r1) (+ hipw 5.0 r2)] black)
         true (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [(+ neckw r3) (+ neckw r4) (+ hipw r5)] colc)
         
         ;; head
-        true (gen-head-triangles (:p head) (:p neck) facing (+ 5.0 r6) [0.0 0.0 0.0 1.0])
+        true (gen-head-triangles (:p head) (:p neck) facing (+ 5.0 r6) black)
         true (gen-head-triangles (:p head) (:p neck) facing r7 [0.8 0.5 0.5 1.0])
         
         ;; arms
-        true (gen-tube-triangles [(:p neck) (:p elbow_r) (:p hand_r)] [(+ armw 5.0 r8) (+ armw 5.0 r9) (+ armw 5.0 r0)] [0.0 0.0 0.0 1.0]) ; stroke
+        true (gen-tube-triangles [(:p neck) (:p elbow_r) (:p hand_r)] [(+ armw 5.0 r8) (+ armw 5.0 r9) (+ armw 5.0 r0)] black) ; stroke
         true (gen-tube-triangles [(:p neck) (:p elbow_r) (:p hand_r)] [(+ armw r1) (+ armw r2) (+ armw r3)] cola)))
     floatbuffer))
