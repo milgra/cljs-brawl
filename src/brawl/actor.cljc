@@ -405,8 +405,8 @@
    {:keys [left right up down run]}
    surfaces
    time]
-  (let [foot_l (if kick-pressed [(+ hx (* legl facing)) (+ hy (* legl 0.5))] (:p base_l))
-        foot_r (if kick-pressed [(+ hx (* legl facing)) (+ hy (* legl 0.5))] (:p base_r))
+  (let [foot_l (if kick-pressed [(+ hx (* legl facing) -10.0 ) (+ hy (* legl 0.5))] (:p base_l))
+        foot_r (if kick-pressed [(+ hx (* legl facing)) (+ hy (* legl 0.5) -10.0)] (:p base_r))
         command (if (and kick-pressed (not action-sent)) {:id id :text "attack" :base [hx hy] :target foot_l :time time})]
     (-> state
         (assoc :commands (if command (conj command command) commands))
@@ -516,7 +516,7 @@
 
 (defn update-mode
   "if next mode is set, switch to that mode"
-  [{:keys [next speed update-fn] {ba :base_l bb :base_r fl :foot_l fr :foot_r :as masses} :masses :as state}]
+  [{:keys [next speed update-fn] {hip :hip ba :base_l bb :base_r fl :foot_l fr :foot_r :as masses} :masses :as state}]
   (let [result
         (cond
           (= next nil) state
@@ -535,11 +535,13 @@
                 true (assoc :update-fn update-walk)
                 true (assoc :masses newmasses))))
           (= next "jump")
-          (do
+          (let [[hx hy] (:p hip)
+                [lx ly] (:p ba)
+                [rx ry] (:p bb)]
             ;; reset jump state
             (cond-> state
-              (= update-fn update-walk) (update-in [:masses :base_l :p] math2/add-v2 [0 -10])
-              (= update-fn update-walk) (update-in [:masses :base_r :p] math2/add-v2 [0 -10])
+              (= update-fn update-walk) (assoc-in [:masses :base_l :p] [(- hx 10.0) (- (min ly ry) 10.0)])
+              (= update-fn update-walk) (assoc-in [:masses :base_r :p] [(+ hx 10.0) (- (min ly ry) 10.0)])
               (= update-fn update-walk) (assoc-in [:masses :base_l :d] [(/ speed 2) -10])
               (= update-fn update-walk) (assoc-in [:masses :base_r :d] [(/ speed 2) -10])         
               (= update-fn update-rag) (assoc-in [:masses :base_l :p] (math2/add-v2 (:p fl) [0 -1]))
