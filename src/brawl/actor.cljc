@@ -179,49 +179,56 @@
             
             headv (math2/sub-v2 (:p neck) (:p head))
             bodyv (math2/sub-v2 (:p hip) (:p neck))
-            footav (math2/sub-v2 (:p knee_l) (:p hip))
-            footbv (math2/sub-v2 (:p knee_r) (:p hip))
+            footlv (math2/sub-v2 (:p knee_l) (:p hip))
+            footrv (math2/sub-v2 (:p knee_r) (:p hip))
 
-            headisp (math2/isp-v2-v2 base target (:p head) headv 0.0)
-            bodyisp (math2/isp-v2-v2 base target (:p neck) bodyv 0.0)
-            footaisp (math2/isp-v2-v2 base target (:p hip) footav 0.0)
-            footbisp (math2/isp-v2-v2 base target (:p hip) footbv 0.0)]
+            headisp (math2/isp-v2-v2 base hitv (:p head) headv 1.0)
+            bodyisp (math2/isp-v2-v2 base hitv (:p neck) bodyv 1.0)
+            footlisp (math2/isp-v2-v2 base hitv (:p hip) footlv 1.0)
+            footrisp (math2/isp-v2-v2 base hitv (:p hip) footrv 1.0)]
 
-            (first (remove nil? [headisp bodyisp footaisp footbisp]))))))
+            (first (remove nil? [headisp bodyisp footlisp footrisp]))))))
             
 
-(defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health :as actor} {:keys [id base target time] :as command}]
+(defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health metrics :metrics :as actor} {:keys [id base target time] :as command}]
   ;; check distance from nect first
-  (let [dist (math2/length-v2 (math2/sub-v2 target (:p hip)))]
-    (if (and (not= id (:id actor)) (< dist 80.0))
+  (let [ [dx dy] (math2/sub-v2 target (:p hip))]
+    (if (and (not= id (:id actor)) (< dx 80.0) (< dy 80.0))
       (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
             hitsm (math2/resize-v2 hitv (if (< health 20) 10 2))
             hitbg (math2/resize-v2 hitv (if (< health 20) 20 4))
             
             headv (math2/sub-v2 (:p neck) (:p head))
             bodyv (math2/sub-v2 (:p hip) (:p neck))
-            footav (math2/sub-v2 (:p knee_l) (:p hip))
-            footbv (math2/sub-v2 (:p knee_r) (:p hip))
+            footlv (math2/sub-v2 (:p knee_l) (:p hip))
+            footrv (math2/sub-v2 (:p knee_r) (:p hip))
 
-            headisp (math2/isp-v2-v2 base target (:p head) headv 0.0)
-            bodyisp (math2/isp-v2-v2 base target (:p neck) bodyv 0.0)
-            footaisp (math2/isp-v2-v2 base target (:p hip) footav 0.0)
-            footbisp (math2/isp-v2-v2 base target (:p hip) footbv 0.0)
+            headisp (math2/isp-v2-v2 base hitv (:p head) headv 1.0)
+            bodyisp (math2/isp-v2-v2 base hitv (:p neck) bodyv 1.0)
+            footlisp (math2/isp-v2-v2 base hitv (:p hip) footlv 1.0)
+            footrisp (math2/isp-v2-v2 base hitv (:p hip) footrv 1.0)
 
-            result (-> actor
-                       (assoc :hittime time)
-                       (assoc :next "rag")
-                       (update :health - 15) 
-                       (update :speed + (* (/ hvx (Math/abs hvx)) 5.0))
-                       (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) (if bodyisp hitbg hitsm)))
-                       (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) (if bodyisp hitbg hitsm)))
-                       (assoc-in [:masses :knee_l :d] (math2/add-v2 (:d knee_l) (if footaisp hitbg hitsm)))
-                       (assoc-in [:masses :knee_r :d] (math2/add-v2 (:d knee_r) (if footbisp hitbg hitsm)))
-                       (assoc-in [:masses :foot_l :d] (math2/add-v2 (:d foot_l) hitsm))
-                       (assoc-in [:masses :foot_r :d] (math2/add-v2 (:d foot_r) hitbg))
-                       (assoc-in [:masses :hand_l :d] (math2/add-v2 (:d hand_l) (if bodyisp hitbg hitsm)))
-                       (assoc-in [:masses :hand_r :d] (math2/add-v2 (:d hand_r) (if bodyisp hitbg hitsm))))]
-
+            has-isp (or headisp bodyisp footlisp footrisp)
+            neck-part (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p neck))))
+            hip-part  (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p hip))))
+            neck-ratio (if bodyisp (/ hip-part (:bodyl metrics)))
+            hip-ratio (if bodyisp (/ neck-part (:bodyl metrics)))
+            
+            result (if-not has-isp
+                     actor
+                     (cond-> actor
+                       true (assoc :hittime time)
+                       true (assoc :next "rag")
+                       true (update :health - 15) 
+                       true (update :speed + (* (/ hvx (Math/abs hvx)) 5.0))
+                       headisp (assoc-in [:masses :head :d] (math2/add-v2 (:d head) hitbg))
+                       headisp (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) hitsm))
+                       bodyisp (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) (math2/scale-v2 hitbg (+ 0.4 neck-ratio))))
+                       bodyisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) (math2/scale-v2 hitbg (+ 0.4 hip-ratio))))
+                       footlisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
+                       footlisp (assoc-in [:masses :knee_l :d] (math2/add-v2 (:d knee_l) hitsm))
+                       footrisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
+                       footrisp (assoc-in [:masses :knee_r :d] (math2/add-v2 (:d knee_r) hitsm))))]
         result)
       actor)))
 
@@ -612,7 +619,7 @@
 (defn update-rag [{:keys [masses dguards hittime next health] :as state } control surfaces time]
   (if (> health 0)
     (let [newmasses (-> masses
-                        (phys2/add-gravity [0.0 0.1])
+                        (phys2/add-gravity [0.0 0.2])
                         ;;(phys2/keep-angles (:aguards state))
                         (phys2/keep-distances (:dguards state))
                         (phys2/move-masses surfaces))
