@@ -182,6 +182,13 @@
         (assoc :curr-level next-level))))
 
 
+(defn load-ui [state description]
+  (let [views (ui/gen-from-desc {} description)
+        baseviews (ui/get-base-ids description)
+        viewids (ui/collect-visible-ids views baseviews "")]
+    (assoc state :views views :baseviews baseviews :viewids viewids)))
+
+
 (defn execute-commands [{commands :commands :as state}]
   (reduce (fn [oldstate {text :text :as command}]
             (cond
@@ -232,49 +239,23 @@
                               (actor/basemetrics-normalize :height))
                     nmetrics (actor/generate-metrics nbase)]
                 (-> oldstate (assoc-in [:world :actors 0 :metrics] nmetrics) (update-gen-sliders)))
-              (= text "show-menu") 
-              (let [views (ui/gen-from-desc {} layouts/menu)
-                    baseviews (ui/get-base-ids layouts/menu)
-                    viewids (ui/collect-visible-ids views baseviews "")]
-                (assoc oldstate :views views :baseviews baseviews :viewids viewids))
-              (= text "continue") 
-              (let [uidesc (if (= (:curr-level oldstate) 0) layouts/generator layouts/hud)
-                    views (ui/gen-from-desc {} uidesc)
-                    baseviews (ui/get-base-ids uidesc)
-                    viewids (ui/collect-visible-ids views baseviews "")]
-                (assoc oldstate :views views :baseviews baseviews :viewids viewids))
-              (= text "options") 
-              (let [views (ui/gen-from-desc {} layouts/options)
-                    baseviews (ui/get-base-ids layouts/options)
-                    viewids (ui/collect-visible-ids views baseviews "")]
-                (assoc oldstate :views views :baseviews baseviews :viewids viewids))
-              (= text "options back") 
-              (let [views (ui/gen-from-desc {} layouts/menu)
-                    baseviews (ui/get-base-ids layouts/menu)
-                    viewids (ui/collect-visible-ids views baseviews "")]
-                (assoc oldstate :views views :baseviews baseviews :viewids viewids))
-
-              (= text "left")
-              (assoc-in oldstate [:keycodes 37] true)
-              (= text "right")
-              (assoc-in oldstate [:keycodes 39] true)
-              (= text "jump")
-              (assoc-in oldstate [:keycodes 38] true)
-              (= text "down")
-              (assoc-in oldstate [:keycodes 40] true)
-              (= text "run")
-              (assoc-in oldstate [:keycodes 32] true)
-              (= text "punch")
-              (assoc-in oldstate [:keycodes 70] true)
-              (= text "kick")
-              (assoc-in oldstate [:keycodes 83] true)
-              (= text "block")
-              (assoc-in oldstate [:keycodes 68] true)
               
-              (= text "start-game")
-              (load-next-level oldstate)
-              (= text "next-level")
-              (load-next-level oldstate)
+              (= text "show-menu") (load-ui oldstate layouts/menu)
+              (= text "continue") (load-ui oldstate (if (= (:curr-level oldstate) 0) layouts/generator layouts/hud))
+              (= text "options") (load-ui oldstate layouts/options)
+              (= text "options back") (load-ui oldstate layouts/menu)
+
+              (= text "left") (assoc-in oldstate [:keycodes 37] true)
+              (= text "right") (assoc-in oldstate [:keycodes 39] true)
+              (= text "jump") (assoc-in oldstate [:keycodes 38] true)
+              (= text "down") (assoc-in oldstate [:keycodes 40] true)
+              (= text "run") (assoc-in oldstate [:keycodes 32] true)
+              (= text "punch") (assoc-in oldstate [:keycodes 70] true)
+              (= text "kick") (assoc-in oldstate [:keycodes 83] true)
+              (= text "block") (assoc-in oldstate [:keycodes 68] true)
+              
+              (= text "start-game") (load-next-level oldstate)
+              (= text "next-level") (load-next-level oldstate)
 
               :else oldstate))
           state

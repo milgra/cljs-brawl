@@ -12,13 +12,11 @@ run :
 
 
 * no punch when running
-* preciz hit test
 * összeesett ember guggolasbol alljon fol
 * 50 százaléknál essen össze mindenki egyszer
 * in case of kick without blocking, body should fall and rise again
 
 * use enemy counts from svg
-* load ui fuggveny
 * "loading" screen
 * fej piros legyen aztan lila
 * kifordult lab masodik palyan
