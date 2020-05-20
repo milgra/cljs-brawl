@@ -16,16 +16,16 @@
 ;; |Hitrate         Speed  |
   [{:id "Hitpower"
     :class "Slider"
-    :texture "Color 0x555555FF"
-    :label "Label 25 Hitpower 00000000 FFFFFFFF"
+    :texture {:type "Color" :color 0x555555FF}
+    :label {:type "Label" :text "Hitpower" :size 25 :color 0xFFFFFFFF}
     :width "150 px"
     :height "50 px"
     :command "set-hitpower"}
 
    {:id "Height"
     :class "Slider"
-    :texture "Color 0x555555FF"
-    :label "Label 25 Height 00000000 FFFFFFFF"
+    :texture {:type "Color" :color 0x555555FF}
+    :label {:type "Label" :text "Height" :size 25 :color 0xFFFFFFFF}
     :width "150 px"
     :height "50 px"
     :center-x "Edge 50 %"
@@ -33,8 +33,8 @@
    
    {:id "Stamina"
     :class "Slider"
-    :texture "Color 0x555555FF"
-    :label "Label 25 Stamina 00000000 FFFFFFFF"
+    :texture {:type "Color" :color 0x555555FF}
+    :label {:type "Label" :text "Stamina" :size 25 :color 0xFFFFFFFF}
     :width "150 px"
     :height "50 px"
     :right "Edge 0 px"
@@ -42,8 +42,8 @@
    
    {:id "Hitrate"
     :class "Slider"
-    :texture "Color 0x555555FF"
-    :label "Label 25 Hitrate 00000000 FFFFFFFF"
+    :texture {:type "Color" :color 0x555555FF}
+    :label {:type "Label" :text "Hitrate" :size 25 :color 0xFFFFFFFF}
     :width "150 px"
     :height "50 px"
     :bottom "Edge 0 px"
@@ -51,8 +51,8 @@
    
    {:id "Speed"
     :class "Slider"
-    :texture "Color 0x555555FF"
-    :label "Label 25 Speed 00000000 FFFFFFFF"
+    :texture {:type "Color" :color 0x555555FF}
+    :label {:type "Label" :text "Speed" :size 25 :color 0xFFFFFFFF}
     :width "150 px"
     :height "50 px"
     :right "Edge 0 px"
@@ -68,8 +68,8 @@
 ;;|     StartGame      |
   [{:id "Menu"
     :class "Button"
-    :texture "Color 0xFFFFFF09"
-    :label "Label 25 Menu FFFFFF11 FFFFFFFF"
+    :texture {:type "Color" :color 0xFFFFFF09}
+    :label {:type "Label" :text "Menu" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
     :command "show-menu" 
     :width "150 px" 
     :height "50 px" 
@@ -77,7 +77,7 @@
     :right "Edge 0 px"}
 
    {:id "Sliders"
-    :texture "Color FF00FF55"
+    :texture {:type "Color" :color 0x00000000}
     :width "453 px"
     :height "101 px"
     :center-x "Edge 50 %"
@@ -86,8 +86,8 @@
 
    {:id "Randomize"
     :class "Button" 
-    :texture "Color 0xFFFFFF19"
-    :label "Label 25 Randomize FFFFFF09 FFFFFFFF"
+    :texture {:type "Color" :color 0xFFFFFF19}
+    :label {:type "Label" :text "Randomize" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
     :command "randomize" 
     :width "200 px" 
     :height "50 px" 
@@ -96,8 +96,8 @@
    
    {:id "StartGame"
     :class "Button"
-    :texture "Color 0xDD0000FF"
-    :label "Label 25 Startgame FFFFFF11 FFFFFFFF"
+    :texture {:type "Color" :color 0xDD0000FF}
+    :label {:type "Label" :text "Startgame" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
     :command "start-game" 
     :width "200 px" 
     :height "50 px"
@@ -113,8 +113,8 @@
 ;;Kick  Shoot   Health Bullets Power    Down|
   [{:id "Menu"
     :class "Button"
-    :texture "Color 0xFFFFFF19"
-    :label "Label 25 Menu FFFFFF11 FFFFFFFF"
+    :texture {:type "Color" :color 0xFFFFFF19}
+    :label {:type "Label" :text "Menu" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
     :command "show-menu" 
     :width "150 px" 
     :height "50 px" 
@@ -123,8 +123,8 @@
 
    {:id "Kick"
     :class "Button"
-    :texture "Color 0xFFFFFF09"
-    :label "Label 25 KICK(S) FFFFFF09 FFFFFFFF"
+    :texture {:type "Color" :color 0xFFFFFF19}
+    :label {:type "Label" :text "KICK (S)" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
     :command "kick"
     :width "150 px"
     :height "150 px"
@@ -133,8 +133,8 @@
 
    {:id "Block"
     :class "Button" 
-    :texture "Color 0xFFFFFF09"
-    :label "Label 25 BLOCK(D) FFFFFF09 FFFFFFFF"
+    :texture {:type "Color" :color 0xFFFFFF19}
+    :label {:type "Label" :text "BLOCK (D)" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
     :command "block" 
     :width "150 px" 
     :height "150 px" 
@@ -143,8 +143,8 @@
    
    {:id "Punch"
     :class "Button" 
-    :texture "Color 0xFFFFFF09"
-    :label "Label 25 PUNCH(F) FFFFFF09 FFFFFFFF"
+    :texture {:type "Color" :color 0xFFFFFF19}
+    :label {:type "Label" :text "PUNCH (F)" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
     :command "punch" 
     :width "150 px" 
     :height "150 px" 
@@ -153,8 +153,8 @@
 
    {:id "Shoot"
     :class "Button" 
-    :texture "Color 0xFFFFFF09"
-    :label "Label 25 SHOOT(V) FFFFFF09 FFFFFFFF"
+    :texture {:type "Color" :color 0xFFFFFF19}
+    :label {:type "Label" :text "SHOOT (V)" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
     :command "shoot" 
     :width "150 px" 
     :height "150 px" 
@@ -163,8 +163,8 @@
    
    {:id "Jump"
     :class "Button" 
-    :texture "Color 0xFFFFFF09"
-    :label "Label 25 JUMP(UP) FFFFFF09 FFFFFFFF"
+    :texture {:type "Color" :color 0xFFFFFF19}
+    :label {:type "Label" :text "JUMP" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
     :command "jump" 
     :width "150 px" 
     :height "150 px" 
@@ -173,8 +173,8 @@
 
    {:id "Down"
     :class "Button"
-    :texture "Color FFFFFF09"
-    :label "Label 25 DOWN FFFFFF09 FFFFFFFF"
+    :texture {:type "Color" :color 0xFFFFFF19}
+    :label {:type "Label" :text "DOWN" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
     :command "down"
     :width "150 px"
     :height "150 px"
@@ -183,8 +183,8 @@
 
    {:id "Right"
     :class "Button"
-    :texture "Color FFFFFF09"
-    :label "Label 25 RIGHT FFFFFF09 FFFFFFFF"
+    :texture {:type "Color" :color 0xFFFFFF19}
+    :label {:type "Label" :text "RIGHT" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
     :command "right"
     :width "150 px"
     :height "150 px"
@@ -193,8 +193,8 @@
 
    {:id "Left"
     :class "Button"
-    :texture "Color FFFFFF09"
-    :label "Label 25 LEFT FFFFFF09 FFFFFFFF"
+    :texture {:type "Color" :color 0xFFFFFF19}
+    :label {:type "Label" :text "LEFT" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
     :command "left"
     :width "150 px"
     :height "150 px"
@@ -213,23 +213,23 @@
   ;;
   [{:id "Menu"
     :class ""
-    :texture "Color 0x000000EE"
+    :texture {:type "Color" :color 0x000000EE}
     :width "100 %" 
     :height "100 %" 
     :subviews
     
     [{:id "Brawl"
       :class "Button"
-      :texture "Color 0xFFFFFF0F"
-      :label "Label 50 BRAWL 00000000 FFFFFFFF"
+      :texture {:type "Color" :color 0xFFFFFF0F}
+      :label {:type "Label" :text "BRAWL" :size 50 :color 0xFFFFFFFF}
       :width "400 px" 
       :height "140 px" 
       :bottom "Continue 8 px" 
       :center-x "Edge 50 %"
       :subviews [{:id "By"
                   :class "Button"
-                  :texture "Color 0x00000000"
-                  :label "Label 15 ByMilanToth 00000000 FFFFFFFF"
+                  :texture {:type "Color" :color 0x00000000}
+                  :label {:type "Label" :text "By Milan Toth" :size 15 :color 0xFFFFFFFF}
                   :width "150 px" 
                   :height "40 px" 
                   :right "Edge 4 px" 
@@ -238,8 +238,8 @@
      {:id "Continue"
       :class "Button"
       :command "continue"
-      :texture "Color 0xFFFFFF0F"
-      :label "Label 25 Continue 00000000 FFFFFFFF"
+      :texture {:type "Color" :color 0xFFFFFF0F}
+      :label {:type "Label" :text "Continue" :size 25 :color 0xFFFFFFFF}
       :width "350 px" 
       :height "50 px" 
       :center-y "Edge 40 %" 
@@ -248,8 +248,8 @@
      {:id "NewGame"
       :class "Button"
       :command "new-game"
-      :texture "Color 0xFFFFFF0F"
-      :label "Label 25 NewGame 00000000 FFFFFFFF"
+      :texture {:type "Color" :color 0xFFFFFF0F}
+      :label {:type "Label" :text "New Game" :size 25 :color 0xFFFFFFFF}
       :width "350 px" 
       :height "50 px" 
       :top "Continue 4 px" 
@@ -258,8 +258,8 @@
      {:id "Options"
       :class "Button"
       :command "options"
-      :texture "Color 0xFFFFFF0F"
-      :label "Label 25 Options 00000000 FFFFFFFF"
+      :texture {:type "Color" :color 0xFFFFFF0F}
+      :label {:type "Label" :text "Options" :size 25 :color 0xFFFFFFFF}
       :width "350 px" 
       :height "50 px" 
       :top "NewGame 4 px" 
@@ -268,8 +268,8 @@
      {:id "Donate"
       :class "Button"
       :command "donate"
-      :texture "Color 0xFFFFFF0F"
-      :label "Label 25 Donate 00000000 FFFFFFFF"
+      :texture {:type "Color" :color 0xFFFFFF0F}
+      :label {:type "Label" :text "Donate" :size 25 :color 0xFFFFFFFF}
       :width "350 px" 
       :height "50 px" 
       :top "Options 4 px" 
@@ -278,8 +278,8 @@
      {:id "Exit"
       :class "Button"
       :command "exit"
-      :texture "Color 0xFFFFFF0F"
-      :label "Label 25 Exit 00000000 FFFFFFFF"
+      :texture {:type "Color" :color 0xFFFFFF0F}
+      :label {:type "Label" :text "Exit" :size 25 :color 0xFFFFFFFF}
       :width "350 px" 
       :height "50 px" 
       :top "Donate 4 px" 
@@ -297,7 +297,7 @@
   ;;
   [{:id "Options"
     :class ""
-    :texture "Color 0x000000EE"
+    :texture {:type "Color" :color 0x000000EE}
     :width "100 %" 
     :height "100 %" 
     :subviews
@@ -305,8 +305,8 @@
     [{:id "Music"
       :class "Slider"
       :command "set music volume"
-      :texture "Color 0xFFFFFF0F"
-      :label "Label 25 MusicVolume 00000000 FFFFFFFF"
+      :texture {:type "Color" :color 0xFFFFFF0F}
+      :label {:type "Label" :text "Music Volume" :size 25 :color 0xFFFFFFFF}
       :width "350 px" 
       :height "50 px" 
       :center-y "Edge 40 %" 
@@ -315,8 +315,8 @@
      {:id "Sound"
       :class "Slider"
       :command "set sound volume"
-      :texture "Color 0xFFFFFF0F"
-      :label "Label 25 SoundVolume 00000000 FFFFFFFF"
+      :texture {:type "Color" :color 0xFFFFFF0F}
+      :label {:type "Label" :text "Sound Volume" :size 25 :color 0xFFFFFFFF}
       :width "350 px" 
       :height "50 px" 
       :top "Music 4 px" 
@@ -325,8 +325,8 @@
      {:id "Physics"
       :class "Button"
       :command "show physics"
-      :texture "Color 0xFFFFFF0F"
-      :label "Label 25 Show/HidePhysics 00000000 FFFFFFFF"
+      :texture {:type "Color" :color 0xFFFFFF0F}
+      :label {:type "Label" :text "Show Physics" :size 25 :color 0xFFFFFFFF}
       :width "350 px" 
       :height "50 px" 
       :top "Sound 4 px" 
@@ -335,8 +335,8 @@
      {:id "Fullscreen"
       :class "Button"
       :command "donate"
-      :texture "Color 0xFFFFFF0F"
-      :label "Label 25 ToggleFullscreen 00000000 FFFFFFFF"
+      :texture {:type "Color" :color 0xFFFFFF0F}
+      :label {:type "Label" :text "Fullscreen" :size 25 :color 0xFFFFFFFF}
       :width "350 px" 
       :height "50 px" 
       :top "Physics 4 px" 
@@ -345,8 +345,8 @@
      {:id "OptBack"
       :class "Button"
       :command "options back"
-      :texture "Color 0xFFFFFF0F"
-      :label "Label 25 Back 00000000 FFFFFFFF"
+      :texture {:type "Color" :color 0xFFFFFF0F}
+      :label {:type "Label" :text "Back" :size 25 :color 0xFFFFFFFF}
       :width "350 px" 
       :height "50 px" 
       :top "Fullscreen 4 px" 
@@ -354,22 +354,35 @@
 
 
 (def info
-;;|                Menu|
-;;|     Sliders        |
-;;|                    |
-;;|     Randomize      |
-;;|     StartGame      |
   [{:id "Info"
     :class ""
-    :texture "Color 0xFF0000AA"
+    :texture {:type "Color" :color 0x00FF00AA}
+    :width "100 %" 
+    :height "100 %" 
+    :subviews
+    
+    [{:id "Message"
+      :class "Slider"
+      :texture {:type "Color" :color 0x00FF0055}
+      :label {:type "Label" :text "Loading" :size 30 :color 0xFFFFFFFF}
+      :width "500 px" 
+      :height "90 px" 
+      :center-y "Edge 50 %" 
+      :center-x "Edge 50 %"}]}])
+
+
+(def failure
+  [{:id "Info"
+    :class ""
+    :texture {:type "Color" :color 0xFF0000AA}
     :width "100 %" 
     :height "100 %" 
     :subviews
     
     [{:id "Reason"
       :class "Slider"
-      :texture "Color 0xFF000055"
-      :label "Label 30 HealthProblems 00000000 FFFFFFFF"
+      :texture {:type "Color" :color 0xFF000055}
+      :label {:type "Label" :text "Health Problems" :size 30 :color 0xFFFFFFFF}
       :width "100 %" 
       :height "50 px" 
       :top "Edge 50 px" 
@@ -377,8 +390,8 @@
 
      {:id "Message"
       :class "Slider"
-      :texture "Color 0x00FF0055"
-      :label "Label 30 LOADING 00000000 FFFFFFFF"
+      :texture {:type "Color" :color 0x00FF0055}
+      :label {:type "Label" :text "Loading" :size 30 :color 0xFFFFFFFF}
       :width "500 px" 
       :height "90 px" 
       :center-y "Edge 50 %" 
@@ -387,8 +400,8 @@
      {:id "Restart"
       :class "Button"
       :command "restart level"
-      :texture "Color 0xFFFFFF55"
-      :label "Label 25 Restart 00000000 FFFFFFFF"
+      :texture {:type "Color" :color 0xFFFFFF55}
+      :label {:type "Label" :text "Continue" :size 30 :color 0xFFFFFFFF}
       :width "500 px" 
       :height "50 px" 
       :bottom "Edge 50 px" 

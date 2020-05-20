@@ -86,23 +86,29 @@
      :height (int itemhth)}))
 
 
-(defn bitmap-for-glyph [canvas width height desc]
+(defn int-to-rgba [color]
+  (let [r (bit-and (bit-shift-right color 24) 0xFF)
+        g (bit-and (bit-shift-right color 16) 0xFF)
+        b (bit-and (bit-shift-right color 8) 0xFF)
+        a (bit-and color 0xFF)]
+    (str "rgba("r","g","b","(/ a 255)")")))
+
+
+(defn bitmap-for-glyph [canvas width height texture]
   "returns glyph bitmap"
-  (let [[s label c1 c2] (str/split desc #" ")
-        [fr fg fb fa] (map js/parseInt (map (partial str "0x") (re-seq #".{1,2}" c1)))
-        [br bg bb ba] (map js/parseInt (map (partial str "0x") (re-seq #".{1,2}" c2)))
-        size (js/parseInt s)
-        backcol (str "rgba("fr","fg","fb","(/ fa 255)")")
-        forecol (str "rgba("br","bg","bb","(/ ba 255)")")
+  (let [size (:size texture)
+        forecol (int-to-rgba (:color texture))
+        backcol (int-to-rgba (:background texture))
         context (.getContext canvas "2d")]
+    (println "back fore" backcol forecol texture)
     (.clearRect context 0 0 (.-width canvas) (.-height canvas))
     (set! (.-fillStyle context) backcol)
     (.fillRect context 0 0 (.-width canvas) (.-height canvas))
     (set! (.-font context) (str "bolder " size "px Ubuntu Bold"))
     (set! (.-fillStyle context) forecol)
     (set! (.-textBaseline context) "middle")
-    (let [itemwth (int (.-width (.measureText context label)))]
-      (.fillText context label (int (* (- width itemwth) 0.5)) (int (/ height 1.8)))
+    (let [itemwth (int (.-width (.measureText context (:text texture))))]
+      (.fillText context (:text texture) (int (* (- width itemwth) 0.5)) (int (/ height 1.8)))
       {:data (.-data (.getImageData context 0 0 width height))
        :width width
        :height height})))
@@ -119,26 +125,25 @@
                       tmap
                       (cond
 
-                        (str/starts-with? texture "Debug")
+                        (= (:type texture) "Debug")
                         ;; show full texture in quad
                         (assoc-in tmap [:contents texture] [0 0 1 1])
 
-                        (str/starts-with? texture "Image")
+                        (= (:type texture) "Image")
                         ;; show image in quad
                         (tmap)
 
-                        (str/starts-with? texture "Color")
+                        (= (:type texture) "Color")
                         ;; show color in quad
-                        (let [rem (subs texture 8)
-                              r (js/parseInt (subs rem 0 2) 16)
-                              g (js/parseInt (subs rem 2 4) 16)
-                              b (js/parseInt (subs rem 4 6) 16)
-                              a (js/parseInt (subs rem 6 8) 16)]
+                        (let [r (bit-and (bit-shift-right (:color texture) 24) 0xFF)
+                              g (bit-and (bit-shift-right (:color texture) 16) 0xFF)
+                              b (bit-and (bit-shift-right (:color texture) 8) 0xFF)
+                              a (bit-and (:color texture) 0xFF)]
                           (texmap/setbmp tmap (bitmap/init 10 10 r g b a) texture 1))
 
-                        (str/starts-with? texture "Label")
+                        (= (:type texture) "Label")
                         ;; show glyph
-                        (let [bmp (bitmap-for-glyph tempcanvas w h (subs texture 6))]
+                        (let [bmp (bitmap-for-glyph tempcanvas w h texture)]
                           (texmap/setbmp tmap bmp texture 0))
 
                         :default

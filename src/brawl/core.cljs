@@ -396,14 +396,13 @@
           pivots (filter #(if (:id %) (clojure.string/includes? (:id %) "Pivot") false) svglevel)
           surfaces (phys2/surfaces-from-pointlist points)
           lines (clj->js (reduce (fn [result {[tx ty] :t [bx by] :b}] (concat result [tx ty 1.0 1.0 1.0 1.0 (+ tx bx) (+ ty by) 1.0 1.0 1.0 1.0])) [] surfaces))
-          seeds (map #(particle/init (rand 500.0) (rand 500.0) [1.0 1.0 1.0 0.2] [(+ 0.1 (rand 0.6)) (+ 0.05 (rand 0.3))]  :seed) (take 20 (cycle "a")))
+          seeds (map #(particle/init 0.0 0.0 [1.0 1.0 1.0 0.2] [(+ 0.1 (rand 0.6)) (+ 0.05 (rand 0.3))]  :seed) (take 20 (cycle "a")))
           newworld (-> world
                        (create-actors pivots)
                        (assoc :inited true)
                        (assoc :particles seeds)
                        (assoc :surfaces surfaces)
                        (assoc :surfacelines lines))]
-      (println "CURR LEVEL" curr-level)
       (cond-> state
           true (assoc :world newworld)
           true (update-gen-sliders)
