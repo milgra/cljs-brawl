@@ -79,7 +79,7 @@
   "returns glyph sizes"
   (let [context (.getContext canvas "2d" )
         itemhth (* height 1.2)]
-    (set! (.-font context) (str height "px Cantarell"))
+    (set! (.-font context) (str height "px Ubuntu Bold"))
     (set! (.-fillStyle context) "#000000")
     (set! (.-textBaseline context) "middle")
     {:width (int (.-width (.measureText context text)))
@@ -98,7 +98,7 @@
     (.clearRect context 0 0 (.-width canvas) (.-height canvas))
     (set! (.-fillStyle context) backcol)
     (.fillRect context 0 0 (.-width canvas) (.-height canvas))
-    (set! (.-font context) (str "bolder " size "px Impact"))
+    (set! (.-font context) (str "bolder " size "px Ubuntu Bold"))
     (set! (.-fillStyle context) forecol)
     (set! (.-textBaseline context) "middle")
     (let [itemwth (int (.-width (.measureText context label)))]
@@ -147,7 +147,12 @@
         
         (recur (rest remviews) newtmap)))))
 
-(defn clear! [{context :context :as state}]
+
+(defn reset [{:keys [ui-texmap] :as state}]
+  (assoc state :ui-texmap (texmap/reset ui-texmap)))
+
+
+(defn clear! [{:keys [context ui-texmap] :as state}]
   (buffers/clear-color-buffer
    context
    0.1

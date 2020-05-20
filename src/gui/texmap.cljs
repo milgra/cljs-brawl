@@ -16,6 +16,15 @@
     result))
 
 
+(defn reset [{texbmp :texbmp :as texmap}]
+  (assoc texmap
+         :contents {}
+         :changed true
+         :lasth 0
+         :lastx 0
+         :lasty 0))
+
+
 (defn hasbmp? [{contents :contents} id]
   "texmap contains bitmap with given id?"
   (contains? contents id))

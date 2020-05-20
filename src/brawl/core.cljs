@@ -19,40 +19,55 @@
             [brawl.layouts :as layouts]
             [brawl.floatbuffer :as floatbuf])
   (:import [goog.events EventType]))
-  
-
-(defn load-level! [channel curr-level]
-  "load level svg's"
-  (go
-    (let [response (<! (http/get (str "level" curr-level ".svg")
-                                 {:with-credentials? false}))
-          xmlstr (xml->clj (:body response) {:strict false})
-          shapes (svg/psvg xmlstr "")]
-      (put! channel shapes))))
 
 
-(defn load-image! [channel name]
-  "load touchscreen button images"
-  (let [img (js/Image.)]
-    (set! (.-onload img)
-          (fn [a]
-            (put! channel img)))
-    (set! (.-src img) name)))
-
-
-(defn resize-context! [ ]
+(defn resize-context!
   "resize canvas on window resize"
+  []
   (let [canvas (. js/document getElementById "main")]
         (set! (. canvas -width) (. js/window -innerWidth))
         (set! (. canvas -height) (. js/window -innerHeight))))
 
 
+(defn load-font!
+  "start loading external font"
+  [state name url]
+  (let [font (js/FontFace. name (str "url(" url ")"))]
+    (.then (.load font) #(
+                          do
+                          (.add (.-fonts js/document) font)
+                          (put! (:msgch state) {:id "redraw-ui"}))))
+  state)
+
+
+(defn load-level!
+  "load level svg's"
+  [state level]
+  (go
+    (let [channel (:msgch state)
+          response (<! (http/get (str "level" level ".svg")
+                                 {:with-credentials? false}))
+          xmlstr (xml->clj (:body response) {:strict false})
+          shapes (svg/psvg xmlstr "")]
+      (put! channel {:id "level" :shapes shapes})))
+  state)
+
+
+(defn load-ui
+  "load new ui stack"
+  [state description]
+  (let [views (ui/gen-from-desc {} description)
+        baseviews (ui/get-base-ids description)
+        viewids (ui/collect-visible-ids views baseviews "")]
+    (assoc state :views views :baseviews baseviews :viewids viewids :viewdesc description)))
+
+
 (def keycodes (atom {}))
 (def mousedown (atom false))
 
-(defn init-events! [keych tchch]
+(defn init-events!
   "start event listening"
- 
+  [state]
   (events/listen
    js/document
    EventType.KEYDOWN
@@ -60,7 +75,7 @@
      (let [code (.-keyCode event)
            prev (get @keycodes code)]
        (swap! keycodes assoc code true)
-       (if (not prev) (put! keych {:code (.-keyCode event) :value true})))))
+       (if (not prev) (put! (:msgch state) {:id "key" :code (.-keyCode event) :value true})))))
 
   (events/listen
    js/document
@@ -69,7 +84,7 @@
      (let [code (.-keyCode event)
            prev (get @keycodes code)]
        (swap! keycodes assoc code false)
-       (if prev (put! keych {:code (.-keyCode event) :value false})))))
+       (if prev (put! (:msgch state) {:id "key" :code (.-keyCode event) :value false})))))
 
   (events/listen
    js/document
@@ -82,25 +97,27 @@
    EventType.MOUSEDOWN
    (fn [event]
      (swap! mousedown not)
-     (put! tchch {:type "down" :point [(.-clientX event) (.-clientY event)]})))
+     (put! (:msgch state) {:id "mouse" :type "down" :point [(.-clientX event) (.-clientY event)]})))
 
   (events/listen
    js/document
    EventType.MOUSEUP
    (fn [event]
      (swap! mousedown not)
-     (put! tchch {:type "up" :point [(.-clientX event) (.-clientY event)]})))
+     (put! (:msgch state) {:id "mouse" :type "up" :point [(.-clientX event) (.-clientY event)]})))
 
   (events/listen
    js/document
    EventType.MOUSEMOVE
    (fn [event]
-     (if @mousedown (put! tchch {:type "down" :point [(.-clientX event) (.-clientY event)]}))))
+     (if @mousedown (put! (:msgch state) {:id "mouse" :type "down" :point [(.-clientX event) (.-clientY event)]}))))
 
   (events/listen
    js/window
    EventType.RESIZE
-   (fn [event] (resize-context!))))
+   (fn [event] (resize-context!)))
+
+  state)
     
 
 (defn create-actors
@@ -168,8 +185,7 @@
         views (ui/gen-from-desc {} layouts/hud)
         baseviews (ui/get-base-ids layouts/hud)
         viewids (ui/collect-visible-ids views baseviews "")]
-    (println "next-level" next-level)
-    (load-level! (:svgch state) next-level)
+    (load-level! state next-level)
     (-> state
         (assoc :views views :baseviews baseviews :viewids viewids)
         (assoc :world {:inited false
@@ -180,13 +196,6 @@
                        :surfaces []
                        :surfacelines []})
         (assoc :curr-level next-level))))
-
-
-(defn load-ui [state description]
-  (let [views (ui/gen-from-desc {} description)
-        baseviews (ui/get-base-ids description)
-        viewids (ui/collect-visible-ids views baseviews "")]
-    (assoc state :views views :baseviews baseviews :viewids viewids)))
 
 
 (defn execute-commands [{commands :commands :as state}]
@@ -268,14 +277,14 @@
     (assoc state :gui newgui)))
 
   
-(defn update-ui [{:keys [views baseviews commands] :as state} touchevent]
-  (let [results (if touchevent
-                  (let [touched-views (ui/collect-pressed-views views (:point touchevent))]
+(defn update-ui [{:keys [views baseviews commands viewdesc gui] :as state} msg]
+  (let [results (if (and msg (= (:id msg) "mouse"))
+                  (let [touched-views (ui/collect-pressed-views views (:point msg))]
                     (reduce
                      (fn [result {:keys [class] :as view}]
                        (cond
-                         (= class "Slider") (conj result (ui/touch-slider view views touchevent))
-                         (= class "Button") (conj result (ui/touch-button view views touchevent))
+                         (= class "Slider") (conj result (ui/touch-slider view views msg))
+                         (= class "Button") (conj result (ui/touch-button view views msg))
                          :else result))
                      []
                      (map views touched-views)))
@@ -285,12 +294,13 @@
                          views
                          results)
         newcommands (map :command results)]
-    (-> state
-        (assoc :views (ui/align newviews baseviews 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
-        (assoc :commands (concat commands newcommands)))))
+    (cond-> state
+        true (assoc :views (ui/align newviews baseviews 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
+        true (assoc :commands (concat commands newcommands))
+        (and msg (= (:id msg) "redraw-ui")) (assoc :gui (uiwebgl/reset gui)))))
 
 
-(defn draw-world [{:keys [gfx trans floatbuffer] {:keys [actors particles surfacelines] :as world} :world :as state} frame svglevel]
+(defn draw-world [{:keys [gfx trans floatbuffer] {:keys [actors particles surfacelines] :as world} :world :as state} frame msg]
   "draws background, actors, masses with projection"
   (if (:inited world)
     (let [actor (first actors)
@@ -304,7 +314,7 @@
           [l r b t :as vis-rect] [(- tx w) (+ tx w) (+ ty h) (- ty h)]
           projection (math4/proj_ortho (+ l 50) (- r 50) (- b 50) (+ t 50) -1.0 1.0)    
           variation (Math/floor (mod (/ frame 10.0) 3.0 ))
-          newgfx (if svglevel (webgl/loadshapes gfx (filter #(if (:id %) (not (clojure.string/includes? (:id %) "Pivot")) true) svglevel)) gfx)
+          newgfx (if (and msg (= (:id msg) "level")) (webgl/loadshapes gfx (filter #(if (:id %) (not (clojure.string/includes? (:id %) "Pivot")) true) (:shapes msg))) gfx)
 
           newbuf (floatbuf/empty! floatbuffer)
           newbuf1 (reduce (fn [oldbuf actor] (actorskin/get-skin-triangles actor oldbuf variation vis-rect)) newbuf (rseq actors))]
@@ -334,10 +344,8 @@
 
 (defn update-world
   "updates phyisics and actors"
-  [{{:keys [actors surfaces particles inited endpos vis-rect] :as world} :world keycodes :keycodes commands :commands :as state} svglevel]
-
+  [{{:keys [actors surfaces particles inited endpos vis-rect] :as world} :world keycodes :keycodes commands :commands :as state} msg]
   (cond
-    
     inited ; create new state
     (let [currcodes {:left (keycodes 37)
                      :right (keycodes 39)
@@ -375,8 +383,9 @@
           (assoc :commands newnewcommands)
           (assoc :world newworld)))
     
-    svglevel ; load new level
-    (let [[ l r b t] vis-rect
+    (and msg (= (:id msg) "level")) ; load new level
+    (let [svglevel (:shapes msg)
+          [ l r b t] vis-rect
           points (map :path (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) svglevel ))
           pivots (filter #(if (:id %) (clojure.string/includes? (:id %) "Pivot") false) svglevel)
           surfaces (phys2/surfaces-from-pointlist points)
@@ -396,9 +405,9 @@
     state))
 
 
-(defn update-keycodes [state keyevent]           
-  (let [keycodes (if keyevent
-                   (assoc (:keycodes state) (:code keyevent) (:value keyevent))
+(defn update-keycodes [state msg]
+  (let [keycodes (if (and msg (= (:id msg) "key"))
+                   (assoc (:keycodes state) (:code msg) (:value msg))
                    (:keycodes state))
         [tx ty] (:trans state)
         [sx sy] (:speed state)
@@ -433,17 +442,11 @@
 
 (defn main []
   "entering point"
-  (let [gfx (webgl/init)
-        gui (uiwebgl/init)
-        svgch (chan) ;; level svg channel
-        imgch (chan) ;; texture image channel
-        tchch (chan) ;; touch channel
-        keych (chan) ;; key press channel
-        views (ui/gen-from-desc {} layouts/generator) ; viewmap contains all visible views as id-desc pairs
-        baseviews (ui/get-base-ids layouts/generator)
-        viewids (ui/collect-visible-ids views baseviews  "")
-        world {:inited false
-               :actors [] ; (actor/init 580.0 300.0)]
+
+  (resize-context!)
+
+  (let [world {:inited false
+               :actors []
                :guns []
                :infos []
                :endpos [0 0]
@@ -451,46 +454,41 @@
                :surfacelines []
                :particles []
                :vis-rect [0 0 0 0]} ; visible rect in world
-        state {:gfx gfx
-               :gui gui
+
+        state {:gfx (webgl/init)
+               :gui (uiwebgl/init)
                :world world
-               :views views
-               :baseviews baseviews
-               :viewids viewids
-               :curr-level 1
-               :texfile "font.png"
+               :views {}
+               :baseviews [] 
+               :viewids []
+               :curr-level 0
                :floatbuffer (floatbuf/create!)
                :keycodes {}
                :commands []
                :trans [500.0 300.0]
                :speed [0.0 0.0]
-               :svgch svgch}]
-  
-    (resize-context!)
-    (init-events! keych tchch)
-    (load-image! imgch (:texfile state))
-    (load-level! svgch (:curr-level state))
-    
-    (animate state
+               :msgch (chan)}
+
+        final (-> state
+                  (load-ui layouts/generator)
+                  (load-font! "Ubuntu Bold" "Ubuntu-Bold.ttf")
+                  (load-level! 0)
+                  (init-events!))]
+
+    (animate final
              (fn [prestate frame time]
                (if (= (mod frame 1) 0 ) ; frame skipping for development
-                 (let [svglevel (poll! svgch)
-                       teximage (poll! imgch)
-                       keyevent (poll! keych)
-                       tchevent (poll! tchch)
-                       
-                       newstate (-> prestate
-                                    (assoc :commands [])
-                                    ;; world
-                                    (update-keycodes keyevent)
-                                    (update-world svglevel)
-                                    (draw-world frame svglevel)
-                                    ;; ui
-                                    (update-ui tchevent)
-                                    (draw-ui frame)
-                                    (execute-commands)
-                                    )]
-                   newstate)
-                 prestate)))))
-
-(main)
+                 (let [msg (poll! (:msgch prestate))]
+                   (-> prestate
+                       (assoc :commands [])
+                       ;; world
+                       (update-keycodes msg)
+                       (update-world msg)
+                       (draw-world frame msg)
+                       ;; ui
+                       (update-ui msg)
+                       (draw-ui frame)
+                       (execute-commands)))
+                   prestate)))))
+  
+(defonce mainloop (main))
