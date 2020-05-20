@@ -190,10 +190,10 @@
             (first (remove nil? [headisp bodyisp footlisp footrisp]))))))
             
 
-(defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health metrics :metrics :as actor} {:keys [id base target time] :as command}]
+(defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health metrics :metrics update-fn :update-fn :as actor} {:keys [id base target time] :as command}]
   ;; check distance from nect first
   (let [ [dx dy] (math2/sub-v2 target (:p hip))]
-    (if (and (not= id (:id actor)) (< dx 80.0) (< dy 80.0))
+    (if (and (not= id (:id actor)) (< dx 80.0) (< dy 80.0) (not= update-fn update-rag))
       (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
             hitsm (math2/resize-v2 hitv (if (< health 20) 10 2))
             hitbg (math2/resize-v2 hitv (if (< health 20) 20 4))
@@ -235,7 +235,7 @@
 
 (defn move-hand-walk
   "move head point"
-  [{:keys [id facing punch-pressed punch-hand action-sent commands] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r {[nx ny :as neck] :p} :neck } :masses { arml :arml } :metrics angle :idle-angle :as state}
+  [{:keys [id facing punch-pressed punch-hand action-sent commands speed] {{[hx hy] :p} :hip {[ax ay] :p} :base_l {[bx by] :p} :base_r {[nx ny :as neck] :p} :neck } :masses { arml :arml } :metrics angle :idle-angle :as state}
    {:keys [down up left right punch block]}
    surface
    time]
@@ -245,15 +245,15 @@
         nry (- (* arml 0.14 )(* (Math/cos angle ) 5.0))
         hand_l (cond
                  block [(+ nx (* facing arml 0.3)) (- ny (* arml 0.4))]
-                 (and punch-pressed (= punch-hand :hand_l)) [(+ nx (* facing arml 0.99)) ny]
+                 (and punch-pressed (= punch-hand :hand_l) (not left) (not right)) [(+ nx (* facing arml 0.99)) ny]
                  :else [(+ nx nlx) (+ ny nly)])
         hand_r (cond
                  block [(+ nx (* facing arml 0.3)) (- ny (* arml 0.4))]
-                 (and punch-pressed (= punch-hand :hand_r)) [(+ nx (* facing arml 0.99)) ny]                 
+                 (and punch-pressed (= punch-hand :hand_r) (not left) (not right)) [(+ nx (* facing arml 0.99)) ny]                 
                  :else [(+ nx nrx) (+ ny nry)])
         elbow_l (triangle_with_bases neck hand_l (* arml 0.5) facing)
         elbow_r (triangle_with_bases neck hand_r (* arml 0.5) facing)
-        command (if (and punch-pressed (not action-sent)) {:id id :text "attack" :base neck :target (if (= punch-hand :hand_l) hand_l hand_r) :time time}) ]
+        command (if (and punch-pressed (not action-sent) (not left) (not right)) {:id id :text "attack" :base neck :target (if (= punch-hand :hand_l) hand_l hand_r) :time time}) ]
     (-> state
         (assoc :commands (if command (conj command command) commands))
         (assoc-in [:masses :hand_l :p] hand_l)
@@ -424,7 +424,7 @@
         passive-base (:passive base-order)
         [apx apy :as act] (:p (masses active-base)) ; active position
         [ppx ppy :as pas] (:p (masses passive-base)) ; passive position
-        kick-point [(+ ppx (* legl facing)) (- ppy (* legl 1.5))]
+        kick-point [(+ ppx (* legl facing 1.2)) (- ppy (* legl 1.5))]
         foot_l (if (= :base_l (:active base-order))
                  (if kick-pressed kick-point act)
                  pas) ; final position
