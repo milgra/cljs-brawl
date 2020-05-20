@@ -351,3 +351,45 @@
       :height "50 px" 
       :top "Fullscreen 4 px" 
       :center-x "Edge 50 %"}]}])
+
+
+(def info
+;;|                Menu|
+;;|     Sliders        |
+;;|                    |
+;;|     Randomize      |
+;;|     StartGame      |
+  [{:id "Info"
+    :class ""
+    :texture "Color 0xFF0000AA"
+    :width "100 %" 
+    :height "100 %" 
+    :subviews
+    
+    [{:id "Reason"
+      :class "Slider"
+      :texture "Color 0xFF000055"
+      :label "Label 30 HealthProblems 00000000 FFFFFFFF"
+      :width "100 %" 
+      :height "50 px" 
+      :top "Edge 50 px" 
+      :right "Edge 0 px"}
+
+     {:id "Message"
+      :class "Slider"
+      :texture "Color 0x00FF0055"
+      :label "Label 30 LOADING 00000000 FFFFFFFF"
+      :width "500 px" 
+      :height "90 px" 
+      :center-y "Edge 50 %" 
+      :center-x "Edge 50 %"}
+
+     {:id "Restart"
+      :class "Button"
+      :command "restart level"
+      :texture "Color 0xFFFFFF55"
+      :label "Label 25 Restart 00000000 FFFFFFFF"
+      :width "500 px" 
+      :height "50 px" 
+      :bottom "Edge 50 px" 
+      :center-x "Edge 50 %"}]}])

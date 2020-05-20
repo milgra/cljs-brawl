@@ -181,13 +181,9 @@
 
 
 (defn load-next-level [{:keys [curr-level] :as state}]
-  (let [next-level (min (inc curr-level) 6)
-        views (ui/gen-from-desc {} layouts/hud)
-        baseviews (ui/get-base-ids layouts/hud)
-        viewids (ui/collect-visible-ids views baseviews "")]
+  (let [next-level (min (inc curr-level) 6)]
     (load-level! state next-level)
     (-> state
-        (assoc :views views :baseviews baseviews :viewids viewids)
         (assoc :world {:inited false
                        :actors [] ; (actor/init 580.0 300.0)]
                        :guns []
@@ -200,6 +196,7 @@
 
 (defn execute-commands [{commands :commands :as state}]
   (reduce (fn [oldstate {text :text :as command}]
+
             (cond
 
               (= text "attack")
@@ -263,11 +260,20 @@
               (= text "kick") (assoc-in oldstate [:keycodes 83] true)
               (= text "block") (assoc-in oldstate [:keycodes 68] true)
               
-              (= text "start-game") (load-next-level oldstate)
-              (= text "next-level") (load-next-level oldstate)
+              (= text "start-game")
+              (-> oldstate
+                  (load-ui layouts/info)
+                  (update :commands conj {:text "load-level"}))
+
+              (= text "next-level")
+              (-> oldstate
+                  (load-ui layouts/info)
+                  (update :commands conj {:text "load-level"}))
+
+              (= text "load-level") (load-next-level oldstate)
 
               :else oldstate))
-          state
+          (assoc state :commands [])
           commands))
 
 
@@ -344,7 +350,7 @@
 
 (defn update-world
   "updates phyisics and actors"
-  [{{:keys [actors surfaces particles inited endpos vis-rect] :as world} :world keycodes :keycodes commands :commands :as state} msg]
+  [{{:keys [actors surfaces particles inited endpos vis-rect] :as world} :world keycodes :keycodes curr-level :curr-level commands :commands :as state} msg]
   (cond
     inited ; create new state
     (let [currcodes {:left (keycodes 37)
@@ -397,10 +403,12 @@
                        (assoc :particles seeds)
                        (assoc :surfaces surfaces)
                        (assoc :surfacelines lines))]
-      (-> state
-          (assoc :world newworld)
-          (update-gen-sliders)))
-      
+      (println "CURR LEVEL" curr-level)
+      (cond-> state
+          true (assoc :world newworld)
+          true (update-gen-sliders)
+          (> curr-level 0) (load-ui layouts/hud)))
+
     :else ; return unchanged
     state))
 
@@ -480,15 +488,14 @@
                (if (= (mod frame 1) 0 ) ; frame skipping for development
                  (let [msg (poll! (:msgch prestate))]
                    (-> prestate
-                       (assoc :commands [])
+                       (execute-commands)
                        ;; world
                        (update-keycodes msg)
                        (update-world msg)
                        (draw-world frame msg)
                        ;; ui
                        (update-ui msg)
-                       (draw-ui frame)
-                       (execute-commands)))
+                       (draw-ui frame)))
                    prestate)))))
   
 (defonce mainloop (main))
