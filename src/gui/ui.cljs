@@ -75,39 +75,35 @@
           {:element elem :ratio (/ (js/parseInt value) 100.0)})))))
 
 
-(defn gen-from-desc [viewmap desclist]
+(defn gen-from-desc [viewmap viewdesc]
   "generate view structure from description"
-  (reduce
-   (fn [oldmap viewdesc]
-     (let [subviews   (:subviews viewdesc)
-           subids     (if subviews (map (fn [desc] (keyword (:id desc))) subviews) []) ; finalsubviews property needs ids only
-           subviewmap (if subviews (gen-from-desc oldmap subviews) oldmap) ; generate subviews into viewmap
-           view (reduce
-                 (fn [result pair]
-                   (let [k (key pair)
-                         v (val pair)]
-                   (case k
-                     :id       (assoc result :id (keyword v))
-                     :class    (assoc result :class v)
-                     :command  (assoc result :command v)
-                     :color    (assoc result :color v)
-                     :width    (assoc result :width (get-value v))
-                     :height   (assoc result :height (get-value v))
-                     :center-x (assoc result :center-x (get-value v))      
-                     :center-y (assoc result :center-y (get-value v))
-                     :left     (assoc result :left (get-value v))
-                     :right    (assoc result :right (get-value v))
-                     :top      (assoc result :top (get-value v))
-                     :bottom   (assoc result :bottom (get-value v))
-                     :subviews (assoc result :subviews subids)
-                     (assoc result k v)))) {:x 0.0 :y 0.0 :w 150.0 :h 50.0 :subviews []} viewdesc)
-           newviews (setup-view view)] ; generate subviews for sliders, buttons, etc
-       (reduce #(assoc %1 (:id %2) %2) subviewmap newviews)))
-   viewmap
-   desclist))
+  (println "gen-from-desc" (:id viewdesc) viewmap)
+  (let [subviews   (:subviews viewdesc)
+        subids     (if subviews (map (fn [desc] (keyword (:id desc))) subviews) []) ; finalsubviews property needs ids only
+        subviewmap (if subviews (reduce (fn [oldmap desc] (gen-from-desc oldmap desc)) viewmap subviews) viewmap) ; generate subviews into viewmap
+        view (reduce
+              (fn [result [k v]]
+                (case k
+                  :id       (assoc result :id (keyword v))
+                  :class    (assoc result :class v)
+                  :command  (assoc result :command v)
+                  :color    (assoc result :color v)
+                  :width    (assoc result :width (get-value v))
+                  :height   (assoc result :height (get-value v))
+                  :center-x (assoc result :center-x (get-value v))      
+                  :center-y (assoc result :center-y (get-value v))
+                  :left     (assoc result :left (get-value v))
+                  :right    (assoc result :right (get-value v))
+                  :top      (assoc result :top (get-value v))
+                  :bottom   (assoc result :bottom (get-value v))
+                  :subviews (assoc result :subviews subids)
+                  (assoc result k v))) {:x 0.0 :y 0.0 :w 150.0 :h 50.0 :subviews []} viewdesc)
+    newviews (setup-view view)] ; generate subviews for sliders, buttons, etc
+  (reduce #(assoc %1 (:id %2) %2) subviewmap newviews)))
+
 
 (defn get-base-ids [desclist]
-  (map (fn [desc] (keyword (:id desc))) desclist))
+  [(keyword (:id desclist))])
 
 ;; alignment
 
