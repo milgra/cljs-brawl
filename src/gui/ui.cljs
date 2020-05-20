@@ -101,10 +101,6 @@
     newviews (setup-view view)] ; generate subviews for sliders, buttons, etc
   (reduce #(assoc %1 (:id %2) %2) subviewmap newviews)))
 
-
-(defn get-base-ids [desclist]
-  [(keyword (:id desclist))])
-
 ;; alignment
 
 (defn align-view [viewmap id px py pwidth pheight]

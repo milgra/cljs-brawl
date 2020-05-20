@@ -57,9 +57,9 @@
   "load new ui stack"
   [state description]
   (let [views (ui/gen-from-desc {} description)
-        baseviews (ui/get-base-ids description)
-        viewids (ui/collect-visible-ids views baseviews "")]
-    (assoc state :views views :baseviews baseviews :viewids viewids :viewdesc description)))
+        baseid (keyword (:id description))
+        viewids (ui/collect-visible-ids views [baseid] "")]
+    (assoc state :baseid baseid :views views :viewids viewids)))
 
 
 (def keycodes (atom {}))
@@ -283,7 +283,7 @@
     (assoc state :gui newgui)))
 
   
-(defn update-ui [{:keys [views baseviews commands viewdesc gui] :as state} msg]
+(defn update-ui [{:keys [baseid views commands viewdesc gui] :as state} msg]
   (let [results (if (and msg (= (:id msg) "mouse"))
                   (let [touched-views (ui/collect-pressed-views views (:point msg))]
                     (reduce
@@ -301,7 +301,7 @@
                          results)
         newcommands (map :command results)]
     (cond-> state
-        true (assoc :views (ui/align newviews baseviews 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
+        true (assoc :views (ui/align newviews [baseid] 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
         true (assoc :commands (concat commands newcommands))
         (and msg (= (:id msg) "redraw-ui")) (assoc :gui (uiwebgl/reset gui)))))
 
@@ -466,7 +466,7 @@
                :gui (uiwebgl/init)
                :world world
                :views {}
-               :baseviews [] 
+               :baseid nil 
                :viewids []
                :curr-level 0
                :floatbuffer (floatbuf/create!)
