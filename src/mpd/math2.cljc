@@ -99,21 +99,22 @@
 
 (defn collide-v2-v2
   "gets the point wheren vector touches the other vector translated towards the first vector by radius"
-  [[e f :as ta] [g h :as ba] [a b :as tb] [c d :as bb] radius]
+  [ta [bax bay :as ba] tb [bbx bby :as bb]  radius]
   ; should fast check first with radiuses
   (if (or
-       (and (= g 0)(= h 0))
-       (and (= c 0)(= d 0)))
+       (and (= bax 0)(= bay 0))
+       (and (= bbx 0)(= bby 0)))
     nil ;; invalid line
-    (let [[cx cy] (isp-l2-l2 tb bb ta [d (- c)]) ; get isp of surface and perpendicular of surface from trans
-          [dx dy] [(- e cx)(- f cy)] ; vector from isp to vector trans
-          [nx ny] (resize-v2 [dx dy] radius)
-          [fx fy] (add-v2 tb [nx ny]) ; move tb towards vector trans with radius
-          result (isp-l2-l2 [fx fy] bb ta ba)] ; isp of vector and translated surface
+    (let [isp (isp-l2-l2 tb bb ta ba) ;; intersection
+          psp (isp-l2-l2 tb bb ta [bby (- bbx)]) ;; intersection of surface perpendicular from trans
+          per-vec (sub-v2 ta psp) ; vector from isp to vector trans
+          rad-vec (resize-v2 per-vec radius)
+          rad-pnt (add-v2 tb rad-vec) ; move tb towards vector trans with radius
+          rad-isp (isp-l2-l2 rad-pnt bb ta ba)] ; isp of vector and translated surface
       (if (and
-          (p2-in-v2? result ta ba 1.0) ; point is on first vector
-          (p2-in-v2? result [fx fy] bb 1.0)) ; point is on translated second vector
-       result
+          (p2-in-v2? rad-isp ta ba 1.0) ; point is on first vector
+          (p2-in-v2? rad-isp rad-pnt bb 1.0)) ; point is on translated second vector
+       rad-isp
        nil))))
 
 
