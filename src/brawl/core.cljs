@@ -171,8 +171,8 @@
         contacts (remove nil? (map (fn [actor] (actor/hitpoint actor command)) actors))
         newparticles (reduce (fn [ res [x y] ]
                                (concat res
-                                       (repeatedly 10 #(particle/init x y [1.0 1.0 1.0 1.0] (math2/resize-v2 [(+ (- 1.0) (rand 2.0)) (+ (- 1.0) (rand 2.0))] (+ 1.0 (rand 2.0)))  :dust))
-                                       (repeatedly 5 #(particle/init x y [1.0 0.0 0.0 1.0]  [ (+ dx -2.0 (rand 2.0)) (+ dy -2.0 (rand 2.0)) ]  :blood))))
+                                       (repeatedly 10 #(particle/init x y [1.0 1.0 1.0 0.5] (math2/resize-v2 [(+ (- 1.0) (rand 2.0)) (+ (- 1.0) (rand 2.0))] (+ 1.0 (rand 2.0)))  :dust))
+                                       (repeatedly 5 #(particle/init x y [1.0 0.0 0.0 0.5]  [ (+ dx -2.0 (rand 2.0)) (+ dy -2.0 (rand 2.0)) ]  :blood))))
                              [] contacts)
         newactors (vec (map (fn [actor] (actor/hit actor command)) actors))]
     (-> state

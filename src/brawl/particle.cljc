@@ -29,7 +29,7 @@
   (let [nx (+ x sx)
         ny (+ y sy)
         nc (inc cnt)]
-    (if (> nc 10) nil (assoc particle :pos [nx ny] :cnt nc :col [r g b (/ 1.0 nc ) ] ))))
+    (if (> nc 20) nil (assoc particle :pos [nx ny] :cnt nc :col [r g b a ] ))))
 
 
 (defn upd-blood [{[x y] :pos [sx sy] :spd cnt :cnt [r g b a] :col  :as particle} [l r b t]]

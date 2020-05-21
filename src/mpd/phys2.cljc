@@ -10,7 +10,6 @@
    :r radius
    :f friction
    :e elasticity
-   :s nil ;; last collided surface
    :q false}) ;; quiescence
 
 
@@ -194,34 +193,45 @@
   (loop [prev-p p ;; previous position
          prev-d d ;; previous direction
          full-d d ;; final direction
-         prev-s s ;; previous collided/slided surface
          iter 0 ;; iteration
          done false
          quis false] ;; quisence
     (if done
-      (assoc mass :p prev-p :d full-d :s prev-s :q quis) ;; assoc last point and final dir          
+      ;; no more iterations, assigning new point, direction, quisence
+      (assoc mass :p prev-p :d full-d :q quis) ;; assoc last point and final dir          
+      ;; new iterations, get colliding surfaces
       (let [results (sort-by first < (get-colliding-surfaces prev-p prev-d r surfaces))
             [dst isp {strans :t sbasis :b :as segment}] (first results)]
-
         (if segment
-
+          ;; collision, calculate full and used size
           (let [full-size (math2/length-v2 prev-d)
-                used-size (- full-size dst)] ;; go with partial size or full size of direction
-
+                used-size (- full-size dst)]
             (if (< full-size (* 2.0 gravity))
-              ;; sliding
+              ;; full size is smaller than radius, start sliding
               (let [gravity-normal (math2/scale-v2 (math2/norm-p2-l2 isp strans sbasis) gravity)
                     newfull-d (math2/scale-v2 (math2/add-v2 gravity-normal [0 gravity]) f)]
-
-                (recur isp newfull-d newfull-d segment (inc iter) false true)) ;; send mass to next iteration, if it's not in a corner it will move without bounce/slide
-              ;; bouncing
+                (recur isp
+                       newfull-d
+                       newfull-d
+                       (inc iter)
+                       false
+                       true)) ;; send mass to next iteration, if it's not in a corner it will move without bounce/slide
+              ;; full size is bigger than radius, bounce
               (let [newfull-d (math2/scale-v2 (math2/mirror-v2-bases sbasis full-d) e) ;; mirror full size of direction
                     new-d (math2/resize-v2 newfull-d used-size)]
-
-                (recur isp new-d newfull-d segment (inc iter) (> iter 4) false))))
-          (do
-
-          (recur (math2/add-v2 prev-p prev-d) prev-d full-d nil (inc iter) true quis)))))))
+                (recur isp
+                       new-d
+                       newfull-d
+                       (inc iter)
+                       (> iter 4)
+                       false))))
+          ;; move point to new position, finish
+          (recur (math2/add-v2 prev-p prev-d)
+                 prev-d
+                 full-d
+                 (inc iter)
+                 true
+                 quis))))))
 
 
 (defn move-masses [masses surfaces gravity]

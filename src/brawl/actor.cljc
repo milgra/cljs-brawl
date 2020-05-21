@@ -69,7 +69,7 @@
         hipw (+ 6.0 (* st 20.0)) 
         legw (+ 6.0 (* st 5.0)) 
         
-        runs (+ 5.0 (* sp 4.0) height)
+        runs (+ 8.0 (* sp 4.0) height)
         walks (* runs 0.5)
         punchs (+ 7.0 (* hr 2.0))
         kicks (+ 0.2 hr)
@@ -360,7 +360,7 @@
   (let [size (cond
                (and (> speed -1.0) (<  speed 0.0)) -20.0
                (and (< speed  1.0) (>= speed 0.0))  20.0
-               :else (+ (* (/ speed (Math/abs speed)) 40.0) (* speed 8.0)))
+               :else (+ (* (/ speed (Math/abs speed)) 40.0) (* speed 6.0)))
         A [(+ x size) y]
         B [(- size) (/ (Math/abs size) 2.0)]
         C [(- size) (-(/ (Math/abs size) 2.0))]]
@@ -557,6 +557,8 @@
                 [rx ry] (:p bb)]
             ;; reset jump state
             (cond-> state
+              (= update-fn update-walk) (assoc-in [:bases :base_l :p] [(- hx 10.0) (- (min ly ry) 10.0)])
+              (= update-fn update-walk) (assoc-in [:bases :base_r :p] [(+ hx 10.0) (- (min ly ry) 10.0)])
               (= update-fn update-walk) (assoc-in [:bases :base_l :d] [(/ speed 2) -10])
               (= update-fn update-walk) (assoc-in [:bases :base_r :d] [(/ speed 2) -10])         
               true (assoc :next nil)
@@ -631,7 +633,7 @@
   (if (> health 0)
     (let [newmasses (-> masses
                         (phys2/add-gravity [0.0 0.4])
-                        (phys2/keep-angles (:aguards state))
+                        ;;(phys2/keep-angles (:aguards state))
                         (phys2/keep-distances (:dguards state))
                         (phys2/move-masses surfaces 0.4))
           newnext (if (= hittime 20) "jump" next) 
