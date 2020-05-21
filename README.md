@@ -38,3 +38,4 @@ run :
 * mushrooms that change the size/metrics of the character
 * controls menu point in menu, remove exit in browser
 * label description should be map also to be able to set text with space
+* update ui renderer and mpd

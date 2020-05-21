@@ -2,13 +2,16 @@
   (:require [mpd.math2 :as math2]))
 
 
-(defn mass2 [x y radius weight elasticity]
+(defn mass2 [x y radius weight friction elasticity]
   "create basic structure"
   {:p [x y] ;; position
    :d [0 0] ;; direction
    :w weight
    :r radius
-   :e elasticity})
+   :f friction
+   :e elasticity
+   :s nil ;; last collided surface
+   :q false}) ;; quiescence
 
 
 (defn dguard2 [masses massa massb distance elasticity]
@@ -71,25 +74,32 @@
    surfacepoints))
 
 
-(defn get-colliding-surfaces [pos dir origin radius surfaces]
+(defn get-colliding-surfaces [p d radius surfaces prev-surface]
   "collect surfaces crossed by masspoint dir or nearby endpoint"
   (reduce
-   (fn [result surface]
-     (let [isp (math2/isp-v2-v2
-                pos
-                dir
-                (surface :t)
-                (surface :b)
-                radius)
-           end (math2/add-v2 pos dir)
-           dst (math2/dist-p2-v2 end (:t surface) (:b surface))]
-       (if (not= isp nil)
-         (conj result [(math2/dist-p2-p2-cubic origin isp) isp surface])
-         (if (< dst radius)
-           (conj result [dst isp surface])
-           result))))
+   (fn [result {t :t b :b :as surface}]
+     (if-not (= surface prev-surface)
+       (let [isp (math2/collide-v2-v2 p d t b radius)]
+         (if-not (= isp nil)
+           (let [dst (math2/length-v2 (math2/sub-v2 isp p))]
+             (conj result [dst isp surface]))
+           result))
+       result))
      []
      surfaces))
+
+
+(defn get-intersecting-surfaces [p d surfaces]
+  "collect surfaces crossed by masspoint dir or nearby endpoint"
+  (reduce
+   (fn [result {t :t b :b :as surface}]
+     (let [isp (math2/intersect-v2-v2 p d t b)]
+       (if-not (= isp nil)
+         (let [dst (math2/length-v2 (math2/sub-v2 isp p))]
+           (conj result [dst isp surface]))
+         result)))
+   []
+   surfaces))
 
 
 (defn move-mass-back [surface-trans surface-dir vector-trans vector-dir radius]
@@ -181,39 +191,44 @@
 ;; mirror dir on surface and reduce it with passed distance
 ;; if dir is smaller than radius stop movement
 
-(defn move-mass [{:keys [p d r e] :as mass}
-                 surfaces]
+(defn move-mass [{:keys [p d r f e s] :as mass} surfaces gravity]
   "check collision of mass dir with all surfaces, moves mass to next iteration point based on time"
-  (loop [prevpos p ;; previous position
-         prevdir d ;; previous direction
-         fulldir d ;; final direction
-         done false ;; movement done
-         iter 0 ] ;; iterations
+
+  (loop [prev-p p ;; previous position
+         prev-d d ;; previous direction
+         full-d d ;; final direction
+         prev-s s ;; previous collided/slided surface
+         iter 0 ;; iteration
+         done false
+         quis false] ;; quisence
     (if done
-      (-> mass
-          (assoc :p prevpos)
-          (assoc :d fulldir))          
-      (let [results (sort-by first < (get-colliding-surfaces prevpos prevdir prevpos r surfaces))
-           [dest isp {strans :t sbasis :b :as segment}] (first results)]
+      (assoc mass :p prev-p :d full-d :s prev-s :q quis) ;; assoc last point and final dir          
+      (let [results (sort-by first < (get-colliding-surfaces prev-p prev-d r surfaces prev-s))
+            [dst isp {strans :t sbasis :b :as segment}] (first results)]
+
         (if segment
-          (let [newpos (move-mass-back strans sbasis prevpos prevdir (* 1.1 r))
-                fullsize (math2/length-v2 prevdir)
-                currsize (math2/length-v2 (math2/sub-v2 newpos prevpos))
-                usedsize (if (< currsize r)
-                           r
-                           (- fullsize currsize))
-                newfulldir (math2/scale-v2 (math2/mirror-v2-bases sbasis fulldir) e)
-                newdir (math2/resize-v2 newfulldir usedsize)
-                ready (or (> iter 4) (not segment))]
-            (recur newpos newdir newfulldir ready (inc iter)))
-          (recur (math2/add-v2 prevpos prevdir) prevdir fulldir true (inc iter)))))))
+          (let [full-size (math2/length-v2 prev-d)
+                used-size (if (< dst r) r (- full-size dst))] ;; go with partial size or full size of direction
+
+            (if (< full-size (* 2.0 gravity))
+              ;; sliding
+              (let [gravity-normal (math2/scale-v2 (math2/norm-p2-l2 isp strans sbasis) gravity)
+                    newfull-d (math2/scale-v2 (math2/add-v2 gravity-normal [0 gravity]) f)]
+
+                (recur isp newfull-d newfull-d segment (inc iter) false true)) ;; send mass to next iteration, if it's not in a corner it will move without bounce/slide
+              ;; bouncing
+              (let [newfull-d (math2/scale-v2 (math2/mirror-v2-bases sbasis full-d) e) ;; mirror full size of direction
+                    new-d (math2/resize-v2 newfull-d used-size)]
+                (recur isp new-d newfull-d segment (inc iter) (or (> iter 4) (not segment)) false))))
+              
+          (recur (math2/add-v2 prev-p prev-d) prev-d full-d nil (inc iter) true quis))))))
 
 
-(defn move-masses [masses surfaces]
+(defn move-masses [masses surfaces gravity]
   "check collisions and move masses to new positions considering collisions"
   (reduce
    (fn [result [id mass]]
-     (let [newmass (move-mass mass surfaces)]
+     (let [newmass (move-mass mass surfaces gravity)]
        (assoc result id newmass)))
    masses
    masses))

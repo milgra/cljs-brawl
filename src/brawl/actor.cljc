@@ -101,19 +101,19 @@
   
 
 (defn init [x y id]
-  (let [masses {:head (phys2/mass2 x y 4.0 1.0 0.2)
-                :neck (phys2/mass2 x y 4.0 1.0 0.2)
-                :hip (phys2/mass2 x y 4.0 1.0 0.2)
-                :hand_l (phys2/mass2 x y 4.0 1.0 0.2)
-                :hand_r (phys2/mass2 x y 4.0 1.0 0.2)
-                :elbow_l (phys2/mass2 x y 4.0 1.0 0.2)
-                :elbow_r (phys2/mass2 x y 4.0 1.0 0.2)
-                :knee_l (phys2/mass2 x y 4.0 1.0 0.2)
-                :knee_r (phys2/mass2 x y 4.0 1.0 0.2)
-                :foot_l (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.2)
-                :foot_r (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.2)
-                :base_l (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.0)
-                :base_r (phys2/mass2 (- x 20.0) y 4.0 1.0 0.0)}    
+  (let [masses {:head (phys2/mass2 x y 4.0 1.0 0.2 0.2)
+                :neck (phys2/mass2 x y 4.0 1.0 0.2 0.2)
+                :hip (phys2/mass2 x y 4.0 1.0 0.2 0.2)
+                :hand_l (phys2/mass2 x y 4.0 1.0 0.2 0.2)
+                :hand_r (phys2/mass2 x y 4.0 1.0 0.2 0.2)
+                :elbow_l (phys2/mass2 x y 4.0 1.0 0.2 0.2)
+                :elbow_r (phys2/mass2 x y 4.0 1.0 0.2 0.2)
+                :knee_l (phys2/mass2 x y 4.0 1.0 0.2 0.2)
+                :knee_r (phys2/mass2 x y 4.0 1.0 0.2 0.2)
+                :foot_l (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.2 0.2)
+                :foot_r (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.2 0.2)
+                :base_l (phys2/mass2 (+ x 20.0) y 2.0 1.0 0.2 0.0)
+                :base_r (phys2/mass2 (- x 20.0) y 2.0 1.0 0.2 0.0)}    
         metrics (generate-metrics (basemetrics-random))]
     
   {:id id
@@ -182,10 +182,10 @@
             footlv (math2/sub-v2 (:p knee_l) (:p hip))
             footrv (math2/sub-v2 (:p knee_r) (:p hip))
 
-            headisp (math2/isp-v2-v2 base hitv (:p head) headv 1.0)
-            bodyisp (math2/isp-v2-v2 base hitv (:p neck) bodyv 1.0)
-            footlisp (math2/isp-v2-v2 base hitv (:p hip) footlv 1.0)
-            footrisp (math2/isp-v2-v2 base hitv (:p hip) footrv 1.0)]
+            headisp (math2/intersect-v2-v2 base hitv (:p head) headv)
+            bodyisp (math2/intersect-v2-v2 base hitv (:p neck) bodyv)
+            footlisp (math2/intersect-v2-v2 base hitv (:p hip) footlv)
+            footrisp (math2/intersect-v2-v2 base hitv (:p hip) footrv)]
 
             (first (remove nil? [headisp bodyisp footlisp footrisp]))))))
             
@@ -203,10 +203,10 @@
             footlv (math2/sub-v2 (:p knee_l) (:p hip))
             footrv (math2/sub-v2 (:p knee_r) (:p hip))
 
-            headisp (math2/isp-v2-v2 base hitv (:p head) headv 1.0)
-            bodyisp (math2/isp-v2-v2 base hitv (:p neck) bodyv 1.0)
-            footlisp (math2/isp-v2-v2 base hitv (:p hip) footlv 1.0)
-            footrisp (math2/isp-v2-v2 base hitv (:p hip) footrv 1.0)
+            headisp (math2/intersect-v2-v2 base hitv (:p head) headv)
+            bodyisp (math2/intersect-v2-v2 base hitv (:p neck) bodyv)
+            footlisp (math2/intersect-v2-v2 base hitv (:p hip) footlv)
+            footrisp (math2/intersect-v2-v2 base hitv (:p hip) footrv)
 
             has-isp (or headisp bodyisp footlisp footrisp)
             neck-part (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p neck))))
@@ -229,6 +229,7 @@
                        footlisp (assoc-in [:masses :knee_l :d] (math2/add-v2 (:d knee_l) hitsm))
                        footrisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
                        footrisp (assoc-in [:masses :knee_r :d] (math2/add-v2 (:d knee_r) hitsm))))]
+
         result)
       actor)))
 
@@ -368,8 +369,8 @@
   (let [base-order (get-base-order masses speed)
         base-point (:p (masses (:passive base-order)))
         step-zone (get-step-zone base-point speed)
-        collided-top (sort-by first < (phys2/get-colliding-surfaces (:A step-zone) (:B step-zone) base-point  10.0 surfaces))
-        collided-bot (sort-by first < (phys2/get-colliding-surfaces (:A step-zone) (:C step-zone) base-point 10.0 surfaces))
+        collided-top (sort-by first < (phys2/get-intersecting-surfaces (:A step-zone) (:B step-zone) surfaces))
+        collided-bot (sort-by first < (phys2/get-intersecting-surfaces (:A step-zone) (:C step-zone) surfaces))
         collided (cond
                    (and (= vert-direction -1) (not (empty? collided-top))) collided-top
                    (and (= vert-direction 1) (not (empty? collided-bot))) collided-bot
@@ -582,8 +583,8 @@
   (let [bases (select-keys masses [:base_l :base_r])
         newbases (-> bases
                     (phys2/add-gravity [0.0 0.5])
-                    (phys2/move-masses surfaces))
-        ground (every? #(and (= % 0.0)) (flatten (map :d (vals newbases))))
+                    (phys2/move-masses surfaces 0.5))
+        ground (every? #(= % true) (flatten (map :q (vals newbases)))) ;; check quisence of bases
         next (cond
                ground "walk"
                ;(< speed -15) "idle"
@@ -624,7 +625,7 @@
                         (phys2/add-gravity [0.0 0.2])
                         ;;(phys2/keep-angles (:aguards state))
                         (phys2/keep-distances (:dguards state))
-                        (phys2/move-masses surfaces))
+                        (phys2/move-masses surfaces 0.2))
           newnext (if (= hittime 20) "jump" next) 
           result (-> state
                      (assoc :next newnext)
@@ -636,7 +637,7 @@
                         (phys2/add-gravity [0.0 0.4])
                         ;;(phys2/keep-angles (:aguards state))
                         (phys2/keep-distances (:dguards state))
-                        (phys2/move-masses surfaces))
+                        (phys2/move-masses surfaces 0.4))
           newnext (if (= hittime 150) "idle" next) 
           result (-> state
                      (assoc :next newnext)

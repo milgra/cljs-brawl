@@ -80,15 +80,40 @@
      (Math/sqrt (+ (* bx bx) (* by by))))))
 
 
-(defn isp-v2-v2 [transa basisa transb basisb radius]
-  "vector - vector intersection calculation with given radius from endpoints"
+(defn norm-p2-l2 [[px py] [tx ty] [bx by]]
+  (let [[cx cy] (isp-l2-l2 [tx ty] [bx by] [px py] [by (- bx)])]
+    [(- px cx) (- py cy)]))
+
+
+(defn intersect-v2-v2
+  "intersection point of two vectors"
+  [transa basisa transb basisb]
   (let [cp (isp-l2-l2 transa basisa transb basisb)]
     (if (= cp nil)
-     nil
-     (if (and
-          (p2-in-v2? cp transa basisa radius)
-          (p2-in-v2? cp transb basisb radius))
+      nil
+      (if (and
+          (p2-in-v2? cp transa basisa 1.0) ; point in on first vector
+          (p2-in-v2? cp transb basisb 1.0)) ; point is on translated second vector
        cp
+       nil))))
+
+(defn collide-v2-v2
+  "moves mass back to the point where radius doesn't touch the line"
+  [[e f :as ta] [g h :as ba] [a b :as tb] [c d :as bb] radius]
+  ; should fast check first with radiuses
+  (if (or
+       (and (= g 0)(= h 0))
+       (and (= c 0)(= d 0)))
+    nil ;; invalid line
+    (let [[cx cy] (isp-l2-l2 tb bb ta [d (- c)]) ; get isp of surface and perpendicular of surface from trans
+          [dx dy] [(- e cx)(- f cy)] ; vector from isp to vector trans
+          [nx ny] (resize-v2 [dx dy] radius)
+          [fx fy] (add-v2 tb [nx ny]) ; move tb towards vector trans with radius
+          result (isp-l2-l2 [fx fy] bb ta ba)] ; isp of vector and translated surface
+      (if (and
+          (p2-in-v2? result ta ba radius) ; point in on first vector
+          (p2-in-v2? result [fx fy] bb radius)) ; point is on translated second vector
+       result
        nil))))
 
 
@@ -98,8 +123,7 @@
         connv (sub-v2 [px py] cross)]
     (if (p2-in-v2? cross [tx ty] [bx by] 0)
       (length-v2 connv)
-      ##Inf
-      )))
+      ##Inf)))
 
 
 (defn mirror-v2-bases [[ax ay] [vx vy]]
