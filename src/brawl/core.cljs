@@ -310,8 +310,8 @@
   "draws background, actors, masses with projection"
   (if (:inited world)
     (let [actor (first actors)
-          [fax fay] (:p (get-in actor [:masses :base_l]))
-          [fbx fby] (:p (get-in actor [:masses :base_r]))
+          [fax fay] (:p (get-in actor [:bases :base_l]))
+          [fbx fby] (:p (get-in actor [:bases :base_r]))
           [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2))  ]
           ratio 1.0
           r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
@@ -374,7 +374,7 @@
 
           ;; check finish sign
           newnewcommands (let [[ex ey] endpos
-                          [bx by] (get-in newhero [:masses :base_l :p])
+                          [bx by] (get-in newhero [:bases :base_l :p])
                           dx (- bx ex)
                           dy (- by ey)]
                            (if (and (< (Math/abs dx) 50.0) (< (Math/abs dy) 50))

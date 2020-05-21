@@ -126,11 +126,11 @@
            conn (math2/sub-v2 fa fb)
            dist (- (math2/length-v2 conn) d)]
        (if (> (Math/abs dist) 0.01)
-         (let [newdist (if (> e 0.0) (/ dist e) dist)
+         (let [newdist (if (> e 0.0) (* dist e) dist)
                conna (math2/resize-v2 conn (- (* newdist ra)))
                connb (math2/resize-v2 conn (* newdist rb))
-               newmassa (assoc massa :d (math2/add-v2 ba conna))
-               newmassb (assoc massb :d (math2/add-v2 bb connb))]
+               newmassa (update massa :d math2/add-v2 conna)
+               newmassb (update massb :d math2/add-v2 connb)]
            (-> result
                (assoc a newmassa)
                (assoc b newmassb)))
@@ -208,7 +208,7 @@
 
         (if segment
           (let [full-size (math2/length-v2 prev-d)
-                used-size (if (< dst r) r (- full-size dst))] ;; go with partial size or full size of direction
+                used-size (- full-size dst)] ;; go with partial size or full size of direction
 
             (if (< full-size (* 2.0 gravity))
               ;; sliding
@@ -219,9 +219,11 @@
               ;; bouncing
               (let [newfull-d (math2/scale-v2 (math2/mirror-v2-bases sbasis full-d) e) ;; mirror full size of direction
                     new-d (math2/resize-v2 newfull-d used-size)]
-                (recur isp new-d newfull-d segment (inc iter) (or (> iter 4) (not segment)) false))))
-              
-          (recur (math2/add-v2 prev-p prev-d) prev-d full-d nil (inc iter) true quis))))))
+
+                (recur isp new-d newfull-d segment (inc iter) (> iter 4) false))))
+          (do
+
+          (recur (math2/add-v2 prev-p prev-d) prev-d full-d nil (inc iter) true quis)))))))
 
 
 (defn move-masses [masses surfaces gravity]

@@ -98,7 +98,7 @@
        nil))))
 
 (defn collide-v2-v2
-  "moves mass back to the point where radius doesn't touch the line"
+  "gets the point wheren vector touches the other vector translated towards the first vector by radius"
   [[e f :as ta] [g h :as ba] [a b :as tb] [c d :as bb] radius]
   ; should fast check first with radiuses
   (if (or
@@ -111,8 +111,8 @@
           [fx fy] (add-v2 tb [nx ny]) ; move tb towards vector trans with radius
           result (isp-l2-l2 [fx fy] bb ta ba)] ; isp of vector and translated surface
       (if (and
-          (p2-in-v2? result ta ba radius) ; point in on first vector
-          (p2-in-v2? result [fx fy] bb radius)) ; point is on translated second vector
+          (p2-in-v2? result ta ba 1.0) ; point is on first vector
+          (p2-in-v2? result [fx fy] bb 1.0)) ; point is on translated second vector
        result
        nil))))
 
