@@ -15,6 +15,7 @@ run :
 * összeesett ember guggolasbol alljon fol
 * 50 százaléknál essen össze mindenki egyszer
 * in case of kick without blocking, body should fall and rise again
+* slidingnal meroleges komponenst nezz, es azt gravityvel
 
 * use enemy counts from svg
 * "loading" screen

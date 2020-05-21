@@ -74,19 +74,17 @@
    surfacepoints))
 
 
-(defn get-colliding-surfaces [p d radius surfaces prev-surface]
+(defn get-colliding-surfaces [p d radius surfaces]
   "collect surfaces crossed by masspoint dir or nearby endpoint"
   (reduce
    (fn [result {t :t b :b :as surface}]
-     (if-not (= surface prev-surface)
-       (let [isp (math2/collide-v2-v2 p d t b radius)]
-         (if-not (= isp nil)
-           (let [dst (math2/length-v2 (math2/sub-v2 isp p))]
-             (conj result [dst isp surface]))
-           result))
-       result))
-     []
-     surfaces))
+     (let [isp (math2/collide-v2-v2 p d t b radius)]
+       (if-not (= isp nil)
+         (let [dst (math2/length-v2 (math2/sub-v2 isp p))]
+           (conj result [dst isp surface]))
+         result)))
+   []
+   surfaces))
 
 
 (defn get-intersecting-surfaces [p d surfaces]
@@ -193,7 +191,6 @@
 
 (defn move-mass [{:keys [p d r f e s] :as mass} surfaces gravity]
   "check collision of mass dir with all surfaces, moves mass to next iteration point based on time"
-
   (loop [prev-p p ;; previous position
          prev-d d ;; previous direction
          full-d d ;; final direction
@@ -203,10 +200,11 @@
          quis false] ;; quisence
     (if done
       (assoc mass :p prev-p :d full-d :s prev-s :q quis) ;; assoc last point and final dir          
-      (let [results (sort-by first < (get-colliding-surfaces prev-p prev-d r surfaces prev-s))
+      (let [results (sort-by first < (get-colliding-surfaces prev-p prev-d r surfaces))
             [dst isp {strans :t sbasis :b :as segment}] (first results)]
 
         (if segment
+
           (let [full-size (math2/length-v2 prev-d)
                 used-size (- full-size dst)] ;; go with partial size or full size of direction
 

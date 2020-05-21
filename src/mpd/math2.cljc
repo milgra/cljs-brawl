@@ -9,6 +9,10 @@
   [(- ax bx) (- ay by)])
 
 
+(defn dot-v2 [[ax ay][bx by]]
+  (+ (* ax bx) (* ay by)))
+
+ 
 (defn length-v2 [[ax ay]]
   (Math/sqrt (+ (* ax ax) (* ay ay))))
 
@@ -97,25 +101,37 @@
        cp
        nil))))
 
+;; todo!!! p2-in-v2 can be too heavy with radius, do something else with too close points
 (defn collide-v2-v2
   "gets the point wheren vector touches the other vector translated towards the first vector by radius"
-  [ta [bax bay :as ba] tb [bbx bby :as bb]  radius]
+  [ta [bax bay :as ba] tb [bbx bby :as bb] radius]
   ; should fast check first with radiuses
   (if (or
        (and (= bax 0)(= bay 0))
        (and (= bbx 0)(= bby 0)))
-    nil ;; invalid line
-    (let [isp (isp-l2-l2 tb bb ta ba) ;; intersection
-          psp (isp-l2-l2 tb bb ta [bby (- bbx)]) ;; intersection of surface perpendicular from trans
-          per-vec (sub-v2 ta psp) ; vector from isp to vector trans
-          rad-vec (resize-v2 per-vec radius)
-          rad-pnt (add-v2 tb rad-vec) ; move tb towards vector trans with radius
-          rad-isp (isp-l2-l2 rad-pnt bb ta ba)] ; isp of vector and translated surface
-      (if (and
-          (p2-in-v2? rad-isp ta ba 1.0) ; point is on first vector
-          (p2-in-v2? rad-isp rad-pnt bb 1.0)) ; point is on translated second vector
-       rad-isp
-       nil))))
+    ;; invalid lines
+    nil
+    ;; valid lines
+    (let [isp (isp-l2-l2 tb bb ta ba)
+          isp-to-ta (sub-v2 ta isp)
+          dot-ta-isp (dot-v2 ba isp-to-ta)]
+
+      (if (< dot-ta-isp 0)
+        ;; vectors are in the opposing direction, check collision
+        (let [psp (isp-l2-l2 tb bb ta [bby (- bbx)]) ;; intersection of surface perpendicular from trans
+              per-vec (sub-v2 ta psp) ; vector from isp to vector trans
+              rad-vec (resize-v2 per-vec radius)
+              rad-pnt (add-v2 tb rad-vec) ; move tb towards vector trans with radius
+              rad-isp (isp-l2-l2 rad-pnt bb ta ba)] ; isp of vector and translated surface          
+          (if (and
+               (p2-in-v2? rad-isp ta ba radius) ; point is on first vector
+               (p2-in-v2? rad-isp rad-pnt bb radius)) ; point is on translated second vector
+            ;; isp is on both vectors, collision
+            rad-isp
+            ;; isp is not on both vectors
+            nil))
+        ;; vectors are in the same direction, no collision
+        nil))))
 
 
 (defn dist-p2-v2 [[px py] [tx ty] [bx by]]

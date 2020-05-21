@@ -101,19 +101,19 @@
   
 
 (defn init [x y id]
-  (let [bases {:base_l (phys2/mass2 (+ x 20.0) y 2.0 1.0 0.2 0.3)
-               :base_r (phys2/mass2 (- x 20.0) y 2.0 1.0 0.2 0.3)}    
-        masses {:head (phys2/mass2 x y 4.0 1.0 0.2 0.3)
-                :neck (phys2/mass2 x y 4.0 1.0 0.2 0.3)
-                :hip (phys2/mass2 x y 4.0 1.0 0.2 0.3)
-                :hand_l (phys2/mass2 x y 4.0 1.0 0.2 0.3)
-                :hand_r (phys2/mass2 x y 4.0 1.0 0.2 0.3)
-                :elbow_l (phys2/mass2 x y 4.0 1.0 0.2 0.3)
-                :elbow_r (phys2/mass2 x y 4.0 1.0 0.2 0.3)
-                :knee_l (phys2/mass2 x y 4.0 1.0 0.2 0.3)
-                :knee_r (phys2/mass2 x y 4.0 1.0 0.2 0.3)
-                :foot_l (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.2 0.3)
-                :foot_r (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.2 0.3)}
+  (let [bases {:base_l (phys2/mass2 (+ x 20.0) y 2.0 1.0 0.0 0.0)
+               :base_r (phys2/mass2 (- x 20.0) y 2.0 1.0 0.0 0.0)}    
+        masses {:head (phys2/mass2 x y 4.0 1.0 0.2 0.7)
+                :neck (phys2/mass2 x y 4.0 1.0 0.2 0.7)
+                :hip (phys2/mass2 x y 4.0 1.0 0.2 0.7)
+                :hand_l (phys2/mass2 x y 4.0 1.0 0.2 0.7)
+                :hand_r (phys2/mass2 x y 4.0 1.0 0.2 0.7)
+                :elbow_l (phys2/mass2 x y 4.0 1.0 0.2 0.7)
+                :elbow_r (phys2/mass2 x y 4.0 1.0 0.2 0.7)
+                :knee_l (phys2/mass2 x y 4.0 1.0 0.2 0.7)
+                :knee_r (phys2/mass2 x y 4.0 1.0 0.2 0.7)
+                :foot_l (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.2 0.7)
+                :foot_r (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.2 0.7)}
         metrics (generate-metrics (basemetrics-random))]
     
   {:id id
@@ -153,6 +153,14 @@
              (phys2/dguard2 masses :elbow_l :hand_l (* 0.5 (:arml metrics)) 0.0)
              (phys2/dguard2 masses :elbow_r :hand_r (* 0.5 (:arml metrics)) 0.0)
              ]
+   :aguards [
+             (phys2/aguard2 masses :head :neck :hip 0 Math/PI 0.5)
+             (phys2/aguard2 masses :hip :knee_l :foot_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
+             (phys2/aguard2 masses :hip :knee_r :foot_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
+             (phys2/aguard2 masses :neck :elbow_r :hand_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
+             (phys2/aguard2 masses :neck :elbow_l :hand_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
+             ]
+       
    ; debug
    :step-zone [x y]
    ; body metrics
@@ -226,15 +234,15 @@
                        true (assoc :next "rag")
                        true (update :health - 15) 
                        true (update :speed  + (* (/ hvx (Math/abs hvx)) 5.0))
-                       true (assoc :masses (reduce (fn [oldmasses [id mass]] (assoc oldmasses id (assoc mass :d [0 0]))) {} masses))
-                       ;; headisp (assoc-in [:masses :head :d] (math2/add-v2 (:d head) hitbg))
-                       ;; headisp (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) hitsm))
-                       ;; bodyisp (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) (math2/scale-v2 hitbg (+ 0.4 neck-ratio))))
-                       ;; bodyisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) (math2/scale-v2 hitbg (+ 0.4 hip-ratio))))
-                       ;; footlisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
-                       ;; footlisp (assoc-in [:masses :knee_l :d] (math2/add-v2 (:d knee_l) hitsm))
-                       ;; footrisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
-                       ;; footrisp (assoc-in [:masses :knee_r :d] (math2/add-v2 (:d knee_r) hitsm))
+                       ;; true (assoc :masses (reduce (fn [oldmasses [id mass]] (assoc oldmasses id (assoc mass :d [0 0]))) {} masses))
+                       headisp (assoc-in [:masses :head :d] (math2/add-v2 (:d head) hitbg))
+                       headisp (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) hitsm))
+                       bodyisp (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) (math2/scale-v2 hitbg (+ 0.4 neck-ratio))))
+                       bodyisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) (math2/scale-v2 hitbg (+ 0.4 hip-ratio))))
+                       footlisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
+                       footlisp (assoc-in [:masses :knee_l :d] (math2/add-v2 (:d knee_l) hitsm))
+                       footrisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
+                       footrisp (assoc-in [:masses :knee_r :d] (math2/add-v2 (:d knee_r) hitsm))
                        ))]
 
         result)
@@ -356,7 +364,7 @@
         A [(+ x size) y]
         B [(- size) (/ (Math/abs size) 2.0)]
         C [(- size) (-(/ (Math/abs size) 2.0))]]
-    {:A A :B B :C C}))
+    {:A A :B B :C C :T (math2/add-v2 A C) :M (math2/add-v2 A B)}))
 
 
 (defn get-base-order
@@ -376,16 +384,17 @@
   (let [base-order (get-base-order bases speed)
         base-point (:p (bases (:passive base-order)))
         step-zone (get-step-zone base-point speed)
-        collided-top (sort-by first < (phys2/get-intersecting-surfaces (:A step-zone) (:B step-zone) surfaces))
-        collided-bot (sort-by first < (phys2/get-intersecting-surfaces (:A step-zone) (:C step-zone) surfaces))
+        collided-top (sort-by first < (phys2/get-colliding-surfaces (:T step-zone) (math2/sub-v2 (:A step-zone) (:T step-zone)) 4.0 surfaces))
+        collided-bot (sort-by first < (phys2/get-colliding-surfaces (:A step-zone) (math2/sub-v2 (:M step-zone) (:A step-zone)) 4.0 surfaces))
         collided (cond
-                   (and (= vert-direction -1) (not (empty? collided-top))) collided-top
-                   (and (= vert-direction 1) (not (empty? collided-bot))) collided-bot
+                   (and (= vert-direction 1) (not (empty? collided-top))) collided-top
+                   (and (= vert-direction -1) (not (empty? collided-bot))) collided-bot
                    :else (concat collided-top collided-bot))
         surf (first collided)
         base-target (if surf (nth surf 1) (:A step-zone))
         newpassivesurf (:active base-surfaces)
         newactivesurf (if surf (nth surf 2) nil)]
+
     (-> state
         (assoc :step-zone {:A (:A step-zone)
                            :B (math2/add-v2 (:A step-zone)(:B step-zone))
@@ -548,14 +557,8 @@
                 [rx ry] (:p bb)]
             ;; reset jump state
             (cond-> state
-              (= update-fn update-walk) (assoc-in [:bases :base_l :p] [(- hx 10.0) (- (min ly ry) 10.0)])
-              (= update-fn update-walk) (assoc-in [:bases :base_r :p] [(+ hx 10.0) (- (min ly ry) 10.0)])
               (= update-fn update-walk) (assoc-in [:bases :base_l :d] [(/ speed 2) -10])
               (= update-fn update-walk) (assoc-in [:bases :base_r :d] [(/ speed 2) -10])         
-              (= update-fn update-rag) (assoc-in [:bases :base_l :p] (math2/add-v2 (:p fl) [0 -1]))
-              (= update-fn update-rag) (assoc-in [:bases :base_r :p] (math2/add-v2 (:p fr) [0 -1]))
-              ;(= update-fn update-rag) (assoc-in [:masses :base_l] (update (:foot_l masses) :p math2/add-v2 [0 -25]))
-              ;(= update-fn update-rag) (assoc-in [:masses :base_r] (update (:foot_r masses) :p math2/add-v2 [0 -25]))
               true (assoc :next nil)
               true (assoc :update-fn update-jump)))
 
@@ -627,21 +630,21 @@
 (defn update-rag [{:keys [masses dguards hittime next health] :as state } control surfaces time]
   (if (> health 0)
     (let [newmasses (-> masses
-                        (phys2/add-gravity [0.0 0.2])
-                        ;;(phys2/keep-angles (:aguards state))
-                        ;;(phys2/keep-distances (:dguards state))
-                        (phys2/move-masses surfaces 0.2))
-          newnext (if (= hittime 200) "jump" next) 
+                        (phys2/add-gravity [0.0 0.4])
+                        (phys2/keep-angles (:aguards state))
+                        (phys2/keep-distances (:dguards state))
+                        (phys2/move-masses surfaces 0.4))
+          newnext (if (= hittime 20) "jump" next) 
           result (-> state
                      (assoc :next newnext)
                      (assoc :masses newmasses)
                      (update :hittime inc))]
-      (println "masses" newmasses)
+
       (if (= result nil) println "UPDATERAG ERROR!!!")
       result)
     (let [newmasses (-> masses
                         (phys2/add-gravity [0.0 0.4])
-                        ;;(phys2/keep-angles (:aguards state))
+                        (phys2/keep-angles (:aguards state))
                         (phys2/keep-distances (:dguards state))
                         (phys2/move-masses surfaces 0.4))
           newnext (if (= hittime 150) "idle" next) 
