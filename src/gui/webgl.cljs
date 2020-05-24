@@ -62,6 +62,9 @@
         
         ui-location-pos (shaders/get-attrib-location context ui-shader "position")
         ui-location-texcoord (shaders/get-attrib-location context ui-shader "texcoord")]
+
+    (set! (. tempcanvas -width) 1000)
+    (set! (. tempcanvas -height) 200)
     
     {:context context
      :tempcanvas tempcanvas

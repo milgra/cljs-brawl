@@ -373,19 +373,27 @@
 (def info
   {:id "Info"
    :class ""
-   :texture {:type "Color" :color 0x00FF00AA}
+   :texture {:type "Color" :color 0x00AA00AA}
    :width "100 %" 
    :height "100 %" 
    :subviews
    
    [{:id "Message"
-     :class "Slider"
+     :class ""
      :texture {:type "Color" :color 0x00FF0055}
-     :label {:type "Label" :text "Loading" :size 30 :color 0xFFFFFFFF}
-     :width "500 px" 
+     :width "100 %" 
      :height "90 px" 
      :center-y "Edge 50 %" 
-     :center-x "Edge 50 %"}]})
+     :center-x "Edge 50 %"
+     :subviews
+
+     [{:id "Text"
+      :class ""
+      :texture {:type "Label" :text "Loading" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
+      :width "400 px" 
+      :height "90 px" 
+      :center-y "Edge 50 %" 
+      :center-x "Edge 50 %"}]}]})
 
 
 (def failure
@@ -397,29 +405,55 @@
    :subviews
    
    [{:id "Reason"
-     :class "Slider"
-     :texture {:type "Color" :color 0xFF000055}
-     :label {:type "Label" :text "Health Problems" :size 30 :color 0xFFFFFFFF}
+     :class ""
+     :texture {:type "Color" :color 0xFFFFFF55}
      :width "100 %" 
      :height "50 px" 
      :top "Edge 50 px" 
-     :right "Edge 0 px"}
-
+     :center-x "Edge 50 %"
+     :subviews
+     
+     [{:id "Text"
+       :class ""
+       :texture {:type "Label" :text "Health Problems" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
+       :width "400 px" 
+       :height "50 px" 
+       :center-y "Edge 50 %" 
+       :center-x "Edge 50 %"}]}
+    
     {:id "Message"
-     :class "Slider"
-     :texture {:type "Color" :color 0x00FF0055}
-     :label {:type "Label" :text "Loading" :size 30 :color 0xFFFFFFFF}
-     :width "500 px" 
+     :class ""
+     :texture {:type "Color" :color 0xFF000055}
+     :width "100 %" 
      :height "90 px" 
      :center-y "Edge 50 %" 
-     :center-x "Edge 50 %"}
+     :center-x "Edge 50 %"
+     :subviews
+     
+     [{:id "MsgText"
+       :class ""
+       :texture {:type "Label" :text "Wasted" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
+       :width "400 px" 
+       :height "90 px" 
+       :center-y "Edge 50 %" 
+       :center-x "Edge 50 %"}]
+     }
 
     {:id "Restart"
-     :class "Button"
-     :command "restart level"
-     :texture {:type "Color" :color 0xFFFFFF55}
-     :label {:type "Label" :text "Continue" :size 30 :color 0xFFFFFFFF}
-     :width "500 px" 
+     :class ""
+     :texture {:type "Color" :color 0x00FF00AA}
+     :width "100 %" 
      :height "50 px" 
      :bottom "Edge 50 px" 
-     :center-x "Edge 50 %"}]})
+     :center-x "Edge 50 %"
+     :subviews
+
+     [{:id "Button"
+       :class "Button"
+       :command "restart level"
+       :texture {:type "Color" :color 0x00000000}
+       :label {:type "Label" :text "Continue" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
+       :width "200 px" 
+       :height "50 px" 
+       :center-y "Edge 50 %" 
+       :center-x "Edge 50 %"}]}]})

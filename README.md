@@ -27,7 +27,6 @@ run :
 * gun drag
 * hangok mp3-ba
 * death/loading/congrats ui pages
-* block multiple kick/punch in a row
 * szakadekrol lelepes csekk
 * auto aim at head after first punch
 * AI - standing enemy, walking towards enemy, running and jumping and kicking enemy
@@ -38,5 +37,4 @@ run :
 * rain with particles
 * mushrooms that change the size/metrics of the character
 * controls menu point in menu, remove exit in browser
-* label description should be map also to be able to set text with space
 * update ui renderer and mpd
