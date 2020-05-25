@@ -264,7 +264,7 @@
 
 (defn move-hand-walk
   "move head point"
-  [{:keys [id facing punch-pressed punch-hand action-sent commands speed]
+  [{:keys [id facing punch-hand action-sent commands speed]
     {{[hx hy] :p} :hip {[nx ny :as neck] :p} :neck } :masses
     {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
     {arml :arml} :metrics angle :idle-angle

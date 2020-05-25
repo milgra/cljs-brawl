@@ -130,17 +130,11 @@
                   toks (clojure.string/split id #"_")
                   type (first (second toks))]
               (cond
-                (= type "l")
-                (let [team (js/parseInt (second (nth toks 2)))
-                      level (js/parseInt (second (second toks)))]
-                  (-> oldstate
-                      (assoc :actors (conj
-                                      actors
-                                      (actor/init
-                                       (first pos)
-                                       (second pos)
-                                       (if (= level 0) :hero (keyword (names/getname)))
-                                       (nth colors team))))))
+                (= type "l") (let [team (js/parseInt (second (nth toks 2)))
+                                   level (js/parseInt (second (second toks)))
+                                   name (if (= level 0) :hero (keyword (names/getname)))
+                                   color (nth colors team)]
+                               (update oldstate :actors assoc name (actor/init (first pos) (second pos) name color)))
                 (= type "g") (assoc oldstate :guns (conj guns {:pos pos}))
                 (= type "e") (assoc oldstate :endpos pos)
                 (= type "i") (assoc oldstate :infos (conj infos {:pos pos :index (js/parseInt (second type))})))     
@@ -148,7 +142,7 @@
 
 
 (defn update-gen-sliders [{:keys [views world] :as state}]
-  (let [{:keys [height hitpower hitrate stamina speed]} (get-in world [:actors 0 :metrics :base])
+  (let [{:keys [height hitpower hitrate stamina speed]} (get-in world [:actors :hero :metrics :base])
         hpsl (:Hitpower views)
         hrsl (:Hitrate views)
         hesl (:Height views)
@@ -166,13 +160,13 @@
 (defn execute-attack [{ {actors :actors particles :particles} :world :as state} command]
   ;; hittest other actors
   (let [[dx dy] (math2/resize-v2 (math2/sub-v2 (:target command) (:base command)) 4.0)
-        contacts (remove nil? (map (fn [actor] (actor/hitpoint actor command)) actors))
-        newparticles (reduce (fn [ res [x y] ]
+        contacts (remove nil? (map (fn [[id actor]] (actor/hitpoint actor command)) actors))
+        newparticles (reduce (fn [res [x y]]
                                (concat res
                                        (repeatedly 10 #(particle/init x y [1.0 1.0 1.0 0.5] (math2/resize-v2 [(+ (- 1.0) (rand 2.0)) (+ (- 1.0) (rand 2.0))] (+ 1.0 (rand 2.0))) :dust))
                                        (repeatedly 5 #(particle/init x y [1.0 0.0 0.0 0.5]  [ (+ dx -2.0 (rand 2.0)) (+ dy -2.0 (rand 2.0))] :blood))))
                              [] contacts)
-        newactors (vec (map (fn [actor] (actor/hit actor command)) actors))]
+        newactors (reduce (fn [result [id actor]] (assoc result id (actor/hit actor command))) {} actors)]
     (-> state
         (assoc-in [:world :particles] (concat particles newparticles))
         (assoc-in [:world :actors] newactors ))))
@@ -183,7 +177,7 @@
     (load-level! state next-level)
     (-> state
         (assoc :world {:inited false
-                       :actors [] ; (actor/init 580.0 300.0)]
+                       :actors {} ; (actor/init 580.0 300.0)]
                        :guns []
                        :infos []
                        :endpos [0 0]
@@ -193,86 +187,79 @@
 
 
 (defn execute-commands [{commands :commands :as state}]
-  (reduce (fn [oldstate {text :text :as command}]
+  (reduce
+   (fn [oldstate {text :text :as command}]
+     (let [hero (get-in oldstate [:worlds :actors :hero])
+           path-metrics [:world :actors :hero :metrics]]
+       (cond
+         (= text "attack")
+         (execute-attack oldstate command)
+         ;; ui
+         (= text "set-hitpower") ; update base metrics and generate new metrics for hero
+         (let [nbase (-> (get-in hero [:metrics :base])
+                         (assoc :hitpower (:ratio command))
+                         (actor/basemetrics-normalize :hitpower))
+               nmetrics (actor/generate-metrics nbase)]
+           (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
+         (= text "set-hitrate") ; update base metrics and generate new metrics for hero
+         (let [nbase (-> (get-in hero [:metrics :base])
+                         (assoc :hitrate (:ratio command))
+                         (actor/basemetrics-normalize :hitrate))
+               nmetrics (actor/generate-metrics nbase)]
+           (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
+         (= text "set-height") ; update base metrics and generate new metrics for hero
+         (let [nbase (-> (get-in hero [:metrics :base])
+                         (assoc :height (:ratio command))
+                         (actor/basemetrics-normalize :height))
+               nmetrics (actor/generate-metrics nbase)]
+           (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
+         (= text "set-speed") ; update base metrics and generate new metrics for hero
+         (let [nbase (-> (get-in hero [:metrics :base])
+                         (assoc :speed (:ratio command))
+                         (actor/basemetrics-normalize :speed))
+               nmetrics (actor/generate-metrics nbase)]
+           (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
+         (= text "set-stamina") ; update base metrics and generate new metrics for hero
+         (let [nbase (-> (get-in hero [:metrics :base])
+                         (assoc :stamina (:ratio command))
+                         (actor/basemetrics-normalize :stamina))
+               nmetrics (actor/generate-metrics nbase)]
+           (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
+         (= text "randomize")
+         (let [nbase (-> (actor/basemetrics-random)
+                         (actor/basemetrics-normalize :height))
+               nmetrics (actor/generate-metrics nbase)]
+           (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
+         
+         (= text "show-menu") (load-ui oldstate layouts/menu)
+         (= text "continue") (load-ui oldstate (if (= (:curr-level oldstate) 0) layouts/generator layouts/hud))
+         (= text "options") (load-ui oldstate layouts/options)
+         (= text "options back") (load-ui oldstate layouts/menu)
 
-            (cond
+         (= text "left") (assoc-in oldstate [:keycodes 37] true)
+         (= text "right") (assoc-in oldstate [:keycodes 39] true)
+         (= text "jump") (assoc-in oldstate [:keycodes 38] true)
+         (= text "down") (assoc-in oldstate [:keycodes 40] true)
+         (= text "run") (assoc-in oldstate [:keycodes 32] true)
+         (= text "punch") (assoc-in oldstate [:keycodes 70] true)
+         (= text "kick") (assoc-in oldstate [:keycodes 83] true)
+         (= text "block") (assoc-in oldstate [:keycodes 68] true)
+         
+         (= text "start-game")
+         (-> oldstate
+             (load-ui layouts/info)
+             (update :commands conj {:text "load-level"}))
 
-              (= text "attack")
-              (execute-attack oldstate command)
+         (= text "next-level")
+         (-> oldstate
+             (load-ui layouts/info)
+             (update :commands conj {:text "load-level"}))
 
-              ;; ui
-              
-              (= text "set-hitpower") ; update base metrics and generate new metrics for actor
-              (let [actor (get-in oldstate [:world :actors 0])
-                    nbase (-> (get-in actor [:metrics :base])
-                              (assoc :hitpower (:ratio command))
-                              (actor/basemetrics-normalize :hitpower))
-                    nmetrics (actor/generate-metrics nbase)]
-                (-> oldstate (assoc-in [:world :actors 0 :metrics] nmetrics) (update-gen-sliders)))
-              (= text "set-hitrate") ; update base metrics and generate new metrics for actor
-              (let [actor (get-in oldstate [:world :actors 0])
-                    nbase (-> (get-in actor [:metrics :base])
-                              (assoc :hitrate (:ratio command))
-                              (actor/basemetrics-normalize :hitrate))
-                    nmetrics (actor/generate-metrics nbase)]
-                (-> oldstate (assoc-in [:world :actors 0 :metrics] nmetrics) (update-gen-sliders)))
-              (= text "set-height") ; update base metrics and generate new metrics for actor
-              (let [actor (get-in oldstate [:world :actors 0])
-                    nbase (-> (get-in actor [:metrics :base])
-                              (assoc :height (:ratio command))
-                              (actor/basemetrics-normalize :height))
-                    nmetrics (actor/generate-metrics nbase)]
-                (-> oldstate (assoc-in [:world :actors 0 :metrics] nmetrics) (update-gen-sliders)))
-              (= text "set-speed") ; update base metrics and generate new metrics for actor
-              (let [actor (get-in oldstate [:world :actors 0])
-                    nbase (-> (get-in actor [:metrics :base])
-                              (assoc :speed (:ratio command))
-                              (actor/basemetrics-normalize :speed))
-                    nmetrics (actor/generate-metrics nbase)]
-                (-> oldstate (assoc-in [:world :actors 0 :metrics] nmetrics) (update-gen-sliders)))
-              (= text "set-stamina") ; update base metrics and generate new metrics for actor
-              (let [actor (get-in oldstate [:world :actors 0])
-                    nbase (-> (get-in actor [:metrics :base])
-                              (assoc :stamina (:ratio command))
-                              (actor/basemetrics-normalize :stamina))
-                    nmetrics (actor/generate-metrics nbase)]
-                (-> oldstate (assoc-in [:world :actors 0 :metrics] nmetrics) (update-gen-sliders)))
-              (= text "randomize")
-              (let [actor (get-in oldstate [:world :actors 0])
-                    nbase (-> (actor/basemetrics-random)
-                              (actor/basemetrics-normalize :height))
-                    nmetrics (actor/generate-metrics nbase)]
-                (-> oldstate (assoc-in [:world :actors 0 :metrics] nmetrics) (update-gen-sliders)))
-              
-              (= text "show-menu") (load-ui oldstate layouts/menu)
-              (= text "continue") (load-ui oldstate (if (= (:curr-level oldstate) 0) layouts/generator layouts/hud))
-              (= text "options") (load-ui oldstate layouts/options)
-              (= text "options back") (load-ui oldstate layouts/menu)
+         (= text "load-level") (load-next-level oldstate)
 
-              (= text "left") (assoc-in oldstate [:keycodes 37] true)
-              (= text "right") (assoc-in oldstate [:keycodes 39] true)
-              (= text "jump") (assoc-in oldstate [:keycodes 38] true)
-              (= text "down") (assoc-in oldstate [:keycodes 40] true)
-              (= text "run") (assoc-in oldstate [:keycodes 32] true)
-              (= text "punch") (assoc-in oldstate [:keycodes 70] true)
-              (= text "kick") (assoc-in oldstate [:keycodes 83] true)
-              (= text "block") (assoc-in oldstate [:keycodes 68] true)
-              
-              (= text "start-game")
-              (-> oldstate
-                  (load-ui layouts/info)
-                  (update :commands conj {:text "load-level"}))
-
-              (= text "next-level")
-              (-> oldstate
-                  (load-ui layouts/info)
-                  (update :commands conj {:text "load-level"}))
-
-              (= text "load-level") (load-next-level oldstate)
-
-              :else oldstate))
-          (assoc state :commands [])
-          commands))
+         :else oldstate)))
+   (assoc state :commands [])
+   commands))
 
 
 (defn draw-ui [{:keys [gui views viewids] :as state} frame]
@@ -307,9 +294,9 @@
 (defn draw-world [{:keys [gfx trans floatbuffer] {:keys [actors particles surfacelines] :as world} :world :as state} frame msg]
   "draws background, actors, masses with projection"
   (if (:inited world)
-    (let [actor (first actors)
-          [fax fay] (:p (get-in actor [:bases :base_l]))
-          [fbx fby] (:p (get-in actor [:bases :base_r]))
+    (let [hero (:hero actors)
+          [fax fay] (:p (get-in hero [:bases :base_l]))
+          [fbx fby] (:p (get-in hero [:bases :base_r]))
           [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2))  ]
           ratio 1.0
           r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
@@ -321,7 +308,10 @@
           newgfx (if (and msg (= (:id msg) "level")) (webgl/loadshapes gfx (filter #(if (:id %) (not (clojure.string/includes? (:id %) "Pivot")) true) (:shapes msg))) gfx)
 
           newbuf (floatbuf/empty! floatbuffer)
-          newbuf1 (reduce (fn [oldbuf actor] (actorskin/get-skin-triangles actor oldbuf variation vis-rect)) newbuf (rseq actors))]
+          newbuf1 (reduce (fn [oldbuf [id actor]]
+                            (actorskin/get-skin-triangles actor oldbuf variation vis-rect))
+                          newbuf
+                          actors)]
       ;; draw triangles
       (webgl/clear! newgfx)
       (webgl/drawshapes! newgfx projection trans variation)
@@ -329,13 +319,13 @@
 
       (let [newbuf2 (floatbuf/empty! newbuf1)
             newbuf3 (reduce (fn [oldbuf particle] (particle/get-point particle oldbuf)) newbuf2 particles) ;; particles
-            newbuf4 (reduce (fn [oldbuf actor] (actorskin/getpoints actor oldbuf vis-rect)) newbuf3 actors)]
+            newbuf4 (reduce (fn [oldbuf [id actor]] (actorskin/getpoints actor oldbuf vis-rect)) newbuf3 actors)]
 
         ;; draw points
         (webgl/drawpoints! newgfx projection newbuf4)
 
         (let [newbuf5 (floatbuf/empty! newbuf4)
-              newbuf6 (reduce (fn [oldbuf actor] (actorskin/getlines actor oldbuf vis-rect)) newbuf5 actors)
+              newbuf6 (reduce (fn [oldbuf [id actor]] (actorskin/getlines actor oldbuf vis-rect)) newbuf5 actors)
               newbuf7 (floatbuf/append! newbuf6 surfacelines)]
           ;; draw lines
           (webgl/drawlines! newgfx projection newbuf7)
@@ -359,20 +349,36 @@
                      :run (keycodes 32)
                      :kick (keycodes 83)
                      :block (keycodes 68)}
-          newhero (actor/update-actor (first actors) currcodes surfaces actors 1.0)
-          newactors (vec (concat [ newhero ] (map (fn [ actor ] (actor/update-actor actor nil surfaces actors 1.0)) (rest actors))))
+          
+          newactors (reduce (fn [result [id actor]]
+                              (let [newactor (cond
+                                               (not= :hero id) (actor/update-actor actor nil surfaces actors 1.0)
+                                               :else (actor/update-actor actor currcodes surfaces actors 1.0))]
+                                (assoc result id newactor)))
+                            {}
+                            actors)
 
           ;; extract commands
-          newcommands (reduce (fn [result {comms :commands :as actor}] (if (empty? comms) result (conj result comms))) commands newactors)
+          newcommands (reduce (fn [result [id actor]]
+                                (if (empty? (:commands actor))
+                                  result
+                                  (conj result (:commands actor))))
+                              commands
+                              newactors)
 
           ;; remove commands if needed
           newnewactors (if (empty? newcommands)
                          newactors
-                         (mapv (fn [{comms :commands :as actor}] (if (empty? comms) actor (-> actor (assoc :commands []) (assoc :action-sent true)))) newactors)) 
+                         (reduce (fn [result [id actor]]
+                                   (if (empty? (:commands actor))
+                                     result
+                                     (assoc result id (-> actor (assoc :commands []) (assoc :action-sent true)))))
+                                 newactors
+                                 newactors))
 
           ;; check finish sign
           newnewcommands (let [[ex ey] endpos
-                          [bx by] (get-in newhero [:bases :base_l :p])
+                          [bx by] (get-in newactors [:hero :bases :base_l :p])
                           dx (- bx ex)
                           dy (- by ey)]
                            (if (and (< (Math/abs dx) 50.0) (< (Math/abs dy) 50))
@@ -401,6 +407,7 @@
                        (assoc :particles seeds)
                        (assoc :surfaces surfaces)
                        (assoc :surfacelines lines))]
+
       (cond-> state
           true (assoc :world newworld)
           true (update-gen-sliders)
@@ -451,7 +458,7 @@
   (resize-context!)
 
   (let [world {:inited false
-               :actors []
+               :actors {}
                :guns []
                :infos []
                :endpos [0 0]
@@ -477,7 +484,7 @@
         final (-> state
                   (load-ui layouts/generator)
                   (load-font! "Ubuntu Bold" "Ubuntu-Bold.ttf")
-                  (load-level! 1)
+                  (load-level! 0)
                   (init-events!))]
 
     (animate final
