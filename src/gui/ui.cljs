@@ -77,7 +77,6 @@
 
 (defn gen-from-desc [viewmap viewdesc]
   "generate view structure from description"
-  (println "gen-from-desc" (:id viewdesc) viewmap)
   (let [subviews   (:subviews viewdesc)
         subids     (if subviews (map (fn [desc] (keyword (:id desc))) subviews) []) ; finalsubviews property needs ids only
         subviewmap (if subviews (reduce (fn [oldmap desc] (gen-from-desc oldmap desc)) viewmap subviews) viewmap) ; generate subviews into viewmap

@@ -123,6 +123,7 @@
     facing :facing
     randoms :randoms
     health :health
+    color :colorf
     }
    floatbuffer
    variation
@@ -159,7 +160,7 @@
         
         ;; body
         true (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [(+ neckw 5.0 r0) (+ neckw 5.0 r1) (+ hipw 5.0 r2)] black)
-        true (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [(+ neckw r3) (+ neckw r4) (+ hipw r5)] colc)
+        true (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [(+ neckw r3) (+ neckw r4) (+ hipw r5)] color)
         
         ;; head
         true (gen-head-triangles (:p head) (:p neck) facing (+ 5.0 r6) [(/ (- 100.0 health) 100.0) 0.0 0.0 1.0])

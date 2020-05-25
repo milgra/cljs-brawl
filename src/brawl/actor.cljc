@@ -98,9 +98,17 @@
                 :cola color_a :colb [dra dga dba 1.0] :colc color_b :cold [drb dgb dbb 1.0]
                 :base base}] ; colors
     result))
+
+
+(defn int-to-rgba [color]
+  (let [r (/ (float (bit-and (bit-shift-right color 24) 0xFF)) 255.0)
+        g (/ (float (bit-and (bit-shift-right color 16) 0xFF)) 255.0)
+        b (/ (float (bit-and (bit-shift-right color 8) 0xFF)) 255.0)
+        a (/ (float (bit-and color 0xFF)) 255.0)]
+    [r g b a]))
   
 
-(defn init [x y id]
+(defn init [x y id color]
   (let [bases {:base_l (phys2/mass2 (+ x 20.0) y 2.0 1.0 0.0 0.0)
                :base_r (phys2/mass2 (- x 20.0) y 2.0 1.0 0.0 0.0)}    
         masses {:head (phys2/mass2 x y 4.0 1.0 0.2 0.7)
@@ -116,57 +124,59 @@
                 :foot_r (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.2 0.7)}
         metrics (generate-metrics (basemetrics-random))]
     
-  {:id id
-   :next nil ; next mode walk / jump / idle
-   :speed 0.0
-   :power 100.0
-   :health 100.0
-   :facing 1.0
-   :update-fn update-jump
-   :idle-angle 0
-   :action-sent false
-   :commands []
-   ; control state
-   :control {:left false :right false :up false :down false :punch false :kick false :block false :run false }
-   ; walk state
-   :bases bases
-   :squat-size 0
-   :base-order {:active :base_l :passive :base_r}
-   :base-target nil
-   :base-surfaces {:active nil :passive nil}
-   :punch-hand :hand_l
-   :punch-press false
-   :vert-direction 1
-   :kick-press false
-   :jump-state 0
-   :step-length 0
-   ; masses
-   :masses masses
-   :metrics metrics
-   :dguards [
-             (phys2/dguard2 masses :head :neck (:headl metrics) 0.0)
-             (phys2/dguard2 masses :neck :hip (:bodyl metrics) 0.0)
-             (phys2/dguard2 masses :hip :knee_l (* 0.5 (:legl metrics)) 0.0)
-             (phys2/dguard2 masses :hip :knee_r (* 0.5 (:legl metrics)) 0.0)
-             (phys2/dguard2 masses :knee_l :foot_l (* 0.5 (:legl metrics)) 0.0)
-             (phys2/dguard2 masses :knee_r :foot_r (* 0.5 (:legl metrics)) 0.0)
-             (phys2/dguard2 masses :neck :elbow_l (* 0.5 (:arml metrics)) 0.0)
-             (phys2/dguard2 masses :neck :elbow_r (* 0.5 (:arml metrics)) 0.0)
-             (phys2/dguard2 masses :elbow_l :hand_l (* 0.5 (:arml metrics)) 0.0)
-             (phys2/dguard2 masses :elbow_r :hand_r (* 0.5 (:arml metrics)) 0.0)
-             ]
-   :aguards [
-             (phys2/aguard2 masses :head :neck :hip 0 Math/PI 0.5)
-             (phys2/aguard2 masses :hip :knee_l :foot_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
-             (phys2/aguard2 masses :hip :knee_r :foot_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
-             (phys2/aguard2 masses :neck :elbow_r :hand_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
-             (phys2/aguard2 masses :neck :elbow_l :hand_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
-             ]
-       
-   ; debug
-   :step-zone [x y]
-   ; body metrics
-   :randoms (vec (repeatedly 40 #(+ -1.5 (rand 3))))})); random sizes for skin phasing
+    {:id id
+     :color color
+     :colorf (int-to-rgba color)
+     :next nil ; next mode walk / jump / idle
+     :speed 0.0
+     :power 100.0
+     :health 100.0
+     :facing 1.0
+     :update-fn update-jump
+     :idle-angle 0
+     :action-sent false
+     :commands []
+                                        ; control state
+     :control {:left false :right false :up false :down false :punch false :kick false :block false :run false }
+                                        ; walk state
+     :bases bases
+     :squat-size 0
+     :base-order {:active :base_l :passive :base_r}
+     :base-target nil
+     :base-surfaces {:active nil :passive nil}
+     :punch-hand :hand_l
+     :punch-press false
+     :vert-direction 1
+     :kick-press false
+     :jump-state 0
+     :step-length 0
+                                        ; masses
+     :masses masses
+     :metrics metrics
+     :dguards [
+               (phys2/dguard2 masses :head :neck (:headl metrics) 0.0)
+               (phys2/dguard2 masses :neck :hip (:bodyl metrics) 0.0)
+               (phys2/dguard2 masses :hip :knee_l (* 0.5 (:legl metrics)) 0.0)
+               (phys2/dguard2 masses :hip :knee_r (* 0.5 (:legl metrics)) 0.0)
+               (phys2/dguard2 masses :knee_l :foot_l (* 0.5 (:legl metrics)) 0.0)
+               (phys2/dguard2 masses :knee_r :foot_r (* 0.5 (:legl metrics)) 0.0)
+               (phys2/dguard2 masses :neck :elbow_l (* 0.5 (:arml metrics)) 0.0)
+               (phys2/dguard2 masses :neck :elbow_r (* 0.5 (:arml metrics)) 0.0)
+               (phys2/dguard2 masses :elbow_l :hand_l (* 0.5 (:arml metrics)) 0.0)
+               (phys2/dguard2 masses :elbow_r :hand_r (* 0.5 (:arml metrics)) 0.0)
+               ]
+     :aguards [
+               (phys2/aguard2 masses :head :neck :hip 0 Math/PI 0.5)
+               (phys2/aguard2 masses :hip :knee_l :foot_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
+               (phys2/aguard2 masses :hip :knee_r :foot_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
+               (phys2/aguard2 masses :neck :elbow_r :hand_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
+               (phys2/aguard2 masses :neck :elbow_l :hand_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
+               ]
+     
+                                        ; debug
+     :step-zone [x y]
+                                        ; body metrics
+     :randoms (vec (repeatedly 40 #(+ -1.5 (rand 3))))})); random sizes for skin phasing
 
 
 
@@ -289,7 +299,8 @@
   [{:keys [facing squat-size kick-pressed] {{[hx hy] :p} :hip} :masses
     {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
     {legl :legl bodyl :bodyl headl :headl} :metrics
-    {:keys [down up left right kick]} :control :as state}]
+    {:keys [down up left right kick]} :control :as state}
+   time]
   (let [nx (* facing (/ (Math/abs (- bx ax )) 8.0 )) ; head move forward and backwards when stepping
         nnx (* facing squat-size 0.5) ; head move even forward when squatting
         ny (* squat-size 0.25) ; head should move lower when squatting
@@ -306,7 +317,8 @@
   [{:keys [facing squat-size punch-pressed speed] {{[hx hy] :p} :hip} :masses
     {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
     {legl :legl bodyl :bodyl headl :headl} :metrics
-    {:keys [down up left right punch]} :control :as state}]
+    {:keys [down up left right punch]} :control :as state}
+   time]
   (let [nx (* facing (+ (* (Math/abs speed) 1.0) (/ (Math/abs (- bx ax )) 15.0 ))) ; head move forward and backwards when stepping
         nnx (* facing squat-size 0.5) ; head move even forward when squatting
         ny (* squat-size 0.25) ; head should move lower when squatting
@@ -631,7 +643,6 @@
 (defn update-walk
   "update walk state"
   [state surfaces time]
-  (println "update-walk" (:control state))
   (let [result (-> state
                   (update-speed time)
                   (move-feet-walk surfaces time)
@@ -714,11 +725,8 @@
 
 
 (defn update-ai
-  [state surfaces actors time]
-  
-
-  state
-  )
+  [{:keys [color] :as state} control surfaces actors time]
+  (if-not control (assoc-in state [:control :left] true) state))
 
 
 (defn update-actor [{mode :mode update-fn :update-fn :as state} control surfaces actors time]
@@ -726,7 +734,7 @@
   ;;(if (= (:id state) :enemy) (println "BEFORE UPDATE" (:version state) (get-in state [:masses :knee_l :d] )))
   (let [result (-> state
                    (update-controls control) ;; manual controls for hero
-                   (update-ai surfaces actors time) ;; ai controls for others
+                   (update-ai control surfaces actors time) ;; ai controls for others
                    (update-angle)
                    (update-fn surfaces time)
                    (update-mode)

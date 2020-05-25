@@ -15,6 +15,7 @@
             [brawl.actorskin :as actorskin]
             [mpd.phys2 :as phys2]
             [mpd.math2 :as math2]
+            [brawl.names :as names]
             [brawl.particle :as particle]
             [brawl.layouts :as layouts]
             [brawl.floatbuffer :as floatbuf])
@@ -118,7 +119,8 @@
    (fn [event] (resize-context!)))
 
   state)
-    
+
+(def colors [0xFF0000FF 0x00FF00FF 0x0000FFFF 0xFF00FFFF 0x00FFFFFFF 0xFFFF00FF])
 
 (defn create-actors
   "add actors, infos, guns and enpoint to scene based on pivot points in svg"
@@ -127,25 +129,21 @@
             (let [pos (nth path 3)
                   toks (clojure.string/split id #"_")
                   type (first (second toks))]
-              (cond (= type "l")
-                    (do
-                      (println "create actor" id type pos)
-                      (-> oldstate
+              (cond
+                (= type "l")
+                (let [team (js/parseInt (second (nth toks 2)))
+                      level (js/parseInt (second (second toks)))]
+                  (-> oldstate
                       (assoc :actors (conj
                                       actors
                                       (actor/init
                                        (first pos)
                                        (second pos)
-                                       (if (= id "Pivot_l0_t0") :hero (keyword (str (rand)))))
-
-                                      ;; (actor/init
-                                      ;;  (first pos)
-                                      ;;  (second pos)
-                                      ;;  (if (= id "Pivot_l0_t0") :enemy (keyword (str (rand)))))
-                                      ))))
-                    (= type "g") (assoc oldstate :guns (conj guns {:pos pos}))
-                    (= type "e") (assoc oldstate :endpos pos)
-                    (= type "i") (assoc oldstate :infos (conj infos {:pos pos :index (js/parseInt (second type))})))     
+                                       (if (= level 0) :hero (keyword (names/getname)))
+                                       (nth colors team))))))
+                (= type "g") (assoc oldstate :guns (conj guns {:pos pos}))
+                (= type "e") (assoc oldstate :endpos pos)
+                (= type "i") (assoc oldstate :infos (conj infos {:pos pos :index (js/parseInt (second type))})))     
               )) state pivots))
 
 
@@ -171,8 +169,8 @@
         contacts (remove nil? (map (fn [actor] (actor/hitpoint actor command)) actors))
         newparticles (reduce (fn [ res [x y] ]
                                (concat res
-                                       (repeatedly 10 #(particle/init x y [1.0 1.0 1.0 0.5] (math2/resize-v2 [(+ (- 1.0) (rand 2.0)) (+ (- 1.0) (rand 2.0))] (+ 1.0 (rand 2.0)))  :dust))
-                                       (repeatedly 5 #(particle/init x y [1.0 0.0 0.0 0.5]  [ (+ dx -2.0 (rand 2.0)) (+ dy -2.0 (rand 2.0)) ]  :blood))))
+                                       (repeatedly 10 #(particle/init x y [1.0 1.0 1.0 0.5] (math2/resize-v2 [(+ (- 1.0) (rand 2.0)) (+ (- 1.0) (rand 2.0))] (+ 1.0 (rand 2.0))) :dust))
+                                       (repeatedly 5 #(particle/init x y [1.0 0.0 0.0 0.5]  [ (+ dx -2.0 (rand 2.0)) (+ dy -2.0 (rand 2.0))] :blood))))
                              [] contacts)
         newactors (vec (map (fn [actor] (actor/hit actor command)) actors))]
     (-> state
@@ -396,7 +394,7 @@
           pivots (filter #(if (:id %) (clojure.string/includes? (:id %) "Pivot") false) svglevel)
           surfaces (phys2/surfaces-from-pointlist points)
           lines (clj->js (reduce (fn [result {[tx ty] :t [bx by] :b}] (concat result [tx ty 1.0 1.0 1.0 1.0 (+ tx bx) (+ ty by) 1.0 1.0 1.0 1.0])) [] surfaces))
-          seeds (map #(particle/init 0.0 0.0 [1.0 1.0 1.0 0.2] [(+ 0.1 (rand 0.6)) (+ 0.05 (rand 0.3))]  :seed) (take 20 (cycle "a")))
+          seeds (map #(particle/init 0.0 0.0 [1.0 1.0 1.0 0.5] [(+ 0.1 (rand 0.6)) (+ 0.05 (rand 0.3))]  :seed) (take 20 (cycle "a")))
           newworld (-> world
                        (create-actors pivots)
                        (assoc :inited true)
@@ -479,7 +477,7 @@
         final (-> state
                   (load-ui layouts/generator)
                   (load-font! "Ubuntu Bold" "Ubuntu-Bold.ttf")
-                  (load-level! 0)
+                  (load-level! 1)
                   (init-events!))]
 
     (animate final
