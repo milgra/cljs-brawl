@@ -134,20 +134,21 @@
      :facing 1.0
      :update-fn update-jump
      :idle-angle 0
-     :action-sent false
      :commands []
-                                        ; control state
+     ;; ai state
+     :ai-state :idle
+     :ai-enemy nil
+     ;; control state
      :control {:left false :right false :up false :down false :punch false :kick false :block false :run false }
-                                        ; walk state
+     :action-sent false
+     ;; walk state
      :bases bases
      :squat-size 0
      :base-order {:active :base_l :passive :base_r}
      :base-target nil
      :base-surfaces {:active nil :passive nil}
      :punch-hand :hand_l
-     :punch-press false
      :vert-direction 1
-     :kick-press false
      :jump-state 0
      :step-length 0
                                         ; masses
@@ -725,8 +726,14 @@
 
 
 (defn update-ai
-  [{:keys [color] :as state} control surfaces actors time]
-  (if-not control (assoc-in state [:control :left] true) state))
+  [{:keys [color ai-state] :as state} control surfaces actors time]
+  (cond
+    (= :idle ai-state)
+    (do
+      ;; look for enemy
+      state
+      )
+    :else state))
 
 
 (defn update-actor [{mode :mode update-fn :update-fn :as state} control surfaces actors time]
