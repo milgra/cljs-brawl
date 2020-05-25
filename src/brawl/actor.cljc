@@ -138,6 +138,7 @@
      ;; ai state
      :ai-state :idle
      :ai-enemy nil
+     :ai-duration 0
      ;; control state
      :control {:left false :right false :up false :down false :punch false :kick false :block false :run false }
      :action-sent false
@@ -612,8 +613,7 @@
             state)
           )]
     (if (= result nil) println "UPDATEMODE ERROR!!!")
-    result
-    ))
+    result))
 
 
 (defn update-jump
@@ -726,15 +726,34 @@
 
 
 (defn update-ai
-  [{:keys [color ai-state] :as state} control surfaces actors time]
-  (cond
-    (= :idle ai-state)
-    (do
-      ;; look for enemy
-      state
-      )
-    :else state))
-
+  [{:keys [id color ai-state ai-duration] {{p :p} :base_l} :bases :as state} control surfaces actors time]
+  (if-not control
+    (let [new-duration (+ ai-duration time)]
+       (cond
+        (= :idle ai-state)
+        (if (> new-duration 60)
+          (let [by-distance (sort-by
+                             first
+                             (remove
+                              nil?
+                              (map (fn [[id actor]]
+                                     (let [pos (get-in actor [:bases :base_l :p])
+                                           col (:color actor)
+                                           [dx dy] (math2/sub-v2 pos p)]
+                                       (if (and (< (Math/abs dx) 500) (< (Math/abs dy) 500) (not= col color)) [(+ dx dy) id] nil)))
+                                   actors)))
+                enemy (first by-distance)]
+            ;; look for enemy
+            (if enemy
+              (-> state
+                  (assoc :ai-duration 0)
+                  (assoc :ai-enemy (if enemy (second enemy) nil))
+                  (assoc :ai-state :attack))
+              (assoc state :ai-duration 0)))
+          (assoc state :ai-duration new-duration))
+        :else (assoc state :ai-duration new-duration)))
+      state))
+  
 
 (defn update-actor [{mode :mode update-fn :update-fn :as state} control surfaces actors time]
   "update actor state"
