@@ -10,6 +10,8 @@ run :
 
 ## Todo
 
+* ai
+* drag body
 
 * music, sounds!
 * összeesett ember guggolasbol alljon fol
@@ -18,8 +20,6 @@ run :
 * slidingnal meroleges komponenst nezz, es azt gravityvel
 
 * use enemy counts from svg
-* "loading" screen
-* fej piros legyen aztan lila
 * kifordult lab masodik palyan
 * new game/show physics/fullscreen button should work
 * working control buttons down/up

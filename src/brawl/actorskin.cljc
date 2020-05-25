@@ -121,7 +121,9 @@
     {af :active pf :passive} :base-order
     {as :active ps :passive} :base-surfaces
     facing :facing
-    randoms :randoms}
+    randoms :randoms
+    health :health
+    }
    floatbuffer
    variation
    [l r b t]]
@@ -160,7 +162,7 @@
         true (gen-tube-triangles [(:p head) (:p neck) (:p hip)] [(+ neckw r3) (+ neckw r4) (+ hipw r5)] colc)
         
         ;; head
-        true (gen-head-triangles (:p head) (:p neck) facing (+ 5.0 r6) black)
+        true (gen-head-triangles (:p head) (:p neck) facing (+ 5.0 r6) [(/ (- 100.0 health) 100.0) 0.0 0.0 1.0])
         true (gen-head-triangles (:p head) (:p neck) facing r7 [0.8 0.5 0.5 1.0])
         
         ;; arms
