@@ -729,7 +729,7 @@
   [{:keys [id color ai-state ai-duration] {{p :p} :base_l} :bases :as state} control surfaces actors time]
   (if-not control
     (let [new-duration (+ ai-duration time)]
-       (cond
+      (cond
         (= :idle ai-state)
         (if (> new-duration 60)
           (let [by-distance (sort-by
@@ -751,7 +751,10 @@
                   (assoc :ai-state :attack))
               (assoc state :ai-duration 0)))
           (assoc state :ai-duration new-duration))
-        :else (assoc state :ai-duration new-duration)))
+        (= :attack ai-state)
+        (assoc state :ai-duratmagion new-duration)
+        :else
+        (assoc state :ai-duration new-duration)))
       state))
   
 

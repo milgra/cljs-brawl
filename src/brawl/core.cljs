@@ -176,13 +176,7 @@
   (let [next-level (min (inc curr-level) 6)]
     (load-level! state next-level)
     (-> state
-        (assoc :world {:inited false
-                       :actors {} ; (actor/init 580.0 300.0)]
-                       :guns []
-                       :infos []
-                       :endpos [0 0]
-                       :surfaces []
-                       :surfacelines []})
+        (assoc-in [:world :loaded] false)
         (assoc :curr-level next-level))))
 
 
@@ -291,7 +285,7 @@
         (and msg (= (:id msg) "redraw-ui")) (assoc :gui (uiwebgl/reset gui)))))
 
 
-(defn draw-world [{:keys [gfx trans floatbuffer] {:keys [actors particles surfacelines] :as world} :world :as state} frame msg]
+(defn draw-world [{:keys [gfx trans floatbuffer] {:keys [actors particles surfacelines] :as world} :world curr-level :curr-level :as state} frame msg]
   "draws background, actors, masses with projection"
   (if (:inited world)
     (let [hero (:hero actors)
@@ -338,9 +332,9 @@
 
 (defn update-world
   "updates phyisics and actors"
-  [{{:keys [actors surfaces particles inited endpos vis-rect] :as world} :world keycodes :keycodes curr-level :curr-level commands :commands :as state} msg]
+  [{{:keys [actors surfaces particles inited loaded endpos vis-rect] :as world} :world keycodes :keycodes curr-level :curr-level commands :commands :as state} msg]
   (cond
-    inited ; create new state
+    loaded ; create new state
     (let [currcodes {:left (keycodes 37)
                      :right (keycodes 39)
                      :up (keycodes 38)
@@ -401,17 +395,20 @@
           surfaces (phys2/surfaces-from-pointlist points)
           lines (clj->js (reduce (fn [result {[tx ty] :t [bx by] :b}] (concat result [tx ty 1.0 1.0 1.0 1.0 (+ tx bx) (+ ty by) 1.0 1.0 1.0 1.0])) [] surfaces))
           seeds (map #(particle/init 0.0 0.0 [1.0 1.0 1.0 0.5] [(+ 0.1 (rand 0.6)) (+ 0.05 (rand 0.3))]  :seed) (take 20 (cycle "a")))
-          newworld (-> world
-                       (create-actors pivots)
-                       (assoc :inited true)
-                       (assoc :particles seeds)
-                       (assoc :surfaces surfaces)
-                       (assoc :surfacelines lines))]
+          newworld (-> {:actors {}
+                        :guns []
+                        :infos []
+                        :inited true
+                        :loaded true
+                        :particles seeds
+                        :surfaces surfaces
+                        :surfacelines lines}
+                       (create-actors pivots))]
 
       (cond-> state
-          true (assoc :world newworld)
-          true (update-gen-sliders)
-          (> curr-level 0) (load-ui layouts/hud)))
+        true (assoc :world newworld)
+        true (update-gen-sliders)
+        (> curr-level 0) (load-ui layouts/hud)))
 
     :else ; return unchanged
     state))
