@@ -12,8 +12,8 @@ run :
 
 * ai
 * drag body
-
 * music, sounds!
+
 * összeesett ember guggolasbol alljon fol
 * 50 százaléknál essen össze mindenki egyszer
 * in case of kick without blocking, body should fall and rise again

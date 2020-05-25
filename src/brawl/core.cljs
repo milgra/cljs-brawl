@@ -361,8 +361,8 @@
                      :run (keycodes 32)
                      :kick (keycodes 83)
                      :block (keycodes 68)}
-          newhero (actor/update-actor (first actors) currcodes surfaces 1.0)
-          newactors (vec (concat [ newhero ] (map (fn [ actor ] (actor/update-actor actor {} surfaces 1.0)) (rest actors))))
+          newhero (actor/update-actor (first actors) currcodes surfaces actors 1.0)
+          newactors (vec (concat [ newhero ] (map (fn [ actor ] (actor/update-actor actor nil surfaces actors 1.0)) (rest actors))))
 
           ;; extract commands
           newcommands (reduce (fn [result {comms :commands :as actor}] (if (empty? comms) result (conj result comms))) commands newactors)
