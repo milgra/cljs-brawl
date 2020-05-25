@@ -726,7 +726,7 @@
 
 
 (defn update-ai
-  [{:keys [id color ai-state ai-duration] {{p :p} :base_l} :bases :as state} control surfaces actors time]
+  [{:keys [id color ai-state ai-duration ai-enemy] {{p :p} :base_l} :bases :as state} control surfaces actors time]
   (if-not control
     (let [new-duration (+ ai-duration time)]
       (cond
@@ -752,7 +752,14 @@
               (assoc state :ai-duration 0)))
           (assoc state :ai-duration new-duration))
         (= :attack ai-state)
-        (assoc state :ai-duratmagion new-duration)
+        (let [enemy (ai-enemy actors)
+              [px py] (get-in enemy [:bases :base_l :p])]
+          (cond-> state
+             (> px (first p)) (assoc-in [:control :right] true)
+             (> px (first p)) (assoc-in [:control :left] false)
+             (< px (first p)) (assoc-in [:control :left] true)
+             (< px (first p)) (assoc-in [:control :right] false)
+             true (assoc :ai-duration new-duration)))
         :else
         (assoc state :ai-duration new-duration)))
       state))
