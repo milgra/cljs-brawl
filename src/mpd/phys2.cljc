@@ -86,6 +86,19 @@
    surfaces))
 
 
+(defn get-colliding-surfaces-by-distance [p d radius surfaces point]
+  "collect surfaces crossed by masspoint dir or nearby endpoint"
+  (reduce
+   (fn [result {t :t b :b :as surface}]
+     (let [isp (math2/collide-v2-v2 p d t b radius)]
+       (if-not (= isp nil)
+         (let [dst (math2/length-v2 (math2/sub-v2 isp point))]
+           (conj result [dst isp surface]))
+         result)))
+   []
+   surfaces))
+
+
 (defn get-intersecting-surfaces [p d surfaces]
   "collect surfaces crossed by masspoint dir or nearby endpoint"
   (reduce

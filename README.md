@@ -11,7 +11,6 @@ run :
 ## Todo
 
 * mukodo menu
-* vegigmeheto palyak
 * working control buttons down/up
 * use enemy counts from svg
 * lassab punch rate
@@ -25,3 +24,4 @@ run :
 * slidingnal meroleges komponenst nezz, es azt gravityvel
 * time scaling
 * update ui renderer and mpd
+* first aid box vagy auto health

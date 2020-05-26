@@ -247,7 +247,7 @@
                        true (assoc :hittime time)
                        true (assoc :hitduration (if (and headisp (> power 39)) 100 20))
                        true (assoc :next "rag")
-                       true (update :health - 15) 
+                       true (update :health - power) 
                        true (update :speed  + (* (/ hvx (Math/abs hvx)) 5.0))
                        ;; true (assoc :masses (reduce (fn [oldmasses [id mass]] (assoc oldmasses id (assoc mass :d [0 0]))) {} masses))
                        headisp (assoc-in [:masses :head :d] (math2/add-v2 (:d head) hitbg))
@@ -415,10 +415,10 @@
   (let [base-order (get-base-order bases speed)
         base-point (:p (bases (:passive base-order)))
         step-zone (get-step-zone base-point speed)
-        collided-top (sort-by first < (phys2/get-colliding-surfaces (:T step-zone) (math2/sub-v2 (:A step-zone) (:T step-zone)) 4.0 surfaces))
-        collided-bot (sort-by first < (phys2/get-colliding-surfaces (:A step-zone) (math2/sub-v2 (:M step-zone) (:A step-zone)) 4.0 surfaces))
+        collided-top (sort-by first < (phys2/get-colliding-surfaces-by-distance (:T step-zone) (math2/sub-v2 (:A step-zone) (:T step-zone)) 4.0 surfaces base-point))
+        collided-bot (sort-by first < (phys2/get-colliding-surfaces-by-distance (:A step-zone) (math2/sub-v2 (:M step-zone) (:A step-zone)) 4.0 surfaces base-point))
         collided (cond
-                   (and (= vert-direction 1) (not (empty? collided-top))) collided-top
+                   (and (= vert-direction  1) (not (empty? collided-top))) collided-top
                    (and (= vert-direction -1) (not (empty? collided-bot))) collided-bot
                    :else (concat collided-top collided-bot))
         surf (first collided)

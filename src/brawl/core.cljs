@@ -72,8 +72,7 @@
       (.setItem js/localStorage item item)
       (.removeItem js/localStorage item)
       true
-      (catch :default _
-        false))))
+      (catch :default _ false))))
 
 
 (defn load-defaults! [state]
@@ -98,60 +97,61 @@
   state))
 
 
-(def keycodes (atom {}))
-(def mousedown (atom false))
-
 (defn init-events!
   "start event listening"
   [state]
-  (events/listen
-   js/document
-   EventType.KEYDOWN
-   (fn [event]
-     (let [code (.-keyCode event)
-           prev (get @keycodes code)]
-       (swap! keycodes assoc code true)
-       (if (not prev) (put! (:msgch state) {:id "key" :code (.-keyCode event) :value true})))))
+  (let [key-codes (atom {})
+        mouse-down (atom false)]
+    
+    (events/listen
+     js/document
+     EventType.KEYDOWN
+     (fn [event]
+       (let [code (.-keyCode event)
+             prev (get @key-codes code)]
+         (swap! key-codes assoc code true)
+         (if (not prev) (put! (:msgch state) {:id "key" :code (.-keyCode event) :value true})))))
 
-  (events/listen
-   js/document
-   EventType.KEYUP
-   (fn [event]
-     (let [code (.-keyCode event)
-           prev (get @keycodes code)]
-       (swap! keycodes assoc code false)
-       (if prev (put! (:msgch state) {:id "key" :code (.-keyCode event) :value false})))))
+    (events/listen
+     js/document
+     EventType.KEYUP
+     (fn [event]
+       (let [code (.-keyCode event)
+             prev (get @key-codes code)]
+         (swap! key-codes assoc code false)
+         (if prev (put! (:msgch state) {:id "key" :code (.-keyCode event) :value false})))))
 
-  (events/listen
-   js/document
-   EventType.TOUCHSTART
-   (fn [event]
-     (println "touchstart" event)))
+    (events/listen
+     js/document
+     EventType.TOUCHSTART
+     (fn [event]
+       (println "touchstart" event)))
 
-  (events/listen
-   js/document
-   EventType.MOUSEDOWN
-   (fn [event]
-     (swap! mousedown not)
-     (put! (:msgch state) {:id "mouse" :type "down" :point [(.-clientX event) (.-clientY event)]})))
+    (events/listen
+     js/document
+     EventType.MOUSEDOWN
+     (fn [event]
+       (swap! mouse-down not)
+       (put! (:msgch state) {:id "mouse" :type "down" :point [(.-clientX event) (.-clientY event)]})))
 
-  (events/listen
-   js/document
-   EventType.MOUSEUP
-   (fn [event]
-     (swap! mousedown not)
-     (put! (:msgch state) {:id "mouse" :type "up" :point [(.-clientX event) (.-clientY event)]})))
+    (events/listen
+     js/document
+     EventType.MOUSEUP
+     (fn [event]
+       (swap! mouse-down not)
+       (put! (:msgch state) {:id "mouse" :type "up" :point [(.-clientX event) (.-clientY event)]})))
 
-  (events/listen
-   js/document
-   EventType.MOUSEMOVE
-   (fn [event]
-     (if @mousedown (put! (:msgch state) {:id "mouse" :type "down" :point [(.-clientX event) (.-clientY event)]}))))
+    (events/listen
+     js/document
+     EventType.MOUSEMOVE
+     (fn [event]
+       (if @mouse-down (put! (:msgch state) {:id "mouse" :type "down" :point [(.-clientX event) (.-clientY event)]}))))
 
-  (events/listen
-   js/window
-   EventType.RESIZE
-   (fn [event] (resize-context!))))
+    (events/listen
+     js/window
+     EventType.RESIZE
+     (fn [event] (resize-context!)))))
+
 
 (def colors [0xFF0000FF 0x00FF00FF 0x0000FFFF 0xFF00FFFF 0x00FFFFFFF 0xFFFF00FF])
 
@@ -223,7 +223,7 @@
         (assoc :curr-level next-level))))
 
 
-(defn execute-commands [{commands :commands :as state}]
+(defn execute-commands [{:keys [curr-level] commands :commands :as state}]
   (reduce
    (fn [oldstate {text :text :as command}]
      (let [hero (get-in oldstate [:worlds :actors :hero])
@@ -272,11 +272,10 @@
          (= text "continue") (load-ui oldstate (if (= (:curr-level oldstate) 0) layouts/generator layouts/hud))
          (= text "options")
          (let [newstate (load-ui oldstate layouts/options)]
-           (println "EFFECTS" (get-in newstate [:volumes :music]))
            (assoc newstate :views (-> (:views newstate)
                                       (ui/set-slider-value (:Music (:views newstate)) (get-in newstate [:volumes :music]))
                                       (ui/set-slider-value (:Effects (:views newstate)) (get-in newstate [:volumes :effects])))))
-
+         
          (= text "donate") (save-defaults! oldstate)
          (= text "options back") (load-ui oldstate layouts/menu)
 
@@ -293,11 +292,15 @@
          (-> oldstate
              (load-ui layouts/info)
              (update :commands conj {:text "load-level"}))
-
+         
          (= text "next-level")
-         (-> oldstate
-             (load-ui layouts/info)
-             (update :commands conj {:text "load-level"}))
+         (if (= curr-level 6)
+           ;; show congrats screen
+           (load-ui oldstate layouts/info)
+           ;; load next level
+           (-> oldstate
+               (load-ui layouts/info)
+               (update :commands conj {:text "load-level"})))
 
          (= text "load-level") (load-next-level oldstate)
 
@@ -346,14 +349,14 @@
           r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
           h (* 350.0 ratio)
           w (* h r)
-          [l r b t :as vis-rect] [(- tx w) (+ tx w) (+ ty h) (- ty h)]
+          [l r b t :as view-rect] [(- tx w) (+ tx w) (+ ty h) (- ty h)]
           projection (math4/proj_ortho (+ l 50) (- r 50) (- b 50) (+ t 50) -1.0 1.0)    
           variation (Math/floor (mod (/ frame 10.0) 3.0 ))
           newgfx (if (and msg (= (:id msg) "level")) (webgl/loadshapes gfx (filter #(if (:id %) (not (clojure.string/includes? (:id %) "Pivot")) true) (:shapes msg))) gfx)
 
           newbuf (floatbuf/empty! floatbuffer)
           newbuf1 (reduce (fn [oldbuf [id actor]]
-                            (actorskin/get-skin-triangles actor oldbuf variation vis-rect))
+                            (actorskin/get-skin-triangles actor oldbuf variation view-rect))
                           newbuf
                           actors)]
       ;; draw triangles
@@ -363,42 +366,32 @@
 
       (let [newbuf2 (floatbuf/empty! newbuf1)
             newbuf3 (reduce (fn [oldbuf particle] (particle/get-point particle oldbuf)) newbuf2 particles) ;; particles
-            newbuf4 (reduce (fn [oldbuf [id actor]] (actorskin/getpoints actor oldbuf vis-rect)) newbuf3 actors)]
+            newbuf4 (reduce (fn [oldbuf [id actor]] (actorskin/getpoints actor oldbuf view-rect)) newbuf3 actors)]
 
         ;; draw points
         (webgl/drawpoints! newgfx projection newbuf4)
 
         (let [newbuf5 (floatbuf/empty! newbuf4)
-              newbuf6 (reduce (fn [oldbuf [id actor]] (actorskin/getlines actor oldbuf vis-rect)) newbuf5 actors)
+              newbuf6 (reduce (fn [oldbuf [id actor]] (actorskin/getlines actor oldbuf view-rect)) newbuf5 actors)
               newbuf7 (floatbuf/append! newbuf6 surfacelines)]
           ;; draw lines
           (webgl/drawlines! newgfx projection newbuf7)
 
           (-> state
               (assoc :gfx newgfx)
-              (assoc-in [:world :vis-rect] vis-rect)
+              (assoc-in [:world :view-rect] view-rect)
               (assoc :floatbuffer newbuf7)))))
     state))
 
 
 (defn update-world
   "updates phyisics and actors"
-  [{{:keys [actors surfaces particles inited loaded endpos vis-rect] :as world} :world keycodes :keycodes curr-level :curr-level commands :commands sounds :sounds :as state} msg]
-  (cond
-    loaded ; create new state
-    (let [currcodes {:left (keycodes 37)
-                     :right (keycodes 39)
-                     :up (keycodes 38)
-                     :down (keycodes 40)
-                     :punch (keycodes 70)
-                     :run (keycodes 32)
-                     :kick (keycodes 83)
-                     :block (keycodes 68)}
-          
-          newactors (reduce (fn [result [id actor]]
+  [{{:keys [actors surfaces particles inited loaded endpos view-rect finished] :as world} :world keycodes :keycodes curr-level :curr-level commands :commands sounds :sounds controls :controls :as state} msg]
+  (if loaded
+    (let [newactors (reduce (fn [result [id actor]]
                               (let [newactor (cond
                                                (not= :hero id) (actor/update-actor actor nil surfaces actors 1.0)
-                                               :else (actor/update-actor actor currcodes surfaces actors 1.0))]
+                                               :else (actor/update-actor actor controls surfaces actors 1.0))]
                                 (assoc result id newactor)))
                             {}
                             actors)
@@ -420,70 +413,86 @@
                                      (assoc result id (-> actor (assoc :commands []) (assoc :action-sent true)))))
                                  newactors
                                  newactors))
-
-          ;; check finish sign
-          newnewcommands (let [[ex ey] endpos
-                          [bx by] (get-in newactors [:hero :bases :base_l :p])
-                          dx (- bx ex)
-                          dy (- by ey)]
-                           (if (and (< (Math/abs dx) 50.0) (< (Math/abs dy) 50))
-                             (conj newcommands {:text "next-level"})
-                             newcommands))
-
-          newparticles (map (fn [particle] (particle/upd particle vis-rect)) particles)
+          ;; finished sign?
+          ended (let [[ex ey] endpos
+                      [bx by] (get-in newactors [:hero :bases :base_l :p])
+                      dx (- bx ex)
+                      dy (- by ey)]
+                  (if (and (< (Math/abs dx) 50.0) (< (Math/abs dy) 50)) true false))
           
-          newworld (assoc world :actors newnewactors :particles newparticles)]
+          newnewcommands (if (and (not finished) ended) (conj newcommands {:text "next-level"}) newcommands)
+
+          newparticles (map (fn [particle] (particle/upd particle view-rect)) particles)
+          
+          newworld (assoc world :actors newnewactors :particles newparticles :finished ended)]
 
       (-> state
           (assoc :commands newnewcommands)
           (assoc :world newworld)))
-    
-    (and msg (= (:id msg) "level")) ; load new level
+    state))
+
+
+(defn reset-world [{:keys [curr-level view-rect] :as state} msg]
+  (if (and msg (= (:id msg) "level"))
     (let [svglevel (:shapes msg)
-          [ l r b t] vis-rect
+          [l r b t] view-rect
           points (map :path (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) svglevel ))
           pivots (filter #(if (:id %) (clojure.string/includes? (:id %) "Pivot") false) svglevel)
           surfaces (phys2/surfaces-from-pointlist points)
           lines (clj->js (reduce (fn [result {[tx ty] :t [bx by] :b}] (concat result [tx ty 1.0 1.0 1.0 1.0 (+ tx bx) (+ ty by) 1.0 1.0 1.0 1.0])) [] surfaces))
-          seeds (map #(particle/init 0.0 0.0 [1.0 1.0 1.0 0.5] [(+ 0.1 (rand 0.6)) (+ 0.05 (rand 0.3))]  :seed) (take 20 (cycle "a")))
+          seeds (map #(particle/init 0.0 0.0 [1.0 1.0 1.0 0.5] [(+ 0.1 (rand 0.6)) (+ 0.05 (rand 0.3))]  :seed) (range 0 20))
           newworld (-> {:actors {}
                         :guns []
                         :infos []
                         :inited true
                         :loaded true
+                        :finished false
                         :particles seeds
                         :surfaces surfaces
                         :surfacelines lines}
                        (create-actors pivots))]
-      
+
       (cond-> state
         true (assoc :world newworld)
         true (update-gen-sliders)
+        true (assoc :commands [])
         (= curr-level 0) (load-ui layouts/generator)
         (> curr-level 0) (load-ui layouts/hud)))
-
-    :else ; return unchanged
     state))
 
 
-(defn update-keycodes [state msg]
-  (let [keycodes (if (and msg (= (:id msg) "key"))
-                   (assoc (:keycodes state) (:code msg) (:value msg))
-                   (:keycodes state))
-        [tx ty] (:trans state)
+(defn update-controls [{:keys [keycodes controls] :as state } msg]
+  (if (and msg (= (:id msg) "key"))
+    (let [new-codes (assoc (:keycodes state) (:code msg) (:value msg))
+          new-controls {:left (new-codes 37)
+                       :right (new-codes 39)
+                       :up (new-codes 38)
+                       :down (new-codes 40)
+                       :punch (new-codes 70)
+                       :run (new-codes 32)
+                       :kick (new-codes 83)
+                       :block (new-codes 68)}]
+      (-> state
+          (assoc :keycodes new-codes)
+          (assoc :controls new-controls)))
+    state))
+
+
+(defn update-speed [{{:keys [left right up down] } :controls :as state} msg]
+  (println "speed" left right up down)
+  (let [[tx ty] (:trans state)
         [sx sy] (:speed state)
         nsx (cond
-              (keycodes 37) (- sx 0.4)
-              (keycodes 39) (+ sx 0.4)
+              left (- sx 0.4)
+              right (+ sx 0.4)
               "default" (* sx 0.9))
         nsy (cond
-              (keycodes 38) (- sy 0.4)
-              (keycodes 40) (+ sy 0.4)
+              up (- sy 0.4)
+              down (+ sy 0.4)
               "default" (* sy 0.9))
         ntx (+ tx sx)
         nty (+ ty sy)]  
     (-> state
-        (assoc :keycodes keycodes)
         (assoc :speed [nsx nsy])
         (assoc :trans [ntx nty]))))
 
@@ -507,26 +516,27 @@
   (resize-context!)
 
   (let [world {:inited false
-               :actors {}
+               :loaded false
                :guns []
                :infos []
+               :actors {}
                :endpos [0 0]
                :surfaces []
-               :surfacelines []
                :particles []
-               :vis-rect [0 0 0 0]} ; visible rect in world
+               :surfacelines []
+               :view-rect [0 0 0 0]}
 
-        sound {:argh0 (js/Audio. "sounds/argh0.mp3")
+        sound {:shot (js/Audio. "sounds/shot.mp3")
+               :theme (js/Audio. "sounds/theme.mp3")
+               :argh0 (js/Audio. "sounds/argh0.mp3")
                :argh1 (js/Audio. "sounds/argh1.mp3")
                :argh2 (js/Audio. "sounds/argh2.mp3")
                :death0 (js/Audio. "sounds/death0.mp3")
                :death1 (js/Audio. "sounds/death1.mp3")
                :punch0 (js/Audio. "sounds/punch0.mp3")
                :punch1 (js/Audio. "sounds/punch1.mp3")
-               :punch2 (js/Audio. "sounds/punch2.mp3")
-               :shot (js/Audio. "sounds/shot.mp3")
-               :theme (js/Audio. "sounds/theme.mp3")}
-        
+               :punch2 (js/Audio. "sounds/punch2.mp3")}
+
         state {:gfx (webgl/init)
                :gui (uiwebgl/init)
                :world world
@@ -535,8 +545,16 @@
                :viewids []
                :curr-level 0
                :floatbuffer (floatbuf/create!)
-               :keycodes {}
                :commands []
+               :keycodes {}
+               :controls {:left false
+                         :right false
+                         :up false
+                         :down false
+                         :punch false
+                         :run false
+                         :kick false
+                         :block false}
                :trans [500.0 300.0]
                :speed [0.0 0.0]
                :msgch (chan)
@@ -551,20 +569,23 @@
     (load-font! final "Ubuntu Bold" "css/Ubuntu-Bold.ttf")
     (load-level! final (:curr-level final))
     (init-events! final)
-    
-    (animate final
-             (fn [prestate frame time]
-               (if (= (mod frame 1) 0 ) ; frame skipping for development
-                 (let [msg (poll! (:msgch prestate))]
-                   (-> prestate
-                       (execute-commands)
-                       ;; world
-                       (update-keycodes msg)
-                       (update-world msg)
-                       (draw-world frame msg)
-                       ;; ui
-                       (update-ui msg)
-                       (draw-ui frame)))
-                   prestate)))))
-  
+
+    (animate
+     final
+     (fn [prestate frame time]
+       (if (= (mod frame 1) 0 ) ; frame skipping for development
+         (let [msg (poll! (:msgch prestate))]
+           (-> prestate
+               (reset-world msg)
+               (update-controls msg)
+               (update-speed msg)
+               (execute-commands)
+               ;; world
+               (update-world msg)
+               (draw-world frame msg)
+               ;; ui
+               (update-ui msg)
+               (draw-ui frame)))
+         prestate)))))
+
 (defonce mainloop (main))
