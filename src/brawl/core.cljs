@@ -7,7 +7,6 @@
             [cljs.core.async :refer-macros [go]]
             [brawl.svg :as svg]
             [gui.webgl :as uiwebgl]
-            [gui.ui :as ui]
             [gui.math4 :as math4]
             [brawl.shape :as shape]
             [brawl.webgl :as webgl]
@@ -15,6 +14,7 @@
             [brawl.actorskin :as actorskin]
             [mpd.phys2 :as phys2]
             [mpd.math2 :as math2]
+            [brawl.ui :as brawlui]
             [brawl.names :as names]
             [brawl.particle :as particle]
             [brawl.layouts :as layouts]
@@ -33,11 +33,10 @@
 
 
 (defn load-font!
-  "start loading external font"
+  "load external font"
   [state name url]
   (let [font (js/FontFace. name (str "url(" url ")"))]
-    (.then (.load font) #(
-                          do
+    (.then (.load font) (fn []
                           (.add (.-fonts js/document) font)
                           (put! (:msgch state) {:id "redraw-ui"})))))
 
@@ -52,19 +51,6 @@
           xmlstr (xml->clj (:body response) {:strict false})
           shapes (svg/psvg xmlstr "")]
       (put! channel {:id "level" :shapes shapes}))))
-
-
-(defn load-ui
-  "load new ui stack"
-  [state description]
-  (let [views (ui/gen-from-desc {} description)
-        baseid (keyword (:id description))
-        viewids (ui/collect-visible-ids views [baseid] "")
-        alignedviews (ui/align views [baseid] 0 0 (. js/window -innerWidth) (. js/window -innerHeight))]
-    (assoc state
-           :baseid baseid
-           :views alignedviews
-           :viewids viewids)))
 
 
 (defn init-events!
@@ -146,22 +132,6 @@
               )) state pivots))
 
 
-(defn update-gen-sliders [{:keys [views world] :as state}]
-  (let [{:keys [height hitpower hitrate stamina speed]} (get-in world [:actors :hero :metrics :base])
-        hpsl (:Hitpower views)
-        hrsl (:Hitrate views)
-        hesl (:Height views)
-        spsl (:Speed views)
-        stsl (:Stamina views)
-        newv (-> views
-                 (ui/set-slider-value hpsl hitpower)
-                 (ui/set-slider-value hrsl hitrate)
-                 (ui/set-slider-value hesl height)
-                 (ui/set-slider-value spsl speed)
-                 (ui/set-slider-value stsl stamina))]
-    (assoc state :views newv)))
-
-
 (defn execute-attack [{ {actors :actors particles :particles} :world sounds :sounds :as state} command]
   ;; hittest other actors
   (let [[dx dy] (math2/resize-v2 (math2/sub-v2 (:target command) (:base command)) 4.0)
@@ -209,47 +179,48 @@
                          (assoc :hitpower (:ratio command))
                          (actor/basemetrics-normalize :hitpower))
                nmetrics (actor/generate-metrics nbase)]
-           (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
+           (-> oldstate (assoc-in path-metrics nmetrics) (brawlui/update-gen-sliders)))
          (= text "set-hitrate") ; update base metrics and generate new metrics for hero
          (let [nbase (-> (get-in hero [:metrics :base])
                          (assoc :hitrate (:ratio command))
                          (actor/basemetrics-normalize :hitrate))
                nmetrics (actor/generate-metrics nbase)]
-           (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
+           (-> oldstate (assoc-in path-metrics nmetrics) (brawlui/update-gen-sliders)))
          (= text "set-height") ; update base metrics and generate new metrics for hero
          (let [nbase (-> (get-in hero [:metrics :base])
                          (assoc :height (:ratio command))
                          (actor/basemetrics-normalize :height))
                nmetrics (actor/generate-metrics nbase)]
-           (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
+           (-> oldstate (assoc-in path-metrics nmetrics) (brawlui/update-gen-sliders)))
          (= text "set-speed") ; update base metrics and generate new metrics for hero
          (let [nbase (-> (get-in hero [:metrics :base])
                          (assoc :speed (:ratio command))
                          (actor/basemetrics-normalize :speed))
                nmetrics (actor/generate-metrics nbase)]
-           (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
+           (-> oldstate (assoc-in path-metrics nmetrics) (brawlui/update-gen-sliders)))
          (= text "set-stamina") ; update base metrics and generate new metrics for hero
          (let [nbase (-> (get-in hero [:metrics :base])
                          (assoc :stamina (:ratio command))
                          (actor/basemetrics-normalize :stamina))
                nmetrics (actor/generate-metrics nbase)]
-           (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
+           (-> oldstate (assoc-in path-metrics nmetrics) (brawlui/update-gen-sliders)))
          (= text "randomize")
          (let [nbase (-> (actor/basemetrics-random)
                          (actor/basemetrics-normalize :height))
                nmetrics (actor/generate-metrics nbase)]
-           (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
+           (-> oldstate (assoc-in path-metrics nmetrics) (brawlui/update-gen-sliders)))
          
-         (= text "show-menu") (load-ui oldstate layouts/menu)
-         (= text "continue") (load-ui oldstate (if (= (:curr-level oldstate) 0) layouts/generator layouts/hud))
+         (= text "show-menu") (brawlui/load-ui oldstate layouts/menu)
+         (= text "continue") (brawlui/load-ui oldstate (if (= (:curr-level oldstate) 0) layouts/generator layouts/hud))
          (= text "options")
-         (let [newstate (load-ui oldstate layouts/options)]
-           (assoc newstate :views (-> (:views newstate)
-                                      (ui/set-slider-value (:Music (:views newstate)) (get-in newstate [:volumes :music]))
-                                      (ui/set-slider-value (:Effects (:views newstate)) (get-in newstate [:volumes :effects])))))
+         (let [newstate (brawlui/load-ui oldstate layouts/options)]
+           (-> newstate
+               (brawlui/set-slider-value :Music (get-in newstate [:volumes :music]))
+               (brawlui/set-slider-value :Effects (get-in newstate [:volumes :effects]))
+               (brawlui/align)))
          
          (= text "donate") (defaults/save-defaults! oldstate)
-         (= text "options back") (load-ui oldstate layouts/menu)
+         (= text "options back") (brawlui/load-ui oldstate layouts/menu)
 
          (= text "left") (assoc-in oldstate [:keycodes 37] true)
          (= text "right") (assoc-in oldstate [:keycodes 39] true)
@@ -262,16 +233,16 @@
          
          (= text "start-game")
          (-> oldstate
-             (load-ui layouts/info)
+             (brawlui/load-ui layouts/info)
              (update :commands conj {:text "load-level"}))
          
          (= text "next-level")
          (if (= curr-level 6)
            ;; show congrats screen
-           (load-ui oldstate layouts/info)
+           (brawlui/load-ui oldstate layouts/info)
            ;; load next level
            (-> oldstate
-               (load-ui layouts/info)
+               (brawlui/load-ui layouts/info)
                (update :commands conj {:text "load-level"})))
 
          (= text "load-level") (load-next-level oldstate)
@@ -279,40 +250,6 @@
          :else oldstate)))
    (assoc state :commands [])
    commands))
-
-
-(defn draw-ui [{:keys [gui views viewids] :as state} frame]
-  (let [projection (math4/proj_ortho 0 (.-innerWidth js/window) (.-innerHeight js/window) 0 -10.0 10.0)
-        newgui (uiwebgl/draw! gui projection (map views viewids))]
-    (assoc state :gui newgui)))
-
-  
-(defn update-ui [{:keys [baseid views commands viewdesc gui] :as state} msg]
-  (let [results (if (and msg (= (:id msg) "mouse"))
-                  (let [touched-views (ui/collect-pressed-views views (:point msg))]
-                    (reduce
-                     (fn [result {:keys [class] :as view}]
-                       (cond
-                         (= class "Slider") (conj result (ui/touch-slider view views msg))
-                         (= class "Button") (conj result (ui/touch-button view views msg))
-                         :else result))
-                     []
-                     (map views touched-views)))
-                  [])
-        newviews (reduce (fn [oldviews {newviews :views}]
-                           (reduce #(assoc oldviews (:id %2) %2) oldviews newviews))
-                         views
-                         results)
-        
-        newnewviews (if (and msg (= (:id msg) "resize"))
-                      (ui/align newviews [baseid] 0 0 (. js/window -innerWidth) (. js/window -innerHeight))
-                      newviews)
-        
-        newcommands (map :command results)]
-    (cond-> state
-      true (assoc :views newnewviews)
-      true (assoc :commands (concat commands newcommands))
-      (and msg (= (:id msg) "redraw-ui")) (assoc :gui (uiwebgl/reset gui)))))
 
 
 (defn draw-world [{:keys [gfx trans floatbuffer] {:keys [actors particles surfacelines] :as world} :world curr-level :curr-level :as state} frame msg]
@@ -431,10 +368,10 @@
 
       (cond-> state
         true (assoc :world newworld)
-        true (update-gen-sliders)
+        true (brawlui/update-gen-sliders)
         true (assoc :commands [])
-        (= curr-level 0) (load-ui layouts/generator)
-        (> curr-level 0) (load-ui layouts/hud)))
+        (= curr-level 0) (brawlui/load-ui layouts/generator)
+        (> curr-level 0) (brawlui/load-ui layouts/hud)))
     state))
 
 
@@ -495,24 +432,21 @@
                :punch1 (js/Audio. "sounds/punch1.mp3")
                :punch2 (js/Audio. "sounds/punch2.mp3")}
 
-        state {:gfx (webgl/init)
-               :gui (uiwebgl/init)
+        state {:ui (brawlui/init)
+               :gfx (webgl/init)
                :world world
-               :views {}
-               :baseid nil 
-               :viewids []
                :curr-level 0
                :floatbuffer (floatbuf/create!)
                :commands []
                :keycodes {}
                :controls {:left false
-                         :right false
-                         :up false
-                         :down false
-                         :punch false
-                         :run false
-                         :kick false
-                         :block false}
+                          :right false
+                          :up false
+                          :down false
+                          :punch false
+                          :run false
+                          :kick false
+                          :block false}
                :trans [500.0 300.0]
                :speed [0.0 0.0]
                :msgch (chan)
@@ -522,7 +456,7 @@
 
         final (-> state
                   (defaults/load-defaults!)
-                  (load-ui layouts/info))]
+                  (brawlui/load-ui layouts/info))]
 
     (load-font! final "Ubuntu Bold" "css/Ubuntu-Bold.ttf")
     (load-level! final (:curr-level final))
@@ -541,8 +475,8 @@
                (update-world msg)
                (draw-world frame msg)
                ;; ui
-               (update-ui msg)
-               (draw-ui frame)))
+               (brawlui/update-ui msg)
+               (brawlui/draw-ui frame)))
          prestate)))))
 
 (defonce mainloop (main))

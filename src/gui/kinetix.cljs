@@ -1,4 +1,4 @@
-(ns gui.ui
+(ns gui.kinetix
   (:require [gui.texmap :as texmap]
             [gui.bitmap :as bitmap]
             [gui.webgl :as webgl]
