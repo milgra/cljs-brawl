@@ -46,7 +46,7 @@
   [state level]
   (go
     (let [channel (:msgch state)
-          response (<! (http/get (str "level" level ".svg")
+          response (<! (http/get (str "levels/level" level ".svg")
                                  {:with-credentials? false}))
           xmlstr (xml->clj (:body response) {:strict false})
           shapes (svg/psvg xmlstr "")]
@@ -157,7 +157,7 @@
     (assoc state :views newv)))
 
 
-(defn execute-attack [{ {actors :actors particles :particles} :world :as state} command]
+(defn execute-attack [{ {actors :actors particles :particles} :world sounds :sounds :as state} command]
   ;; hittest other actors
   (let [[dx dy] (math2/resize-v2 (math2/sub-v2 (:target command) (:base command)) 4.0)
         contacts (remove nil? (map (fn [[id actor]] (actor/hitpoint actor command)) actors))
@@ -166,15 +166,26 @@
                                        (repeatedly 10 #(particle/init x y [1.0 1.0 1.0 0.5] (math2/resize-v2 [(+ (- 1.0) (rand 2.0)) (+ (- 1.0) (rand 2.0))] (+ 1.0 (rand 2.0))) :dust))
                                        (repeatedly 5 #(particle/init x y [1.0 0.0 0.0 0.5]  [ (+ dx -2.0 (rand 2.0)) (+ dy -2.0 (rand 2.0))] :blood))))
                              [] contacts)
-        newactors (reduce (fn [result [id actor]] (assoc result id (actor/hit actor command))) {} actors)]
+        newactors (reduce (fn [result [id actor]]
+                            (let [newactor (actor/hit actor command)]
+                              (if (and (> (:health actor) 0 ) (< (:health newactor) 0)) (.play ((keyword (str "death" (rand-int 2))) sounds)))
+                              (assoc result id newactor)))
+                          {}
+                          actors)]
+    (if-not (empty? contacts) (.play ((keyword (str "punch" (rand-int 3))) sounds)))
     (-> state
         (assoc-in [:world :particles] (concat particles newparticles))
         (assoc-in [:world :actors] newactors ))))
 
 
-(defn load-next-level [{:keys [curr-level] :as state}]
+(defn load-next-level [{:keys [curr-level sounds] :as state}]
   (let [next-level (min (inc curr-level) 6)]
     (load-level! state next-level)
+    (println "next-level" next-level (:theme sounds))
+    (when (> next-level 0)
+      (set! (.-loop (:theme sounds)) true)
+      (set! (.-volume (:theme sounds)) 0.5)
+      (.play (:theme sounds)))
     (-> state
         (assoc-in [:world :loaded] false)
         (assoc :curr-level next-level))))
@@ -464,6 +475,17 @@
                :particles []
                :vis-rect [0 0 0 0]} ; visible rect in world
 
+        sound {:argh0 (js/Audio. "sounds/argh0.mp3")
+               :argh1 (js/Audio. "sounds/argh1.mp3")
+               :argh2 (js/Audio. "sounds/argh2.mp3")
+               :death0 (js/Audio. "sounds/death0.mp3")
+               :death1 (js/Audio. "sounds/death1.mp3")
+               :punch0 (js/Audio. "sounds/punch0.mp3")
+               :punch1 (js/Audio. "sounds/punch1.mp3")
+               :punch2 (js/Audio. "sounds/punch2.mp3")
+               :shot (js/Audio. "sounds/shot.mp3")
+               :theme (js/Audio. "sounds/theme.mp3")}
+        
         state {:gfx (webgl/init)
                :gui (uiwebgl/init)
                :world world
@@ -476,11 +498,12 @@
                :commands []
                :trans [500.0 300.0]
                :speed [0.0 0.0]
-               :msgch (chan)}
+               :msgch (chan)
+               :sounds sound}
 
         final (-> state
                   (load-ui layouts/generator)
-                  (load-font! "Ubuntu Bold" "Ubuntu-Bold.ttf")
+                  (load-font! "Ubuntu Bold" "css/Ubuntu-Bold.ttf")
                   (load-level! 0)
                   (init-events!))]
 
