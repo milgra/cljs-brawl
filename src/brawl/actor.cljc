@@ -215,7 +215,7 @@
             (first (remove nil? [headisp bodyisp footlisp footrisp]))))))
             
 
-(defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r] :as masses} :masses health :health metrics :metrics update-fn :update-fn :as actor} {:keys [id base target time] :as command}]
+(defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r] :as masses} :masses health :health metrics :metrics update-fn :update-fn :as actor} {:keys [id base target time power] :as command}]
   ;; check distance from nect first
   (let [ [dx dy] (math2/sub-v2 target (:p hip))]
     (if (and (not= id (:id actor)) (< dx 80.0) (< dy 80.0) (not= update-fn update-rag))
@@ -245,6 +245,7 @@
                      actor
                      (cond-> actor
                        true (assoc :hittime time)
+                       true (assoc :hitduration (if (and headisp (> power 39)) 100 20))
                        true (assoc :next "rag")
                        true (update :health - 15) 
                        true (update :speed  + (* (/ hvx (Math/abs hvx)) 5.0))
@@ -287,7 +288,7 @@
                  :else [(+ nx nrx) (+ ny nry)])
         elbow_l (triangle_with_bases neck hand_l (* arml 0.5) facing)
         elbow_r (triangle_with_bases neck hand_r (* arml 0.5) facing)
-        command (if (and punch (not action-sent) (not left) (not right)) {:id id :text "attack" :base neck :target (if (= punch-hand :hand_l) hand_l hand_r) :time time}) ]
+        command (if (and punch (not action-sent) (not left) (not right)) {:id id :text "attack" :base neck :target (if (= punch-hand :hand_l) hand_l hand_r) :time time :power 10}) ]
     (-> state
         (assoc :commands (if command (conj command command) commands))
         (assoc-in [:masses :hand_l :p] hand_l)
@@ -458,7 +459,7 @@
    time]
   (let [foot_l (if kick [(+ hx (* legl facing) -10.0 ) (+ hy (* legl 0.5))] (:p base_l))
         foot_r (if kick [(+ hx (* legl facing)) (+ hy (* legl 0.5) -10.0)] (:p base_r))
-        command (if (and kick (not action-sent)) {:id id :text "attack" :base [hx hy] :target foot_l :time time})]
+        command (if (and kick (not action-sent)) {:id id :text "attack" :base [hx hy] :target foot_l :time time :power 50.0})]
     (-> state
         (assoc :commands (if command (conj command command) commands))
         (assoc-in [:masses :foot_l :p] foot_l) 
@@ -481,7 +482,7 @@
         foot_r (if (= :base_r (:active base-order))
                  (if kick kick-point act)
                  pas)
-        command (if (and kick (not action-sent)) {:id id :text "attack" :base (:p (:hip masses)) :target kick-point :time time})]
+        command (if (and kick (not action-sent)) {:id id :text "attack" :base (:p (:hip masses)) :target kick-point :time time :power 40})]
     (-> state
         (assoc :commands (if command (conj command command) commands))
         (assoc-in [:masses :foot_l :p] foot_l) 
@@ -658,14 +659,14 @@
 (defn update-idle [state] state)
 
 
-(defn update-rag [{:keys [masses dguards hittime next health] :as state } surfaces time]
+(defn update-rag [{:keys [masses dguards hittime hitduration next health] :as state } surfaces time]
   (if (> health 0)
     (let [newmasses (-> masses
                         (phys2/add-gravity [0.0 0.4])
                         ;;(phys2/keep-angles (:aguards state))
                         (phys2/keep-distances (:dguards state))
                         (phys2/move-masses surfaces 0.4))
-          newnext (if (= hittime 20) "jump" next) 
+          newnext (if (= hittime hitduration) "jump" next) 
           result (-> state
                      (assoc :next newnext)
                      (assoc :masses newmasses)

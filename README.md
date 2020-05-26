@@ -10,30 +10,18 @@ run :
 
 ## Todo
 
-* ai
-* drag body
-* lassab punch rate
-
-* összeesett ember guggolasbol alljon fol
-* 50 százaléknál essen össze mindenki egyszer
-* in case of kick without blocking, body should fall and rise again
-* slidingnal meroleges komponenst nezz, es azt gravityvel
-
-* use enemy counts from svg
-* kifordult lab masodik palyan
-* new game/show physics/fullscreen button should work
+* mukodo menu
+* vegigmeheto palyak
 * working control buttons down/up
-* dead body drag
-* gun drag
-* death/loading/congrats ui pages
+* use enemy counts from svg
+* lassab punch rate
+* ai
+* random punch / kick heights
+* drag body
+* összeesett ember guggolasbol alljon fol
 * szakadekrol lelepes csekk
-* auto aim at head after first punch
-* AI - standing enemy, walking towards enemy, running and jumping and kicking enemy
-* attack power egyensulyozas
-* sometimes rear leg stuck when jumping
-* time scaling
-* kickable trash cans
-* rain with particles
-* mushrooms that change the size/metrics of the character
+
 * controls menu point in menu, remove exit in browser
+* slidingnal meroleges komponenst nezz, es azt gravityvel
+* time scaling
 * update ui renderer and mpd
