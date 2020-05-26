@@ -290,16 +290,6 @@
      :width "350 px" 
      :height "50 px" 
      :top "Options 4 px" 
-     :center-x "Edge 50 %"}
-
-    {:id "Exit"
-     :class "Button"
-     :command "exit"
-     :texture {:type "Color" :color 0xFFFFFF0F}
-     :label {:type "Label" :text "Exit" :size 25 :color 0xFFFFFFFF}
-     :width "350 px" 
-     :height "50 px" 
-     :top "Donate 4 px" 
      :center-x "Edge 50 %"}]})
 
 
@@ -329,7 +319,7 @@
      :center-y "Edge 40 %" 
      :center-x "Edge 50 %"}
 
-    {:id "Sound"
+    {:id "Effects"
      :class "Slider"
      :command "set sound volume"
      :texture {:type "Color" :color 0xFFFFFF0F}

@@ -37,8 +37,7 @@
     (.then (.load font) #(
                           do
                           (.add (.-fonts js/document) font)
-                          (put! (:msgch state) {:id "redraw-ui"}))))
-  state)
+                          (put! (:msgch state) {:id "redraw-ui"})))))
 
 
 (defn load-level!
@@ -50,8 +49,7 @@
                                  {:with-credentials? false}))
           xmlstr (xml->clj (:body response) {:strict false})
           shapes (svg/psvg xmlstr "")]
-      (put! channel {:id "level" :shapes shapes})))
-  state)
+      (put! channel {:id "level" :shapes shapes}))))
 
 
 (defn load-ui
@@ -59,8 +57,45 @@
   [state description]
   (let [views (ui/gen-from-desc {} description)
         baseid (keyword (:id description))
-        viewids (ui/collect-visible-ids views [baseid] "")]
-    (assoc state :baseid baseid :views views :viewids viewids)))
+        viewids (ui/collect-visible-ids views [baseid] "")
+        alignedviews (ui/align views [baseid] 0 0 (. js/window -innerWidth) (. js/window -innerHeight))]
+    (assoc state
+           :baseid baseid
+           :views alignedviews
+           :viewids viewids)))
+
+
+(defn local-storage-supported?
+  []
+  (let [item "workshub-test-ls"]
+    (try
+      (.setItem js/localStorage item item)
+      (.removeItem js/localStorage item)
+      true
+      (catch :default _
+        false))))
+
+
+(defn load-defaults! [state]
+  (println "load-defaults saved" (.getItem js/localStorage "state-saved?") "state" (.getItem js/localStorage "state"))
+  (if (and (local-storage-supported?) (= "true" (.getItem js/localStorage "state-saved?")))
+    (let [state-js (cljs.reader/read-string (.getItem js/localStorage "state"))]
+      (println "state-js" (:curr-level state-js))
+      ;; todo validate with specs
+      (merge state state-js))
+    state))
+
+
+(defn save-defaults! [state]
+  (println "save-defaults")
+  (if (local-storage-supported?)
+    (let [state-js {:curr-level (:curr-level state)
+                    :volumes {:music (get-in state [:volumes :music])
+                              :effects (get-in state [:volumes :effects])}
+                    }]
+      (.setItem js/localStorage "state-saved?" true)
+      (.setItem js/localStorage "state" state-js))
+  state))
 
 
 (def keycodes (atom {}))
@@ -116,9 +151,7 @@
   (events/listen
    js/window
    EventType.RESIZE
-   (fn [event] (resize-context!)))
-
-  state)
+   (fn [event] (resize-context!))))
 
 (def colors [0xFF0000FF 0x00FF00FF 0x0000FFFF 0xFF00FFFF 0x00FFFFFFF 0xFFFF00FF])
 
@@ -172,7 +205,11 @@
                               (assoc result id newactor)))
                           {}
                           actors)]
-    (if-not (empty? contacts) (.play ((keyword (str "punch" (rand-int 3))) sounds)))
+    (when-not (empty? contacts)
+      (.play ((keyword (str "punch" (rand-int 3))) sounds))
+      (set! (.-loop (:theme sounds)) true)
+      (.play (:theme sounds)))
+  
     (-> state
         (assoc-in [:world :particles] (concat particles newparticles))
         (assoc-in [:world :actors] newactors ))))
@@ -181,11 +218,6 @@
 (defn load-next-level [{:keys [curr-level sounds] :as state}]
   (let [next-level (min (inc curr-level) 6)]
     (load-level! state next-level)
-    (println "next-level" next-level (:theme sounds))
-    (when (> next-level 0)
-      (set! (.-loop (:theme sounds)) true)
-      (set! (.-volume (:theme sounds)) 0.5)
-      (.play (:theme sounds)))
     (-> state
         (assoc-in [:world :loaded] false)
         (assoc :curr-level next-level))))
@@ -238,7 +270,14 @@
          
          (= text "show-menu") (load-ui oldstate layouts/menu)
          (= text "continue") (load-ui oldstate (if (= (:curr-level oldstate) 0) layouts/generator layouts/hud))
-         (= text "options") (load-ui oldstate layouts/options)
+         (= text "options")
+         (let [newstate (load-ui oldstate layouts/options)]
+           (println "EFFECTS" (get-in newstate [:volumes :music]))
+           (assoc newstate :views (-> (:views newstate)
+                                      (ui/set-slider-value (:Music (:views newstate)) (get-in newstate [:volumes :music]))
+                                      (ui/set-slider-value (:Effects (:views newstate)) (get-in newstate [:volumes :effects])))))
+
+         (= text "donate") (save-defaults! oldstate)
          (= text "options back") (load-ui oldstate layouts/menu)
 
          (= text "left") (assoc-in oldstate [:keycodes 37] true)
@@ -334,16 +373,17 @@
               newbuf7 (floatbuf/append! newbuf6 surfacelines)]
           ;; draw lines
           (webgl/drawlines! newgfx projection newbuf7)
-      (-> state
-          (assoc :gfx newgfx)
-          (assoc-in [:world :vis-rect] vis-rect)
-          (assoc :floatbuffer newbuf7)))))
+
+          (-> state
+              (assoc :gfx newgfx)
+              (assoc-in [:world :vis-rect] vis-rect)
+              (assoc :floatbuffer newbuf7)))))
     state))
 
 
 (defn update-world
   "updates phyisics and actors"
-  [{{:keys [actors surfaces particles inited loaded endpos vis-rect] :as world} :world keycodes :keycodes curr-level :curr-level commands :commands :as state} msg]
+  [{{:keys [actors surfaces particles inited loaded endpos vis-rect] :as world} :world keycodes :keycodes curr-level :curr-level commands :commands sounds :sounds :as state} msg]
   (cond
     loaded ; create new state
     (let [currcodes {:left (keycodes 37)
@@ -415,10 +455,11 @@
                         :surfaces surfaces
                         :surfacelines lines}
                        (create-actors pivots))]
-
+      
       (cond-> state
         true (assoc :world newworld)
         true (update-gen-sliders)
+        (= curr-level 0) (load-ui layouts/generator)
         (> curr-level 0) (load-ui layouts/hud)))
 
     :else ; return unchanged
@@ -499,14 +540,18 @@
                :trans [500.0 300.0]
                :speed [0.0 0.0]
                :msgch (chan)
-               :sounds sound}
+               :sounds sound
+               :volumes {:music 0.5
+                         :effects 0.5}}
 
         final (-> state
-                  (load-ui layouts/generator)
-                  (load-font! "Ubuntu Bold" "css/Ubuntu-Bold.ttf")
-                  (load-level! 0)
-                  (init-events!))]
+                  (load-defaults!)
+                  (load-ui layouts/info))]
 
+    (load-font! final "Ubuntu Bold" "css/Ubuntu-Bold.ttf")
+    (load-level! final (:curr-level final))
+    (init-events! final)
+    
     (animate final
              (fn [prestate frame time]
                (if (= (mod frame 1) 0 ) ; frame skipping for development

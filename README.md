@@ -12,7 +12,7 @@ run :
 
 * ai
 * drag body
-* music, sounds!
+* lassab punch rate
 
 * összeesett ember guggolasbol alljon fol
 * 50 százaléknál essen össze mindenki egyszer
@@ -25,7 +25,6 @@ run :
 * working control buttons down/up
 * dead body drag
 * gun drag
-* hangok mp3-ba
 * death/loading/congrats ui pages
 * szakadekrol lelepes csekk
 * auto aim at head after first punch
