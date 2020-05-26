@@ -1,5 +1,5 @@
 (ns ^:figwheel-hooks brawl.core
-  (:require [goog.dom :as gdom]
+  (:require [goog.dom :as dom]
             [goog.events :as events]
             [tubax.core :refer [xml->clj]]
             [cljs-http.client :as http]
@@ -18,6 +18,7 @@
             [brawl.names :as names]
             [brawl.particle :as particle]
             [brawl.layouts :as layouts]
+            [brawl.defaults :as defaults]
             [brawl.floatbuffer :as floatbuf])
   (:import [goog.events EventType]))
 
@@ -25,9 +26,10 @@
 (defn resize-context!
   "resize canvas on window resize"
   []
-  (let [canvas (. js/document getElementById "main")]
-        (set! (. canvas -width) (. js/window -innerWidth))
-        (set! (. canvas -height) (. js/window -innerHeight))))
+  (dom/setProperties
+   (dom/getElement "main")
+   (clj->js {:width (.-innerWidth js/window)
+             :height (.-innerHeight js/window)})))
 
 
 (defn load-font!
@@ -63,38 +65,6 @@
            :baseid baseid
            :views alignedviews
            :viewids viewids)))
-
-
-(defn local-storage-supported?
-  []
-  (let [item "workshub-test-ls"]
-    (try
-      (.setItem js/localStorage item item)
-      (.removeItem js/localStorage item)
-      true
-      (catch :default _ false))))
-
-
-(defn load-defaults! [state]
-  (println "load-defaults saved" (.getItem js/localStorage "state-saved?") "state" (.getItem js/localStorage "state"))
-  (if (and (local-storage-supported?) (= "true" (.getItem js/localStorage "state-saved?")))
-    (let [state-js (cljs.reader/read-string (.getItem js/localStorage "state"))]
-      (println "state-js" (:curr-level state-js))
-      ;; todo validate with specs
-      (merge state state-js))
-    state))
-
-
-(defn save-defaults! [state]
-  (println "save-defaults")
-  (if (local-storage-supported?)
-    (let [state-js {:curr-level (:curr-level state)
-                    :volumes {:music (get-in state [:volumes :music])
-                              :effects (get-in state [:volumes :effects])}
-                    }]
-      (.setItem js/localStorage "state-saved?" true)
-      (.setItem js/localStorage "state" state-js))
-  state))
 
 
 (defn init-events!
@@ -150,7 +120,9 @@
     (events/listen
      js/window
      EventType.RESIZE
-     (fn [event] (resize-context!)))))
+     (fn [event]
+       (put! (:msgch state) {:id "resize"})
+       (resize-context!)))))
 
 
 (def colors [0xFF0000FF 0x00FF00FF 0x0000FFFF 0xFF00FFFF 0x00FFFFFFF 0xFFFF00FF])
@@ -276,7 +248,7 @@
                                       (ui/set-slider-value (:Music (:views newstate)) (get-in newstate [:volumes :music]))
                                       (ui/set-slider-value (:Effects (:views newstate)) (get-in newstate [:volumes :effects])))))
          
-         (= text "donate") (save-defaults! oldstate)
+         (= text "donate") (defaults/save-defaults! oldstate)
          (= text "options back") (load-ui oldstate layouts/menu)
 
          (= text "left") (assoc-in oldstate [:keycodes 37] true)
@@ -331,11 +303,16 @@
                            (reduce #(assoc oldviews (:id %2) %2) oldviews newviews))
                          views
                          results)
+        
+        newnewviews (if (and msg (= (:id msg) "resize"))
+                      (ui/align newviews [baseid] 0 0 (. js/window -innerWidth) (. js/window -innerHeight))
+                      newviews)
+        
         newcommands (map :command results)]
     (cond-> state
-        true (assoc :views (ui/align newviews [baseid] 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
-        true (assoc :commands (concat commands newcommands))
-        (and msg (= (:id msg) "redraw-ui")) (assoc :gui (uiwebgl/reset gui)))))
+      true (assoc :views newnewviews)
+      true (assoc :commands (concat commands newcommands))
+      (and msg (= (:id msg) "redraw-ui")) (assoc :gui (uiwebgl/reset gui)))))
 
 
 (defn draw-world [{:keys [gfx trans floatbuffer] {:keys [actors particles surfacelines] :as world} :world curr-level :curr-level :as state} frame msg]
@@ -478,25 +455,6 @@
     state))
 
 
-(defn update-speed [{{:keys [left right up down] } :controls :as state} msg]
-  (println "speed" left right up down)
-  (let [[tx ty] (:trans state)
-        [sx sy] (:speed state)
-        nsx (cond
-              left (- sx 0.4)
-              right (+ sx 0.4)
-              "default" (* sx 0.9))
-        nsy (cond
-              up (- sy 0.4)
-              down (+ sy 0.4)
-              "default" (* sy 0.9))
-        ntx (+ tx sx)
-        nty (+ ty sy)]  
-    (-> state
-        (assoc :speed [nsx nsy])
-        (assoc :trans [ntx nty]))))
-
-
 (defn animate [state draw-fn]
   "main runloop, syncs animation to display refresh rate"
   (letfn [(loop [prestate frame]
@@ -563,7 +521,7 @@
                          :effects 0.5}}
 
         final (-> state
-                  (load-defaults!)
+                  (defaults/load-defaults!)
                   (load-ui layouts/info))]
 
     (load-font! final "Ubuntu Bold" "css/Ubuntu-Bold.ttf")
@@ -578,7 +536,6 @@
            (-> prestate
                (reset-world msg)
                (update-controls msg)
-               (update-speed msg)
                (execute-commands)
                ;; world
                (update-world msg)
