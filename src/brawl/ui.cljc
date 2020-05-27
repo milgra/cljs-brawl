@@ -154,6 +154,12 @@
                      (set-slider-value :Music (get-in newstate [:volumes :music]))
                      (set-slider-value :Effects (get-in newstate [:volumes :effects]))
                      (align)))
+               (and (= text "fullscreen") (= type "down")) ; randomizes generator values
+               (do
+                 (if (.-fullscreenElement js/document)
+                   (.exitFullscreen js/document)
+                   (.requestFullscreen (.-documentElement js/document)))
+                 oldstate)
                (and (= text "donate") (= type "down")) ; opens donate link in browser
                (defaults/save-defaults! oldstate)
                (and (= text "options back") (= type "down")) ; opens menu view

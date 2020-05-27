@@ -341,7 +341,7 @@
 
     {:id "Fullscreen"
      :class "Button"
-     :command "donate"
+     :command "fullscreen"
      :texture {:type "Color" :color 0xFFFFFF0F}
      :label {:type "Label" :text "Fullscreen" :size 25 :color 0xFFFFFFFF}
      :width "350 px" 

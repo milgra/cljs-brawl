@@ -6,6 +6,7 @@
    :index 0
    :length 512 })
 
+
 (defn append! [ {:keys [data index length] :as buffer} numbers ]
   (let [news (count numbers)
         newb (if (< (+ index news) length)
@@ -17,6 +18,7 @@
                   :length (* length 2)}))]
     (.set (:data newb) numbers index)
     (update newb :index + news)))
+
 
 (defn empty! [ buffer ]
   (assoc buffer :index 0))
