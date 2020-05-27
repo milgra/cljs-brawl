@@ -336,7 +336,7 @@
      :label {:type "Label" :text "Show Physics" :size 25 :color 0xFFFFFFFF}
      :width "350 px" 
      :height "50 px" 
-     :top "Sound 4 px" 
+     :top "Effects 4 px" 
      :center-x "Edge 50 %"}
 
     {:id "Fullscreen"
