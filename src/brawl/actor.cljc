@@ -108,7 +108,7 @@
     [r g b a]))
   
 
-(defn init [x y id color]
+(defn init [x y id color basemetrics]
   (let [bases {:base_l (phys2/mass2 (+ x 20.0) y 2.0 1.0 0.0 0.0)
                :base_r (phys2/mass2 (- x 20.0) y 2.0 1.0 0.0 0.0)}    
         masses {:head (phys2/mass2 x y 4.0 1.0 0.2 0.7)
@@ -122,7 +122,7 @@
                 :knee_r (phys2/mass2 x y 4.0 1.0 0.2 0.7)
                 :foot_l (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.2 0.7)
                 :foot_r (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.2 0.7)}
-        metrics (generate-metrics (basemetrics-random))]
+        metrics (generate-metrics basemetrics)]
     
     {:id id
      :color color
@@ -152,7 +152,7 @@
      :vert-direction 1
      :jump-state 0
      :step-length 0
-                                        ; masses
+     ;; masses
      :masses masses
      :metrics metrics
      :dguards [

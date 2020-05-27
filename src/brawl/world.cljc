@@ -7,6 +7,7 @@
    [mpd.phys2 :as phys2]
    [mpd.math2 :as math2]
    [gui.math4 :as math4]
+   [brawl.defaults :as defaults]
    [brawl.names :as names]
    [brawl.particle :as particle]
    [brawl.webgl :as webgl]
@@ -35,7 +36,7 @@
 
 (defn create-actors
   "add actors, infos, guns and enpoint to scene based on pivot points in svg"
-  [state pivots]
+  [state pivots herometrics]
   (reduce (fn [{:keys [actors guns infos] :as oldstate} {id :id path :path}]         
             (let [pos (nth path 3)
                   toks (clojure.string/split id #"_")
@@ -44,8 +45,9 @@
                 (= type "l") (let [team (js/parseInt (second (nth toks 2)))
                                    level (js/parseInt (second (second toks)))
                                    name (if (= level 0) :hero (keyword (names/getname)))
-                                   color (nth colors team)]
-                               (update oldstate :actors assoc name (actor/init (first pos) (second pos) name color)))
+                                   color (nth colors team)
+                                   metrics (if (= level 0) herometrics (actor/basemetrics-random))]
+                               (update oldstate :actors assoc name (actor/init (first pos) (second pos) name color metrics)))
                 (= type "g") (assoc oldstate :guns (conj guns {:pos pos}))
                 (= type "e") (assoc oldstate :endpos pos)
                 (= type "i") (assoc oldstate :infos (conj infos {:pos pos :index (js/parseInt (second type))})))     
@@ -142,7 +144,7 @@
     state))
 
 
-(defn reset-world [{:keys [level view-rect world-drawer] :as state} msg]
+(defn reset-world [{:keys [level view-rect world-drawer metrics] :as state} msg]
   (if (and msg (= (:id msg) "level"))
     (let [svglevel (:shapes msg)
           [l r b t] view-rect
@@ -161,14 +163,14 @@
                         :particles seeds
                         :surfaces surfaces
                         :surfacelines lines}
-                       (create-actors pivots))]
+                       (create-actors pivots metrics))]
 
       (cond-> state
         true (assoc :world-drawer newdrawer)
         true (assoc :world newworld)
-        true (brawlui/update-gen-sliders)
         true (assoc :commands-world [])
         (= level 0) (brawlui/load-ui layouts/generator)
+        (= level 0) (brawlui/update-gen-sliders)
         (> level 0) (brawlui/load-ui layouts/hud)))
     state))
 

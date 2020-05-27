@@ -72,6 +72,11 @@
   (assoc-in state [:ui :views] (kinetix/align views [baseid] 0 0 (. js/window -innerWidth) (. js/window -innerHeight))))
 
 
+(defn set-slider-value [{{:keys [views]} :ui :as state} id value]
+  "sets slider value"
+  (assoc-in state [:ui :views] (kinetix/set-slider-value views (id views) value)))
+
+
 (defn update-gen-sliders
   "updates generator sliders"
   [{:keys [ui world] :as state}]
@@ -89,11 +94,6 @@
                       (kinetix/set-slider-value spsl speed)
                       (kinetix/set-slider-value stsl stamina))]
     (assoc-in state [:ui :views] new-views)))
-
-
-(defn set-slider-value [{{:keys [views]} :ui :as state} id value]
-  "sets slider value"
-  (assoc-in state [:ui :views] (kinetix/set-slider-value views (id views) value)))
 
 
 (defn execute-commands
@@ -157,7 +157,11 @@
                (let [nbase (-> (actor/basemetrics-random)
                                (actor/basemetrics-normalize :height))
                      nmetrics (actor/generate-metrics nbase)]
-                 (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))         
+                 (-> oldstate
+                     (assoc-in path-metrics nmetrics)
+                     (assoc :metrics nbase)
+                     (defaults/save-defaults!)
+                     (update-gen-sliders)))         
                (and (= text "show-menu") (= type "down")) ; shows menu view
                (load-ui oldstate layouts/menu)
                (and (= text "continue") (= type "down")) ; shows hud
