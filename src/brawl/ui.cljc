@@ -39,26 +39,27 @@
 
         altered-views (if-not pressed-views
                         []
-                        (reduce (fn [result {:keys [class] :as view}]
-                                  (cond
-                                    (= class "Slider") (conj result (kinetix/touch-slider view views msg))
-                                    (= class "Button") (conj result (kinetix/touch-button view views msg))
-                                    :else result))
-                                []
-                                (map views pressed-views)))
-
-        new-views (reduce #(into %1 %2) views altered-views)
+                        (mapcat :views
+                                (reduce (fn [result {:keys [class] :as view}]
+                                          (cond
+                                            (= class "Slider") (conj result (kinetix/touch-slider view views msg))
+                                            (= class "Button") (conj result (kinetix/touch-button view views msg))
+                                            :else result))
+                                        []
+                                        (map views pressed-views))))
+        
+        new-views (reduce #(assoc %1 (:id %2) %2) views altered-views)
 
         newcommands (map :command altered-views)
 
-        newnew-views (if-not (and msg (= (:id msg) "resize"))
+        newnew-views (if-not msg
                       new-views
                       (kinetix/align new-views [baseid] 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
 
         new-projection (if-not (and msg (= (:id msg) "resize"))
                          projection
                          (math4/proj_ortho 0 (.-innerWidth js/window) (.-innerHeight js/window) 0 -10.0 10.0))]
-    
+
     (-> state
         (assoc-in [:ui :projection] new-projection)
         (assoc-in [:ui :views] newnew-views)
