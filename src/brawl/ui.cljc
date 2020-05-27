@@ -165,7 +165,12 @@
                (and (= text "show-menu") (= type "down")) ; shows menu view
                (load-ui oldstate layouts/menu)
                (and (= text "continue") (= type "down")) ; shows hud
-               (load-ui oldstate (if (= (:level oldstate) 0) layouts/generator layouts/hud))
+               (if (= (:level oldstate) 0)
+                 (-> oldstate
+                     (load-ui layouts/generator)
+                     (update-gen-sliders))
+                 (-> oldstate
+                     (load-ui layouts/hud)))
                (and (= text "new game") (= type "down"))
                (update oldstate :commands-world conj {:text "new game"})
                (and (= text "options") (= type "down")) ; shows options view
