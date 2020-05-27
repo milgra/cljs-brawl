@@ -100,8 +100,19 @@
     ui-drawer :ui-drawer :as state}
    frame]
   (let [projection (math4/proj_ortho 0 (.-innerWidth js/window) (.-innerHeight js/window) 0 -10.0 10.0)
-        newwebgl (uiwebgl/draw! ui-drawer projection (map views viewids))]
-    (assoc state :webgl newwebgl)))
+        new-drawer (uiwebgl/draw! ui-drawer projection (map views viewids))]
+    (assoc state :ui-drawer new-drawer)))
+
+
+(defn calc-view-rect [actor]
+  (let [[fax fay] (:p (get-in actor [:bases :base_l]))
+        [fbx fby] (:p (get-in actor [:bases :base_r]))
+        [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2))  ]
+        ratio 1.0
+        r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
+        h (* 350.0 ratio)
+        w (* h r)]
+    [(- tx w) (+ tx w) (+ ty h) (- ty h)]))
 
 
 (defn draw-world
@@ -112,23 +123,11 @@
    frame
    msg]
   (if (:inited world)
-    (let [hero (:hero actors)
-          [fax fay] (:p (get-in hero [:bases :base_l]))
-          [fbx fby] (:p (get-in hero [:bases :base_r]))
-          [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2))  ]
-          ratio 1.0
-          r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
-          h (* 350.0 ratio)
-          w (* h r)
-          [l r b t :as view-rect] [(- tx w) (+ tx w) (+ ty h) (- ty h)]
-          projection (math4/proj_ortho (+ l 50) (- r 50) (- b 50) (+ t 50) -1.0 1.0)    
+    (let [[l r b t :as view-rect] (calc-view-rect (:hero actors))
+          projection (math4/proj_ortho (+ l 50) (- r 50) (- b 50) (+ t 50) -1.0 1.0)
           variation (Math/floor (mod (/ frame 10.0) 3.0 ))
-
           newbuf (floatbuffer/empty! buffer)
-          newbuf1 (reduce (fn [oldbuf [id actor]]
-                            (actorskin/get-skin-triangles actor oldbuf variation view-rect))
-                          newbuf
-                          actors)]
+          newbuf1 (reduce (fn [oldbuf [id actor]] (actorskin/get-skin-triangles actor oldbuf variation view-rect)) newbuf actors)]
       ;; draw triangles
       (webgl/clear! game-drawer)
       (webgl/drawshapes! game-drawer projection trans variation)

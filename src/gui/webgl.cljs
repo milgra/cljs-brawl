@@ -103,7 +103,6 @@
         forecol (int-to-rgba (:color texture))
         backcol (int-to-rgba (:background texture))
         context (.getContext canvas "2d")]
-    (println "back fore" backcol forecol texture)
     (.clearRect context 0 0 (.-width canvas) (.-height canvas))
     (set! (.-fillStyle context) backcol)
     (.fillRect context 0 0 (.-width canvas) (.-height canvas))
@@ -147,6 +146,7 @@
                         (= (:type texture) "Label")
                         ;; show glyph
                         (let [bmp (bitmap-for-glyph tempcanvas w h texture)]
+                          (println "generating texture")
                           (texmap/setbmp tmap bmp texture 0))
 
                         :default

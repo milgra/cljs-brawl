@@ -84,6 +84,7 @@
    (fn [oldstate {text :text :as command}]
      (let [hero (get-in oldstate [:worlds :actors :hero])
            path-metrics [:world :actors :hero :metrics]]
+
        (cond
          ;; ui
          (= text "set-hitpower") ; update base metrics and generate new metrics for hero
@@ -133,8 +134,6 @@
          
          (= text "donate") (defaults/save-defaults! oldstate)
          (= text "options back") (load-ui oldstate layouts/menu)
-
-         (= text "redraw-ui") (assoc oldstate :ui-drawer (uiwebgl/reset ui-drawer))
          
          (= text "left") (assoc-in oldstate [:keycodes 37] true)
          (= text "right") (assoc-in oldstate [:keycodes 39] true)
@@ -144,11 +143,14 @@
          (= text "punch") (assoc-in oldstate [:keycodes 70] true)
          (= text "kick") (assoc-in oldstate [:keycodes 83] true)
          (= text "block") (assoc-in oldstate [:keycodes 68] true)
-         
+
+         ;; font loaded, reset textures to force redraw with new fonts
+         (= text "redraw-ui") (assoc oldstate :ui-drawer (uiwebgl/reset ui-drawer))
+
          (= text "start-game")
          (-> oldstate
              (load-ui layouts/info)
-             (update :commands-ui conj {:text "load-level"}))
+             (update :commands-world conj {:text "load-level"}))
 
          :else oldstate)))
    (assoc state :commands-ui [])
