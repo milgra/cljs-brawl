@@ -30,7 +30,9 @@
                       :projection (math4/proj_ortho 0 (.-innerWidth js/window) (.-innerHeight js/window) 0 -10.0 10.0)})))
 
   
-(defn update-ui [{{:keys [baseid views commands-ui projection]} :ui :as state} msg]
+(defn update-ui
+  "update view based on user actions"
+  [{{:keys [baseid views commands-ui projection]} :ui :as state} msg]
   (let [pressed-views (if-not (and msg (= (:id msg) "mouse"))
                         nil
                         (kinetix/collect-pressed-views views (:point msg)))
@@ -45,31 +47,33 @@
                                 []
                                 (map views pressed-views)))
 
-        newviews (reduce (fn [oldviews {newviews :views}]
-                           (reduce #(assoc oldviews (:id %2) %2) oldviews newviews))
-                         views
-                         altered-views)
-        
-        newnewviews (if (and msg (= (:id msg) "resize"))
-                      (kinetix/align newviews [baseid] 0 0 (. js/window -innerWidth) (. js/window -innerHeight))
-                      newviews)
+        new-views (reduce #(into %1 %2) views altered-views)
 
-        newprojection (if (and msg (= (:id msg) "resize"))
-                        (math4/proj_ortho 0 (.-innerWidth js/window) (.-innerHeight js/window) 0 -10.0 10.0)
-                        projection)
+        newcommands (map :command altered-views)
+
+        newnew-views (if-not (and msg (= (:id msg) "resize"))
+                      new-views
+                      (kinetix/align new-views [baseid] 0 0 (. js/window -innerWidth) (. js/window -innerHeight)))
+
+        new-projection (if-not (and msg (= (:id msg) "resize"))
+                         projection
+                         (math4/proj_ortho 0 (.-innerWidth js/window) (.-innerHeight js/window) 0 -10.0 10.0))]
     
-        newcommands (map :command altered-views)]
     (-> state
-        (assoc-in [:ui :projection] newprojection)
-        (assoc-in [:ui :views] newnewviews)
+        (assoc-in [:ui :projection] new-projection)
+        (assoc-in [:ui :views] newnew-views)
         (assoc :commands-ui (concat commands-ui newcommands)))))
 
 
-(defn align [{{:keys [baseid views]} :ui :as state}]
+(defn align
+  "align view stack, usually on context size change"
+  [{{:keys [baseid views]} :ui :as state}]
   (assoc-in state [:ui :views] (kinetix/align views [baseid] 0 0 (. js/window -innerWidth) (. js/window -innerHeight))))
 
 
-(defn update-gen-sliders [{:keys [ui world] :as state}]
+(defn update-gen-sliders
+  "updates generator sliders"
+  [{:keys [ui world] :as state}]
   (let [views (:views ui)
         {:keys [height hitpower hitrate stamina speed]} (get-in world [:actors :hero :metrics :base])
         hpsl (:Hitpower views)
@@ -77,93 +81,103 @@
         hesl (:Height views)
         spsl (:Speed views)
         stsl (:Stamina views)
-        newv (-> views
-                 (kinetix/set-slider-value hpsl hitpower)
-                 (kinetix/set-slider-value hrsl hitrate)
-                 (kinetix/set-slider-value hesl height)
-                 (kinetix/set-slider-value spsl speed)
-                 (kinetix/set-slider-value stsl stamina))]
-    (assoc-in state [:ui :views] newv)))
+        new-views (-> views
+                      (kinetix/set-slider-value hpsl hitpower)
+                      (kinetix/set-slider-value hrsl hitrate)
+                      (kinetix/set-slider-value hesl height)
+                      (kinetix/set-slider-value spsl speed)
+                      (kinetix/set-slider-value stsl stamina))]
+    (assoc-in state [:ui :views] new-views)))
 
 
-(defn set-slider-value [{ {:keys [views] } :ui :as state} id value]
+(defn set-slider-value [{{:keys [views]} :ui :as state} id value]
+  "sets slider value"
   (assoc-in state [:ui :views] (kinetix/set-slider-value views (id views) value)))
 
 
 (defn execute-commands
-  [{:keys [level] commands :commands-ui ui-drawer :ui-drawer :as state}]
-  (reduce
-   (fn [oldstate {text :text :as command}]
-     (let [hero (get-in oldstate [:worlds :actors :hero])
-           path-metrics [:world :actors :hero :metrics]]
-
-       (cond
-         ;; ui
-         (= text "set-hitpower") ; update base metrics and generate new metrics for hero
-         (let [nbase (-> (get-in hero [:metrics :base])
-                         (assoc :hitpower (:ratio command))
-                         (actor/basemetrics-normalize :hitpower))
-               nmetrics (actor/generate-metrics nbase)]
-           (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
-         (= text "set-hitrate") ; update base metrics and generate new metrics for hero
-         (let [nbase (-> (get-in hero [:metrics :base])
-                         (assoc :hitrate (:ratio command))
-                         (actor/basemetrics-normalize :hitrate))
-               nmetrics (actor/generate-metrics nbase)]
-           (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
-         (= text "set-height") ; update base metrics and generate new metrics for hero
-         (let [nbase (-> (get-in hero [:metrics :base])
-                         (assoc :height (:ratio command))
-                         (actor/basemetrics-normalize :height))
-               nmetrics (actor/generate-metrics nbase)]
-           (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
-         (= text "set-speed") ; update base metrics and generate new metrics for hero
-         (let [nbase (-> (get-in hero [:metrics :base])
-                         (assoc :speed (:ratio command))
-                         (actor/basemetrics-normalize :speed))
-               nmetrics (actor/generate-metrics nbase)]
-           (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
-         (= text "set-stamina") ; update base metrics and generate new metrics for hero
-         (let [nbase (-> (get-in hero [:metrics :base])
-                         (assoc :stamina (:ratio command))
-                         (actor/basemetrics-normalize :stamina))
-               nmetrics (actor/generate-metrics nbase)]
-           (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
-         (= text "randomize")
-         (let [nbase (-> (actor/basemetrics-random)
-                         (actor/basemetrics-normalize :height))
-               nmetrics (actor/generate-metrics nbase)]
-           (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
-         
-         (= text "show-menu") (load-ui oldstate layouts/menu)
-         (= text "continue") (load-ui oldstate (if (= (:level oldstate) 0) layouts/generator layouts/hud))
-         (= text "options")
-         (let [newstate (load-ui oldstate layouts/options)]
-           (-> newstate
-               (set-slider-value :Music (get-in newstate [:volumes :music]))
-               (set-slider-value :Effects (get-in newstate [:volumes :effects]))
-               (align)))
-         
-         (= text "donate") (defaults/save-defaults! oldstate)
-         (= text "options back") (load-ui oldstate layouts/menu)
-         
-         (= text "left") (assoc-in oldstate [:keycodes 37] true)
-         (= text "right") (assoc-in oldstate [:keycodes 39] true)
-         (= text "jump") (assoc-in oldstate [:keycodes 38] true)
-         (= text "down") (assoc-in oldstate [:keycodes 40] true)
-         (= text "run") (assoc-in oldstate [:keycodes 32] true)
-         (= text "punch") (assoc-in oldstate [:keycodes 70] true)
-         (= text "kick") (assoc-in oldstate [:keycodes 83] true)
-         (= text "block") (assoc-in oldstate [:keycodes 68] true)
-
-         ;; font loaded, reset textures to force redraw with new fonts
-         (= text "redraw-ui") (assoc oldstate :ui-drawer (uiwebgl/reset ui-drawer))
-
-         (= text "start-game")
-         (-> oldstate
-             (load-ui layouts/info)
-             (update :commands-world conj {:text "load-level"}))
-
-         :else oldstate)))
-   (assoc state :commands-ui [])
-   commands))
+  "executes commands coming from the ui"
+  [{:keys [level commands-ui ui-drawer] :as state} msg]
+  (let [commands (if-not (and msg (= (:id msg) "redraw-ui"))
+                   commands-ui
+                   (conj commands-ui {:text "redraw-ui"}))]
+        (reduce
+         (fn [oldstate {text :text type :type :as command}]
+           (let [hero (get-in oldstate [:worlds :actors :hero])
+                 path-metrics [:world :actors :hero :metrics]]
+             (cond
+               (= text "start-game")
+               (-> oldstate
+                   (load-ui layouts/info)
+                   (update :commands-world conj {:text "load-level"}))
+               (= text "set-hitpower") ; update base metrics and generate new metrics for hero
+               (let [nbase (-> (get-in hero [:metrics :base])
+                               (assoc :hitpower (:ratio command))
+                               (actor/basemetrics-normalize :hitpower))
+                     nmetrics (actor/generate-metrics nbase)]
+                 (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
+               (= text "set-hitrate") ; update base metrics and generate new metrics for hero
+               (let [nbase (-> (get-in hero [:metrics :base])
+                               (assoc :hitrate (:ratio command))
+                               (actor/basemetrics-normalize :hitrate))
+                     nmetrics (actor/generate-metrics nbase)]
+                 (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
+               (= text "set-height") ; update base metrics and generate new metrics for hero
+               (let [nbase (-> (get-in hero [:metrics :base])
+                               (assoc :height (:ratio command))
+                               (actor/basemetrics-normalize :height))
+                     nmetrics (actor/generate-metrics nbase)]
+                 (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
+               (= text "set-speed") ; update base metrics and generate new metrics for hero
+               (let [nbase (-> (get-in hero [:metrics :base])
+                               (assoc :speed (:ratio command))
+                               (actor/basemetrics-normalize :speed))
+                     nmetrics (actor/generate-metrics nbase)]
+                 (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
+               (= text "set-stamina") ; update base metrics and generate new metrics for hero
+               (let [nbase (-> (get-in hero [:metrics :base])
+                               (assoc :stamina (:ratio command))
+                               (actor/basemetrics-normalize :stamina))
+                     nmetrics (actor/generate-metrics nbase)]
+                 (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
+               (and (= text "randomize") (= type "down")) ; randomizes generator values
+               (let [nbase (-> (actor/basemetrics-random)
+                               (actor/basemetrics-normalize :height))
+                     nmetrics (actor/generate-metrics nbase)]
+                 (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))         
+               (and (= text "show-menu") (= type "down")) ; shows menu view
+               (load-ui oldstate layouts/menu)
+               (and (= text "continue") (= type "down")) ; shows hud
+               (load-ui oldstate (if (= (:level oldstate) 0) layouts/generator layouts/hud))
+               (and (= text "options") (= type "down")) ; shows options view
+               (let [newstate (load-ui oldstate layouts/options)]
+                 (-> newstate ;  set slider values
+                     (set-slider-value :Music (get-in newstate [:volumes :music]))
+                     (set-slider-value :Effects (get-in newstate [:volumes :effects]))
+                     (align)))
+               (and (= text "donate") (= type "down")) ; opens donate link in browser
+               (defaults/save-defaults! oldstate)
+               (and (= text "options back") (= type "down")) ; opens menu view
+               (load-ui oldstate layouts/menu)
+               ;; on-screen control buttons
+               (and (= text "left") (= type "down")) (assoc-in oldstate [:keycodes 37] true)
+               (and (= text "left") (= type "up")) (assoc-in oldstate [:keycodes 37] false)
+               (and (= text "right")(= type "down")) (assoc-in oldstate [:keycodes 39] true)
+               (and (= text "right")(= type "up")) (assoc-in oldstate [:keycodes 39] false)
+               (and (= text "jump")(= type "down")) (assoc-in oldstate [:keycodes 38] true)
+               (and (= text "jump")(= type "up")) (assoc-in oldstate [:keycodes 38] false)
+               (and (= text "down")(= type "down")) (assoc-in oldstate [:keycodes 40] true)
+               (and (= text "down")(= type "up")) (assoc-in oldstate [:keycodes 40] false)
+               (and (= text "run")(= type "down")) (assoc-in oldstate [:keycodes 32] true)
+               (and (= text "run")(= type "up")) (assoc-in oldstate [:keycodes 32] false)
+               (and (= text "punch")(= type "down")) (assoc-in oldstate [:keycodes 70] true)
+               (and (= text "punch")(= type "up")) (assoc-in oldstate [:keycodes 70] false)
+               (and (= text "kick")(= type "down")) (assoc-in oldstate [:keycodes 83] true)
+               (and (= text "kick")(= type "up")) (assoc-in oldstate [:keycodes 83] false)
+               (and (= text "block")(= type "down")) (assoc-in oldstate [:keycodes 68] true)
+               (and (= text "block")(= type "up")) (assoc-in oldstate [:keycodes 68] false)
+               ;; font loaded, reset textures to force redraw with new fonts
+               (= text "redraw-ui") (assoc oldstate :ui-drawer (uiwebgl/reset ui-drawer))
+               :else oldstate)))
+         (assoc state :commands-ui [])
+         commands)))

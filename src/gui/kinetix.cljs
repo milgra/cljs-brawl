@@ -202,5 +202,5 @@
                   (-> (get viewmap (first subviews))
                       (assoc :width {:pixel 0})))]
     (if (= type "up")
-      {:views [subview] :command {:text command}}
-      {:views [subview] :command nil})))
+      {:views [subview] :command {:text command :type type}}
+      {:views [subview] :command {:text command :type type}})))

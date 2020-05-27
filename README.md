@@ -11,7 +11,6 @@ run :
 ## Todo
 
 * mukodo menu
-* working control buttons down/up
 * use enemy counts from svg
 * lassab punch rate
 * ai

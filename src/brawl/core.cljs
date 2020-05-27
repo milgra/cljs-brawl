@@ -139,20 +139,20 @@
 (defn update-controls
   "set up control state based on keycodes"
   [{:keys [keycodes controls] :as state } msg]
-  (if-not (and msg (= (:id msg) "key"))
-    state
-    (let [new-codes (assoc (:keycodes state) (:code msg) (:value msg))
-          new-controls {:left (new-codes 37)
-                        :right (new-codes 39)
-                        :up (new-codes 38)
-                        :down (new-codes 40)
-                        :punch (new-codes 70)
-                        :run (new-codes 32)
-                        :kick (new-codes 83)
-                        :block (new-codes 68)}]
-      (-> state
-          (assoc :keycodes new-codes)
-          (assoc :controls new-controls)))))
+  (let [new-codes (if-not (and msg (= (:id msg) "key"))
+                    keycodes
+                    (assoc keycodes (:code msg) (:value msg)))
+        new-controls {:left (new-codes 37)
+                      :right (new-codes 39)
+                      :up (new-codes 38)
+                      :down (new-codes 40)
+                      :punch (new-codes 70)
+                      :run (new-codes 32)
+                      :kick (new-codes 83)
+                      :block (new-codes 68)}]
+    (-> state
+        (assoc :keycodes new-codes)
+        (assoc :controls new-controls))))
 
 
 (defn animate
@@ -210,7 +210,7 @@
                (world/reset-world msg)
                (world/update-world msg)
                ;; ui
-               (brawlui/execute-commands)
+               (brawlui/execute-commands msg)
                (brawlui/update-ui msg)
                ;; drawing
                (draw-world frame)
