@@ -10,7 +10,6 @@ run :
 
 ## Todo
 
-* mukodo menu
 * use enemy counts from svg
 * lassab punch rate
 * ai
@@ -19,7 +18,6 @@ run :
 * összeesett ember guggolasbol alljon fol
 * szakadekrol lelepes csekk
 
-* controls menu point in menu, remove exit in browser
 * slidingnal meroleges komponenst nezz, es azt gravityvel
 * time scaling
 * update ui renderer and mpd

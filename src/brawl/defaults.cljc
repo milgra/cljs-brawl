@@ -24,9 +24,11 @@
   (println "save-defaults")
   (if (local-storage-supported?)
     (let [state-js {:curr-level (:curr-level state)
+                    :physics (:physics state)
                     :volumes {:music (get-in state [:volumes :music])
                               :effects (get-in state [:volumes :effects])}
                     }]
       (.setItem js/localStorage "state-saved?" true)
-      (.setItem js/localStorage "state" state-js))
+      (.setItem js/localStorage "state" state-js)
+      state)
   state))

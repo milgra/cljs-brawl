@@ -102,7 +102,7 @@
 
 (defn draw-world
   "draws background, actors, masses with projection"
-  [{:keys [world-drawer buffer]
+  [{:keys [world-drawer buffer physics]
     {:keys [actors particles surfacelines view-rect projection] :as world} :world :as state} frame]
   (if-not (:inited world)
     state
@@ -115,20 +115,20 @@
       (webgl/drawshapes! world-drawer projection variation)
       (webgl/drawtriangles! world-drawer projection buffer-triangle)
       
-      (let [buffer-points (-> buffer-triangle
-                              (floatbuffer/empty!)
-                              ((partial reduce (fn [oldbuf particle] (particle/get-point particle oldbuf))) particles)
-                              ((partial reduce (fn [oldbuf [id actor]] (actorskin/getpoints actor oldbuf view-rect))) actors))]
+      (let [buffer-points (cond-> buffer-triangle
+                              true (floatbuffer/empty!)
+                              true ((partial reduce (fn [oldbuf particle] (particle/get-point particle oldbuf))) particles)
+                              physics ((partial reduce (fn [oldbuf [id actor]] (actorskin/getpoints actor oldbuf view-rect))) actors))]
         
         ;; draw points
         (webgl/drawpoints! world-drawer projection buffer-points)
         
-        (let [buffer-line (-> buffer-points
-                              (floatbuffer/empty!)
-                              ((partial reduce (fn [oldbuf [id actor]] (actorskin/getlines actor oldbuf view-rect))) actors)
-                              (floatbuffer/append! surfacelines))]
+        (let [buffer-line (cond-> buffer-points
+                              true (floatbuffer/empty!)
+                              physics ((partial reduce (fn [oldbuf [id actor]] (actorskin/getlines actor oldbuf view-rect))) actors)
+                              physics (floatbuffer/append! surfacelines))]
           ;; draw lines
-          (webgl/drawlines! world-drawer projection buffer-line)
+          (if physics (webgl/drawlines! world-drawer projection buffer-line))
 
           (-> state
               (assoc :world-drawer world-drawer)
@@ -181,6 +181,7 @@
                :sounds (audio/sounds)
                :buffer (floatbuffer/create!)
                :volumes {:music 0.5 :effects 0.5}
+               :physics false
                :keycodes {}
                :controls {}
                :commands-ui []
@@ -188,6 +189,8 @@
         
         final (-> state
                   (defaults/load-defaults!)
+                  (audio/set-effects-volume)
+                  (audio/set-music-volume)
                   (brawlui/load-ui layouts/info))]
 
     (load-font! final "Ubuntu Bold" "css/Ubuntu-Bold.ttf")

@@ -264,7 +264,7 @@
 
     {:id "NewGame"
      :class "Button"
-     :command "new-game"
+     :command "new game"
      :texture {:type "Color" :color 0xFFFFFF0F}
      :label {:type "Label" :text "New Game" :size 25 :color 0xFFFFFFFF}
      :width "350 px" 
@@ -321,7 +321,7 @@
 
     {:id "Effects"
      :class "Slider"
-     :command "set sound volume"
+     :command "set effects volume"
      :texture {:type "Color" :color 0xFFFFFF0F}
      :label {:type "Label" :text "Sound Volume" :size 25 :color 0xFFFFFFFF}
      :width "350 px" 

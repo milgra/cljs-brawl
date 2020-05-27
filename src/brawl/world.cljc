@@ -185,6 +185,13 @@
       (put! channel {:id "level" :shapes shapes}))))
 
 
+(defn load-first-level [{:keys [level sounds] :as state}]
+  (load-level! state 0)
+  (-> state
+      (assoc-in [:world :loaded] false)
+      (assoc :level 0)))
+
+
 (defn load-next-level [{:keys [level sounds] :as state}]
   (let [next-level (min (inc level) 6)]
     (load-level! state next-level)
@@ -202,7 +209,10 @@
        (cond
          (= text "attack")
          (execute-attack oldstate command)
-         
+
+         (= text "new game")
+         (load-first-level oldstate)
+
          (= text "next-level")
          (if (= level 6)
            ;; show congrats screen

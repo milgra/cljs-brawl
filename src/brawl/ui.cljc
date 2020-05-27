@@ -1,7 +1,9 @@
 (ns brawl.ui
-  (:require [gui.kinetix :as kinetix]
+  (:require [goog.window :as window]
+            [gui.kinetix :as kinetix]
             [gui.math4 :as math4]
             [gui.webgl :as uiwebgl]
+            [brawl.audio :as audio]
             [brawl.actor :as actor]
             [brawl.defaults :as defaults]
             [brawl.layouts :as layouts]))
@@ -101,7 +103,7 @@
                    commands-ui
                    (conj commands-ui {:text "redraw-ui"}))]
         (reduce
-         (fn [oldstate {text :text type :type :as command}]
+         (fn [oldstate {text :text type :type ratio :ratio :as command}]
            (let [hero (get-in oldstate [:worlds :actors :hero])
                  path-metrics [:world :actors :hero :metrics]]
              (cond
@@ -139,6 +141,18 @@
                                (actor/basemetrics-normalize :stamina))
                      nmetrics (actor/generate-metrics nbase)]
                  (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
+               (= text "set music volume")
+               (-> oldstate
+                   (assoc-in [:volumes :music] ratio)
+                   (audio/set-music-volume)                 
+                   (defaults/save-defaults!))
+               (= text "set effects volume")
+               (-> oldstate
+                   (assoc-in [:volumes :effects] ratio)
+                   (audio/set-effects-volume)                 
+                   (defaults/save-defaults!))
+               (and (= text "show physics") (= type "down")) ; shows options view
+               (defaults/save-defaults! (update oldstate :physics not))
                (and (= text "randomize") (= type "down")) ; randomizes generator values
                (let [nbase (-> (actor/basemetrics-random)
                                (actor/basemetrics-normalize :height))
@@ -148,6 +162,8 @@
                (load-ui oldstate layouts/menu)
                (and (= text "continue") (= type "down")) ; shows hud
                (load-ui oldstate (if (= (:level oldstate) 0) layouts/generator layouts/hud))
+               (and (= text "new game") (= type "down"))
+               (update oldstate :commands-world conj {:text "new game"})
                (and (= text "options") (= type "down")) ; shows options view
                (let [newstate (load-ui oldstate layouts/options)]
                  (-> newstate ;  set slider values
@@ -161,7 +177,9 @@
                    (.requestFullscreen (.-documentElement js/document)))
                  oldstate)
                (and (= text "donate") (= type "down")) ; opens donate link in browser
-               (defaults/save-defaults! oldstate)
+               (do
+                 (goog.window/open "https://paypal.me/milgra")
+                 oldstate)
                (and (= text "options back") (= type "down")) ; opens menu view
                (load-ui oldstate layouts/menu)
                ;; on-screen control buttons
