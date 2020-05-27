@@ -10,13 +10,14 @@ run :
 
 ## Todo
 
+* gun, dead body
 * use enemy counts from svg
 * lassab punch rate
 * ai
 * random punch / kick heights
-* drag body
 * összeesett ember guggolasbol alljon fol
 * szakadekrol lelepes csekk
+* automatikusan gyogyuljon kozepes sebesseggel
 
 * slidingnal meroleges komponenst nezz, es azt gravityvel
 * time scaling

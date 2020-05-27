@@ -64,21 +64,21 @@
 
     (events/listen
      js/document
-     EventType.MOUSEDOWN
+     EventType.POINTERDOWN
      (fn [event]
        (swap! mouse-down not)
        (put! (:msgch state) {:id "mouse" :type "down" :point [(.-clientX event) (.-clientY event)]})))
 
     (events/listen
      js/document
-     EventType.MOUSEUP
+     EventType.POINTERUP
      (fn [event]
        (swap! mouse-down not)
        (put! (:msgch state) {:id "mouse" :type "up" :point [(.-clientX event) (.-clientY event)]})))
 
     (events/listen
      js/document
-     EventType.MOUSEMOVE
+     EventType.POINTERMOVE
      (fn [event]
        (if @mouse-down (put! (:msgch state) {:id "mouse" :type "down" :point [(.-clientX event) (.-clientY event)]}))))
 
