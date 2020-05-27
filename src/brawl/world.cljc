@@ -6,6 +6,7 @@
    [tubax.core :refer [xml->clj]]
    [mpd.phys2 :as phys2]
    [mpd.math2 :as math2]
+   [gui.math4 :as math4]
    [brawl.names :as names]
    [brawl.particle :as particle]
    [brawl.webgl :as webgl]
@@ -26,7 +27,8 @@
    :surfaces []
    :particles []
    :surfacelines []
-   :view-rect [0 0 0 0]})
+   :view-rect [0 0 0 0]
+   :projection (math4/proj_ortho 50 50 -50 -50 -1.0 1.0)})
 
 
 (def colors [0xFF0000FF 0x00FF00FF 0x0000FFFF 0xFF00FFFF 0x00FFFFFFF 0xFFFF00FF])
@@ -75,6 +77,18 @@
         (assoc-in [:world :actors] newactors ))))
 
 
+(defn calc-view-rect
+  "calculates the visible rectangle of the world"
+  [actor]
+  (let [[fax fay] (:p (get-in actor [:bases :base_l]))
+        [fbx fby] (:p (get-in actor [:bases :base_r]))
+        [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2))  ]
+        r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
+        h 350.0
+        w (* h r)]
+    [(- tx w) (+ tx w) (+ ty h) (- ty h)]))
+
+
 (defn update-world
   "updates phyisics and actors"
   [{{:keys [actors surfaces particles inited loaded endpos view-rect finished] :as world} :world keycodes :keycodes level :level commands-world :commands-world sounds :sounds controls :controls :as state} msg]
@@ -113,9 +127,14 @@
           
           newnewcommands (if (and (not finished) ended) (conj newcommands {:text "next-level"}) newcommands)
 
-          newparticles (map (fn [particle] (particle/upd particle view-rect)) particles)
-          
-          newworld (assoc world :actors newnewactors :particles newparticles :finished ended)]
+          ;; new view rectangle based on hero position
+          [l r b t :as new-rect] (calc-view-rect (:hero newnewactors))
+
+          new-projection (math4/proj_ortho (+ l 50) (- r 50) (- b 50) (+ t 50) -1.0 1.0)
+
+          newparticles (map (fn [particle] (particle/upd particle new-rect)) particles)
+
+          newworld (assoc world :actors newnewactors :particles newparticles :finished ended :view-rect new-rect :projection new-projection)]
 
       (-> state
           (assoc :commands-world newnewcommands)
@@ -123,7 +142,7 @@
     state))
 
 
-(defn reset-world [{:keys [level view-rect game-drawer] :as state} msg]
+(defn reset-world [{:keys [level view-rect world-drawer] :as state} msg]
   (if (and msg (= (:id msg) "level"))
     (let [svglevel (:shapes msg)
           [l r b t] view-rect
@@ -132,7 +151,7 @@
           surfaces (phys2/surfaces-from-pointlist points)
           lines (clj->js (reduce (fn [result {[tx ty] :t [bx by] :b}] (concat result [tx ty 1.0 1.0 1.0 1.0 (+ tx bx) (+ ty by) 1.0 1.0 1.0 1.0])) [] surfaces))
           seeds (map #(particle/init 0.0 0.0 [1.0 1.0 1.0 0.5] [(+ 0.1 (rand 0.6)) (+ 0.05 (rand 0.3))]  :seed) (range 0 20))
-          newdrawer (webgl/loadshapes game-drawer (filter #(if (:id %) (not (clojure.string/includes? (:id %) "Pivot")) true) (:shapes msg)))
+          newdrawer (webgl/loadshapes world-drawer (filter #(if (:id %) (not (clojure.string/includes? (:id %) "Pivot")) true) (:shapes msg)))
           newworld (-> {:actors {}
                         :guns []
                         :infos []
@@ -145,7 +164,7 @@
                        (create-actors pivots))]
 
       (cond-> state
-        true (assoc :game-drawer newdrawer)
+        true (assoc :world-drawer newdrawer)
         true (assoc :world newworld)
         true (brawlui/update-gen-sliders)
         true (assoc :commands-world [])

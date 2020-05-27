@@ -142,7 +142,7 @@
   (buffers/clear-color-buffer context 0.0 0.0 0.0 1.0))
 
 
-(defn drawshapes! [{:keys [context shader scene_buffer actor_buffer location_pos location_col vertexes vertexcounts vertexstarts ] :as state} projection [tx ty] variation]
+(defn drawshapes! [{:keys [context shader scene_buffer actor_buffer location_pos location_col vertexes vertexcounts vertexstarts ] :as state} projection variation]
 
   (.bindBuffer context buffer-object/array-buffer scene_buffer)
 

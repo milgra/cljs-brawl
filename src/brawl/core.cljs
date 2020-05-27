@@ -63,11 +63,6 @@
 
     (events/listen
      js/document
-     EventType.TOUCHSTART
-     (fn [event] nil))
-
-    (events/listen
-     js/document
      EventType.MOUSEDOWN
      (fn [event]
        (swap! mouse-down not)
@@ -87,6 +82,11 @@
        (if @mouse-down (put! (:msgch state) {:id "mouse" :type "down" :point [(.-clientX event) (.-clientY event)]}))))
 
     (events/listen
+     js/document
+     EventType.TOUCHSTART
+     (fn [event] nil))
+
+    (events/listen
      js/window
      EventType.RESIZE
      (fn [event]
@@ -95,68 +95,52 @@
 
 
 (defn draw-ui
-  "draw ui"
-  [{{:keys [views viewids] :as ui} :ui
-    ui-drawer :ui-drawer :as state}
-   frame]
-  (let [projection (math4/proj_ortho 0 (.-innerWidth js/window) (.-innerHeight js/window) 0 -10.0 10.0)
-        new-drawer (uiwebgl/draw! ui-drawer projection (map views viewids))]
-    (assoc state :ui-drawer new-drawer)))
-
-
-(defn calc-view-rect [actor]
-  (let [[fax fay] (:p (get-in actor [:bases :base_l]))
-        [fbx fby] (:p (get-in actor [:bases :base_r]))
-        [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2))  ]
-        ratio 1.0
-        r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
-        h (* 350.0 ratio)
-        w (* h r)]
-    [(- tx w) (+ tx w) (+ ty h) (- ty h)]))
+  "draw ui elements with ui-drawer"
+  [{{:keys [views viewids projection] :as ui} :ui ui-drawer :ui-drawer :as state}]
+  (assoc state :ui-drawer (uiwebgl/draw! ui-drawer projection (map views viewids))))
 
 
 (defn draw-world
   "draws background, actors, masses with projection"
-  [{:keys [game-drawer trans buffer]
-    {:keys [actors particles surfacelines] :as world} :world
-    level :level :as state}
-   frame
-   msg]
-  (if (:inited world)
-    (let [[l r b t :as view-rect] (calc-view-rect (:hero actors))
-          projection (math4/proj_ortho (+ l 50) (- r 50) (- b 50) (+ t 50) -1.0 1.0)
-          variation (Math/floor (mod (/ frame 10.0) 3.0 ))
-          newbuf (floatbuffer/empty! buffer)
-          newbuf1 (reduce (fn [oldbuf [id actor]] (actorskin/get-skin-triangles actor oldbuf variation view-rect)) newbuf actors)]
+  [{:keys [world-drawer buffer]
+    {:keys [actors particles surfacelines view-rect projection] :as world} :world :as state} frame]
+  (if-not (:inited world)
+    state
+    (let [variation (Math/floor (mod (/ frame 10.0) 3.0 ))
+          buffer-triangle (-> buffer
+                              (floatbuffer/empty!)
+                              ((partial reduce (fn [oldbuf [id actor]] (actorskin/get-skin-triangles actor oldbuf variation view-rect))) actors))]
       ;; draw triangles
-      (webgl/clear! game-drawer)
-      (webgl/drawshapes! game-drawer projection trans variation)
-      (webgl/drawtriangles! game-drawer projection newbuf1)
-
-      (let [newbuf2 (floatbuffer/empty! newbuf1)
-            newbuf3 (reduce (fn [oldbuf particle] (particle/get-point particle oldbuf)) newbuf2 particles) ;; particles
-            newbuf4 (reduce (fn [oldbuf [id actor]] (actorskin/getpoints actor oldbuf view-rect)) newbuf3 actors)]
-
+      (webgl/clear! world-drawer)
+      (webgl/drawshapes! world-drawer projection variation)
+      (webgl/drawtriangles! world-drawer projection buffer-triangle)
+      
+      (let [buffer-points (-> buffer-triangle
+                              (floatbuffer/empty!)
+                              ((partial reduce (fn [oldbuf particle] (particle/get-point particle oldbuf))) particles)
+                              ((partial reduce (fn [oldbuf [id actor]] (actorskin/getpoints actor oldbuf view-rect))) actors))]
+        
         ;; draw points
-        (webgl/drawpoints! game-drawer projection newbuf4)
-
-        (let [newbuf5 (floatbuffer/empty! newbuf4)
-              newbuf6 (reduce (fn [oldbuf [id actor]] (actorskin/getlines actor oldbuf view-rect)) newbuf5 actors)
-              newbuf7 (floatbuffer/append! newbuf6 surfacelines)]
+        (webgl/drawpoints! world-drawer projection buffer-points)
+        
+        (let [buffer-line (-> buffer-points
+                              (floatbuffer/empty!)
+                              ((partial reduce (fn [oldbuf [id actor]] (actorskin/getlines actor oldbuf view-rect))) actors)
+                              (floatbuffer/append! surfacelines))]
           ;; draw lines
-          (webgl/drawlines! game-drawer projection newbuf7)
+          (webgl/drawlines! world-drawer projection buffer-line)
 
           (-> state
-              (assoc :game-drawer game-drawer)
+              (assoc :world-drawer world-drawer)
               (assoc-in [:world :view-rect] view-rect)
-              (assoc :buffer newbuf7)))))
-    state))
+              (assoc :buffer buffer-line)))))))
 
 
 (defn update-controls
   "set up control state based on keycodes"
   [{:keys [keycodes controls] :as state } msg]
-  (if (and msg (= (:id msg) "key"))
+  (if-not (and msg (= (:id msg) "key"))
+    state
     (let [new-codes (assoc (:keycodes state) (:code msg) (:value msg))
           new-controls {:left (new-codes 37)
                         :right (new-codes 39)
@@ -168,8 +152,7 @@
                         :block (new-codes 68)}]
       (-> state
           (assoc :keycodes new-codes)
-          (assoc :controls new-controls)))
-    state))
+          (assoc :controls new-controls)))))
 
 
 (defn animate
@@ -189,13 +172,10 @@
 (defn main
   "entering point"
   []
-  
-  (resize-context!)
-
   (let [state {:ui (brawlui/init)
                :world (world/init)
                :ui-drawer (uiwebgl/init)
-               :game-drawer (webgl/init)
+               :world-drawer (webgl/init)
                :level 0
                :msgch (chan)
                :sounds (audio/sounds)
@@ -212,12 +192,15 @@
 
     (load-font! final "Ubuntu Bold" "css/Ubuntu-Bold.ttf")
     (init-events! final)
+    (resize-context!)
     (world/load-level! final (:level final))
 
     (animate
      final
      (fn [prestate frame time]
-       (if (= (mod frame 1) 0 ) ; frame skipping for development
+       ;; frame skipping for development
+       (if-not (= (mod frame 1) 0 )
+         prestate
          (let [msg (poll! (:msgch prestate))]
            (-> prestate
                ;; get controls
@@ -230,8 +213,8 @@
                (brawlui/execute-commands)
                (brawlui/update-ui msg)
                ;; drawing
-               (draw-world frame msg)
-               (draw-ui frame)))
-         prestate)))))
+               (draw-world frame)
+               (draw-ui))))))))
 
+;; start main once, avoid firing new runloops with new reloads
 (defonce mainloop (main))
