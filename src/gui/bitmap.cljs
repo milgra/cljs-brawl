@@ -16,6 +16,17 @@
          :height h}))))
 
 
+(defn clear [{:keys [width height data] :as bmp} r g b a]
+  (let [length (* width height 4)
+        chunk (js/Uint8Array. [r g b a])]
+    (loop [index 0]
+      (if (< index length)
+        (do
+          (.set data chunk index)
+          (recur (+ index 4)))
+        bmp))))
+
+
 (defn insert [{da :data wa :width ha :height :as bmp}
               {db :data wb :width hb :height :as src}
               x y]

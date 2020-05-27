@@ -77,7 +77,6 @@
 ;;|     StartGame      |
   {:id "Generator"
    :class ""
-   :texture {:type "Empty"}
    :width "100 %" 
    :height "100 %" 
    :subviews
@@ -123,7 +122,6 @@
 ;;Kick  Shoot   Health Bullets Power    Down|
   {:id "Hud"
    :class ""
-   :texture {:type "Empty"}
    :width "100 %" 
    :height "100 %" 
    :subviews

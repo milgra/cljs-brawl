@@ -204,7 +204,8 @@
                (and (= text "block")(= type "down")) (assoc-in oldstate [:keycodes 68] true)
                (and (= text "block")(= type "up")) (assoc-in oldstate [:keycodes 68] false)
                ;; font loaded, reset textures to force redraw with new fonts
-               (= text "redraw-ui") (assoc oldstate :ui-drawer (uiwebgl/reset ui-drawer))
+               (= text "redraw-ui")
+               (assoc oldstate :ui-drawer (uiwebgl/reset ui-drawer))
                :else oldstate)))
          (assoc state :commands-ui [])
          commands)))

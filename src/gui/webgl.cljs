@@ -122,7 +122,7 @@
          tmap ui-texmap]
     (if (empty? remviews)
       tmap
-      (let [{:keys [texture w h] :as view} (first remviews)
+      (let [{:keys [id texture w h] :as view} (first remviews)
             newtmap (if (texmap/hasbmp? tmap texture)
                       tmap
                       (cond
@@ -189,16 +189,18 @@
         ;; generate vertex data from views
         resfb (fb/empty! floatbuffer)
         newfb (reduce (fn [oldbuf {:keys [id x y w h texture] :as view}]
-                        (let [[tlx tly brx bry] (texmap/getbmp newtexmap texture)]
-                          (fb/append!
-                           oldbuf
-                           (array x y tlx tly
-                                  (+ x w) y brx tly
-                                  x (+ y h) tlx bry
-                                  
-                                  (+ x w) y brx tly
-                                  (+ x w) (+ y h) brx bry
-                                  x (+ y h) tlx bry)))) resfb views)]
+                        (if-not texture
+                          oldbuf
+                          (let [[tlx tly brx bry] (texmap/getbmp newtexmap texture)]
+                            (fb/append!
+                             oldbuf
+                             (array x y tlx tly
+                                    (+ x w) y brx tly
+                                    x (+ y h) tlx bry
+                                    
+                                    (+ x w) y brx tly
+                                    (+ x w) (+ y h) brx bry
+                                    x (+ y h) tlx bry))))) resfb views)]
     
     ;(cljs.pprint/pprint vertexes)>
     
