@@ -125,7 +125,7 @@
         vertexes (concat vertexesA vertexesB vertexesC)
         vertexcounts [ (count vertexesA) (count vertexesB) (count vertexesC) ]
         vertexstarts [ 0 (vertexcounts 0) (+ (vertexcounts 0 ) ( vertexcounts 1 ) ) ]]
-
+    
     (.bindBuffer context buffer-object/array-buffer scene_buffer)
     (.bufferData context
                  buffer-object/array-buffer
