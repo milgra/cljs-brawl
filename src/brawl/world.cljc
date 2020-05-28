@@ -142,7 +142,15 @@
                              result
                              (assoc result dragged-gun (actor/update-gun (dragged-gun guns) actor)))) guns actors)]
     (assoc-in state [:world :guns] new-guns)))
-    
+
+
+(defn update-dragged [{{:keys [guns actors] :as world} :world :as state}]
+  (let [new-actors (reduce (fn [result [id {:keys [dragged-body] :as actor}]]
+                           (if-not dragged-body
+                             result
+                             (assoc result dragged-body (actor/update-dragged (dragged-body result) actor)))) actors actors)]
+    (assoc-in state [:world :actors] new-actors)))
+
 
 (defn extract-actor-commands [{:keys [commands-world]
                                {:keys [actors] :as world} :world :as state}]
@@ -170,13 +178,9 @@
   (let [new-actors (reduce (fn [result [id actor]]
                              (let [newactor (cond
                                               (not= :hero id) (actor/update-actor actor nil surfaces result guns 1.0)
-                                              :else (actor/update-actor actor controls surfaces result guns 1.0))
-                                   
-                                   newnewactor (if-not (:dragger newactor)
-                                                 newactor
-                                                 (actor/update-dragged newactor ((:dragger newactor) result)))]                                    
+                                              :else (actor/update-actor actor controls surfaces result guns 1.0))]
                                
-                               (assoc result id newnewactor)))
+                               (assoc result id newactor)))
                            {}
                            actors)]
     (assoc-in state [:world :actors] new-actors)))
@@ -191,6 +195,7 @@
         (update-actors)
         (extract-actor-commands)
         (update-guns)
+        (update-dragged)
         (check-ended)
         (calc-view-rect)
         (update-particles))))
@@ -261,8 +266,8 @@
         nearby-gun (first (remove nil? (map (fn [[_ {:keys [id p d]}]]
                                         (if-not (< (math2/length-v2 (math2/sub-v2 p (:p hip))) 80.0) nil id)) guns)))
 
-        nearby-actor (first (remove nil? (map (fn [[_ {:keys [id] {ehip :hip} :masses ecolor :color}]]
-                                          (if-not (and (not= color ecolor) (< (math2/length-v2 (math2/sub-v2 (:p ehip) (:p hip))) 80.0)) nil id)) actors)))
+        nearby-actor (first (remove nil? (map (fn [[_ {:keys [id] {ehip :hip} :masses ecolor :color ehealth :health}]]
+                                          (if-not (and (< ehealth 0) (not= color ecolor) (< (math2/length-v2 (math2/sub-v2 (:p ehip) (:p hip))) 80.0)) nil id)) actors)))
 
         new-actor (cond-> actor
                     nearby-gun

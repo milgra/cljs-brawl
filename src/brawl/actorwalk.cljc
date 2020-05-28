@@ -65,7 +65,7 @@
                  :else [(+ nx nrx) (+ ny nry)])
         elbow_l (triangle_with_bases neck hand_l (* arml 0.5) facing)
         elbow_r (triangle_with_bases neck hand_r (* arml 0.5) facing)
-        command (if (and punch (not action-sent) (not left) (not right)) {:id id :text "attack" :base neck :target (if (= punch-hand :hand_l) hand_l hand_r) :time time :power 10}) ]
+        command (if (and punch (not action-sent) (not left) (not right)) [{:id id :text "attack" :base neck :target (if (= punch-hand :hand_l) hand_l hand_r) :time time :power 10}])]
     (-> state
         (assoc :commands (if command (into commands command) commands))
         (assoc-in [:masses :hand_l :p] hand_l)
@@ -141,7 +141,7 @@
         foot_r (if (= :base_r (:active base-order))
                  (if kick kick-point act)
                  pas)
-        command (if (and kick (not action-sent)) {:id id :text "attack" :base (:p (:hip masses)) :target kick-point :time time :power 40})]
+        command (if (and kick (not action-sent)) [{:id id :text "attack" :base (:p (:hip masses)) :target kick-point :time time :power 40}])]
     (-> state
         (assoc :commands (if command (into commands command) commands))
         (assoc-in [:masses :foot_l :p] foot_l) 

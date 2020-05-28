@@ -194,16 +194,8 @@
       result)))
 
 
-(defn update-dragged [dragged dragger]
-  ;; (if (< health 0.0)
-  ;;   state
-  ;;   (do
-  ;;     (if dragged-gun
-  ;;       (update guns :dragged-gun assoc :p hand_l))
-  ;;     (if dragged-body
-  ;;       (update actors :dragged-body assoc-in [:masses :hip :p] hand_l))))
-  ;; state
-  dragged)
+(defn update-dragged [dragged {{hip :hip} :masses :as dragger}]
+  (assoc-in dragged [:masses :hip :p] (:p hip)))
 
 
 (defn update-gun [gun {{hand_l :hand_l} :masses facing :facing :as actor}]
