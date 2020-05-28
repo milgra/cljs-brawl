@@ -5,6 +5,7 @@
             [gui.webgl :as uiwebgl]
             [brawl.audio :as audio]
             [brawl.actor :as actor]
+            [brawl.metrics :as metrics]
             [brawl.defaults :as defaults]
             [brawl.layouts :as layouts]))
 
@@ -51,7 +52,7 @@
         
         new-views (reduce #(assoc %1 (:id %2) %2) views (mapcat :views altered-views))
 
-        newcommands (map :command altered-views)
+        new-commands (map :command altered-views)
 
         newnew-views (if-not msg
                       new-views
@@ -63,7 +64,7 @@
     (-> state
         (assoc-in [:ui :projection] new-projection)
         (assoc-in [:ui :views] newnew-views)
-        (assoc :commands-ui (concat commands-ui newcommands)))))
+        (assoc :commands-ui (concat commands-ui new-commands)))))
 
 
 (defn align
@@ -114,32 +115,32 @@
                (= text "set-hitpower") ; update base metrics and generate new metrics for hero
                (let [nbase (-> (get-in hero [:metrics :base])
                                (assoc :hitpower (:ratio command))
-                               (actor/basemetrics-normalize :hitpower))
-                     nmetrics (actor/generate-metrics nbase)]
+                               (metrics/basemetrics-normalize :hitpower))
+                     nmetrics (metrics/generate-metrics nbase)]
                  (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
                (= text "set-hitrate") ; update base metrics and generate new metrics for hero
                (let [nbase (-> (get-in hero [:metrics :base])
                                (assoc :hitrate (:ratio command))
-                               (actor/basemetrics-normalize :hitrate))
-                     nmetrics (actor/generate-metrics nbase)]
+                               (metrics/basemetrics-normalize :hitrate))
+                     nmetrics (metrics/generate-metrics nbase)]
                  (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
                (= text "set-height") ; update base metrics and generate new metrics for hero
                (let [nbase (-> (get-in hero [:metrics :base])
                                (assoc :height (:ratio command))
-                               (actor/basemetrics-normalize :height))
-                     nmetrics (actor/generate-metrics nbase)]
+                               (metrics/basemetrics-normalize :height))
+                     nmetrics (metrics/generate-metrics nbase)]
                  (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
                (= text "set-speed") ; update base metrics and generate new metrics for hero
                (let [nbase (-> (get-in hero [:metrics :base])
                                (assoc :speed (:ratio command))
-                               (actor/basemetrics-normalize :speed))
-                     nmetrics (actor/generate-metrics nbase)]
+                               (metrics/basemetrics-normalize :speed))
+                     nmetrics (metrics/generate-metrics nbase)]
                  (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
                (= text "set-stamina") ; update base metrics and generate new metrics for hero
                (let [nbase (-> (get-in hero [:metrics :base])
                                (assoc :stamina (:ratio command))
-                               (actor/basemetrics-normalize :stamina))
-                     nmetrics (actor/generate-metrics nbase)]
+                               (metrics/basemetrics-normalize :stamina))
+                     nmetrics (metrics/generate-metrics nbase)]
                  (-> oldstate (assoc-in path-metrics nmetrics) (update-gen-sliders)))
                (= text "set music volume")
                (-> oldstate
@@ -154,9 +155,9 @@
                (and (= text "show physics") (= type "down")) ; shows options view
                (defaults/save-defaults! (update oldstate :physics not))
                (and (= text "randomize") (= type "down")) ; randomizes generator values
-               (let [nbase (-> (actor/basemetrics-random)
-                               (actor/basemetrics-normalize :height))
-                     nmetrics (actor/generate-metrics nbase)]
+               (let [nbase (-> (metrics/basemetrics-random)
+                               (metrics/basemetrics-normalize :height))
+                     nmetrics (metrics/generate-metrics nbase)]
                  (-> oldstate
                      (assoc-in path-metrics nmetrics)
                      (assoc :metrics nbase)

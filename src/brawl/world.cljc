@@ -13,6 +13,7 @@
    [brawl.webgl :as webgl]
    [brawl.svg :as svg]
    [brawl.ui :as brawlui]
+   [brawl.metrics :as metrics]
    [brawl.layouts :as layouts]
    [brawl.actor :as actor]
    [brawl.actorskin :as actorskin]))
@@ -46,7 +47,7 @@
                                    level (js/parseInt (second (second toks)))
                                    name (if (= level 0) :hero (keyword (names/getname)))
                                    color (nth colors team)
-                                   metrics (if (= level 0) herometrics (actor/basemetrics-random))]
+                                   metrics (if (= level 0) herometrics (metrics/basemetrics-random))]
                                (update oldstate :actors assoc name (actor/init (first pos) (second pos) name color metrics)))
                 (= type "g") (assoc oldstate :guns (conj guns {:pos pos}))
                 (= type "e") (assoc oldstate :endpos pos)

@@ -10,6 +10,7 @@
    [brawl.webgl :as webgl]
    [brawl.audio :as audio]
    [brawl.actor :as actor]
+   [brawl.metrics :as metrics]
    [brawl.layouts :as layouts]
    [brawl.particle :as particle]
    [brawl.defaults :as defaults]
@@ -181,7 +182,7 @@
                :msgch (chan)
                :sounds (audio/sounds)
                :buffer (floatbuffer/create!)
-               :metrics (actor/basemetrics-random)
+               :metrics (metrics/basemetrics-random)
                :volumes {:music 0.5 :effects 0.5}
                :physics false
                :keycodes {}
