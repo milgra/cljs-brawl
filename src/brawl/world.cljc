@@ -34,128 +34,167 @@
    :projection (math4/proj_ortho 50 50 -50 -50 -1.0 1.0)})
 
 
-(def colors [0xFF0000FF 0x00FF00FF 0x0000FFFF 0xFF00FFFF 0x00FFFFFFF 0xFFFF00FF])
+(def colors [0xFF0000FF
+             0x00FF00FF
+             0x0000FFFF
+             0xFF00FFFF
+             0x00FFFFFFF
+             0xFFFF00FF])
+
 
 (defn create-actors
   "add actors, infos, guns and enpoint to scene based on pivot points in svg"
   [state pivots herometrics]
-  (reduce (fn [{:keys [actors guns infos] :as oldstate} {id :id path :path}]         
+  (reduce (fn [{:keys [actors guns infos] :as oldstate}
+               {:keys [id path] :as pivot}]         
             (let [pos (nth path 3)
-                  toks (clojure.string/split id #"_")
-                  type (first (second toks))]
+                  tokens (clojure.string/split id #"_")
+                  type (first (second tokens))]
               (cond
-                (= type "l") (let [team (js/parseInt (second (nth toks 2)))
-                                   level (js/parseInt (second (second toks)))
+                (= type "l") (let [team (js/parseInt (second (nth tokens 2)))
+                                   level (js/parseInt (second (second tokens)))
                                    name (if (= level 0) :hero (keyword (names/getname)))
                                    color (nth colors team)
-                                   metrics (if (= level 0) herometrics (metrics/basemetrics-random))]
-                               (update oldstate :actors assoc name (actor/init (first pos) (second pos) name color metrics)))
-                (= type "g") (let [name (str "gun" (rand 1000))]
-                               (update oldstate :guns assoc name (gun/init pos name)))
+                                   metrics (if (= level 0) herometrics (metrics/basemetrics-random))
+                                   actor (actor/init (first pos) (second pos) name color metrics)]
+                               (update oldstate :actors assoc name actor))
+                (= type "g") (let [name (str "gun" (rand 1000))
+                                   gun (gun/init pos name)]
+                               (update oldstate :guns assoc name gun))
                 (= type "e") (assoc oldstate :endpos pos)
-                (= type "i") (assoc oldstate :infos (conj infos {:pos pos :index (js/parseInt (second type))})))     
-              )) state pivots))
+                (= type "i") (let [index (js/parseInt (second type))]
+                               (assoc oldstate :infos (conj infos {:pos pos :index index})))))) state pivots))
 
 
-(defn execute-attack [{{actors :actors particles :particles} :world sounds :sounds :as state} command]
-  ;; hittest other actors
-  (let [[dx dy] (math2/resize-v2 (math2/sub-v2 (:target command) (:base command)) 4.0)
+(defn create-particles [contacts [dx dy]]
+  (reduce (fn [res [x y]]
+            (concat
+             res
+             (repeatedly 10 #(particle/init x y [1.0 1.0 1.0 0.5] (math2/resize-v2 [(+ (- 1.0) (rand 2.0)) (+ (- 1.0) (rand 2.0))] (+ 1.0 (rand 2.0))) :dust))
+             (repeatedly 5 #(particle/init x y [1.0 0.0 0.0 0.5] [ (+ dx -2.0 (rand 2.0)) (+ dy -2.0 (rand 2.0))] :blood))))
+          []
+          contacts))
+
+
+(defn hit-actors [actors sounds command]
+  (reduce (fn [result [id actor]]
+            (let [newactor (actor/hit actor command)]
+              (if (and (> (:health actor) 0 ) (< (:health newactor) 0)) (.play ((keyword (str "death" (rand-int 2))) sounds)))
+              (assoc result id newactor)))
+          {}
+          actors))
+
+
+(defn execute-attack
+  "hittest actors and modify if hit happened"
+  [{{:keys [actors particles]} :world sounds :sounds :as state} command]
+  (let [main-dir (math2/resize-v2 (math2/sub-v2 (:target command) (:base command)) 4.0)
         contacts (remove nil? (map (fn [[id actor]] (actor/hitpoint actor command)) actors))
-        newparticles (reduce (fn [res [x y]]
-                               (concat res
-                                       (repeatedly 10 #(particle/init x y [1.0 1.0 1.0 0.5] (math2/resize-v2 [(+ (- 1.0) (rand 2.0)) (+ (- 1.0) (rand 2.0))] (+ 1.0 (rand 2.0))) :dust))
-                                       (repeatedly 5 #(particle/init x y [1.0 0.0 0.0 0.5]  [ (+ dx -2.0 (rand 2.0)) (+ dy -2.0 (rand 2.0))] :blood))))
-                             [] contacts)
-        newactors (reduce (fn [result [id actor]]
-                            (let [newactor (actor/hit actor command)]
-                              (if (and (> (:health actor) 0 ) (< (:health newactor) 0)) (.play ((keyword (str "death" (rand-int 2))) sounds)))
-                              (assoc result id newactor)))
-                          {}
-                          actors)]
+        new-particles (create-particles contacts main-dir)
+        new-actors (hit-actors actors sounds command)]
     (when-not (empty? contacts)
       (.play ((keyword (str "punch" (rand-int 3))) sounds))
+      ;; start music at first punch, should do better but starting music needs user interaction
       (set! (.-loop (:theme sounds)) true)
       (.play (:theme sounds)))
-  
     (-> state
-        (assoc-in [:world :particles] (concat particles newparticles))
-        (assoc-in [:world :actors] newactors ))))
+        (assoc-in [:world :particles] (concat particles new-particles))
+        (assoc-in [:world :actors] new-actors))))
 
 
 (defn calc-view-rect
   "calculates the visible rectangle of the world"
-  [actor]
-  (let [[fax fay] (:p (get-in actor [:bases :base_l]))
+  [{{:keys [actors] :as world} :world :as state}]  
+  (let [actor (:hero actors)
+        [fax fay] (:p (get-in actor [:bases :base_l]))
         [fbx fby] (:p (get-in actor [:bases :base_r]))
         [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2))  ]
         r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
         h 350.0
-        w (* h r)]
-    [(- tx w) (+ tx w) (+ ty h) (- ty h)]))
+        w (* h r)
+        [l r b t :as new-rect] [(- tx w) (+ tx w) (+ ty h) (- ty h)]
+        new-proj (math4/proj_ortho (+ l 50) (- r 50) (- b 50) (+ t 50) -1.0 1.0)]
+    (-> state
+        (assoc-in [:world :view-rect] new-rect)
+        (assoc-in [:world :projection] new-proj))))
+
+
+(defn check-ended [{:keys [commands-world] {:keys [actors finished endpos] :as world} :world :as state}]
+  (let [[ex ey] endpos
+        [bx by] (get-in actors [:hero :bases :base_l :p])
+        dx (- bx ex)
+        dy (- by ey)
+        ended? (if (and (< (Math/abs dx) 50.0) (< (Math/abs dy) 50)) true false)
+        new-commands (if (and (not finished) ended?) (conj commands-world {:text "next-level"}) commands-world)]
+    (-> state
+        (assoc :commands-world new-commands)
+        (assoc-in [:world :finished] ended?))))
+
+
+(defn update-particles [{{:keys [particles view-rect]} :world :as state}]
+  (let [new-particles (map (fn [particle] (particle/upd particle view-rect)) particles)]
+    (assoc-in state [:world :particles] new-particles)))
+
+
+(defn update-guns [{{:keys [guns actors] :as world} :world :as state}]
+  (let [new-guns (reduce (fn [result [id gun]]
+                           (if-not (:actor gun)
+                             result
+                             (assoc result id (actor/update-gun gun ((:actor gun) actors))))) guns guns)]
+    (assoc-in state [:world :guns] new-guns)))
+    
+
+(defn extract-actor-commands [{:keys [commands-world]
+                               {:keys [actors] :as world} :world :as state}]
+  (let [new-commands (reduce (fn [result [id actor]]
+                               (if (empty? (:commands actor))
+                                 result
+                                 (conj result (:commands actor))))
+                             commands-world
+                             actors)
+        new-actors (if (empty? new-commands)
+                     actors
+                     (reduce (fn [result [id actor]]
+                               (if (empty? (:commands actor))
+                                 result
+                                 (assoc result id (-> actor (assoc :commands []) (assoc :action-sent true)))))
+                             actors
+                             actors))]
+    (-> state
+        (assoc :commands-world new-commands)
+        (assoc-in [:world :actors] new-actors)))) 
+
+
+(defn update-actors [{:keys [controls]
+                      {:keys [actors surfaces guns] :as world} :world :as state}]
+  (let [new-actors (reduce (fn [result [id actor]]
+                             (let [newactor (cond
+                                              (not= :hero id) (actor/update-actor actor nil surfaces result guns 1.0)
+                                              :else (actor/update-actor actor controls surfaces result guns 1.0))
+                                   
+                                   newnewactor (if-not (:dragger newactor)
+                                                 newactor
+                                                 (actor/update-dragged newactor ((:dragger newactor) result)))]                                    
+                               
+                               (assoc result id newnewactor)))
+                           {}
+                           actors)]
+    (assoc-in state [:world :actors] new-actors)))
 
 
 (defn update-world
   "updates phyisics and actors"
-  [{{:keys [actors guns surfaces particles inited loaded endpos view-rect finished] :as world} :world keycodes :keycodes level :level commands-world :commands-world sounds :sounds controls :controls :as state} msg]
-  (if loaded
-    (let [newactors (reduce (fn [result [id actor]]
-                              (let [newactor (cond
-                                               (not= :hero id) (actor/update-actor actor nil surfaces actors guns 1.0)
-                                               :else (actor/update-actor actor controls surfaces actors guns 1.0))
-                                    newnewactor (if-not (:dragger newactor)
-                                                  newactor
-                                                  (actor/update-dragged newactor ((:dragger newactor) result)))]                                    
-                                
-                                (assoc result id newnewactor)))
-                            {}
-                            actors)
-
-          ;; extract commands
-          newcommands (reduce (fn [result [id actor]]
-                                (if (empty? (:commands actor))
-                                  result
-                                  (conj result (:commands actor))))
-                              commands-world
-                              newactors)
-
-          ;; remove commands if needed
-          newnewactors (if (empty? newcommands)
-                         newactors
-                         (reduce (fn [result [id actor]]
-                                   (if (empty? (:commands actor))
-                                     result
-                                     (assoc result id (-> actor (assoc :commands []) (assoc :action-sent true)))))
-                                 newactors
-                                 newactors))
-
-          newguns (reduce (fn [result [id gun]]
-                            (if-not (:actor gun)
-                              result
-                              (assoc result id (actor/update-gun gun ((:actor gun) newnewactors))))) guns guns)
-          
-          ;; finished sign?
-          ended (let [[ex ey] endpos
-                      [bx by] (get-in newactors [:hero :bases :base_l :p])
-                      dx (- bx ex)
-                      dy (- by ey)]
-                  (if (and (< (Math/abs dx) 50.0) (< (Math/abs dy) 50)) true false))
-          
-          newnewcommands (if (and (not finished) ended) (conj newcommands {:text "next-level"}) newcommands)
-
-          ;; new view rectangle based on hero position
-          [l r b t :as new-rect] (calc-view-rect (:hero newnewactors))
-
-          new-projection (math4/proj_ortho (+ l 50) (- r 50) (- b 50) (+ t 50) -1.0 1.0)
-
-          newparticles (map (fn [particle] (particle/upd particle new-rect)) particles)
-
-          newworld (assoc world :actors newnewactors :particles newparticles :finished ended :view-rect new-rect :projection new-projection)]
-
-      (-> state
-          (assoc :commands-world newnewcommands)
-          (assoc :world newworld)))
-    state))
-
+  [{{loaded :loaded} :world :as state} msg]
+  (if-not loaded
+    state
+    (-> state
+        (update-actors)
+        (extract-actor-commands)
+        (update-guns)
+        (check-ended)
+        (calc-view-rect)
+        (update-particles))))
+  
 
 (defn reset-world [{:keys [level view-rect world-drawer metrics] :as state} msg]
   (if (and msg (= (:id msg) "level"))
