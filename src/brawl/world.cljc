@@ -137,10 +137,10 @@
 
 
 (defn update-guns [{{:keys [guns actors] :as world} :world :as state}]
-  (let [new-guns (reduce (fn [result [id gun]]
-                           (if-not (:actor gun)
+  (let [new-guns (reduce (fn [result [id {:keys [dragged-gun] :as actor}]]
+                           (if-not dragged-gun
                              result
-                             (assoc result id (actor/update-gun gun ((:actor gun) actors))))) guns guns)]
+                             (assoc result dragged-gun (actor/update-gun (dragged-gun guns) actor)))) guns actors)]
     (assoc-in state [:world :guns] new-guns)))
     
 
@@ -254,7 +254,7 @@
         (assoc :level next-level))))
 
 
-(defn pickup-object [{{:keys [actors guns]} :world :as oldstate} {:keys [id text]}]
+(defn pickup-object [{{:keys [actors guns dragged-gun dragged-body]} :world :as oldstate} {:keys [id text]}]
   (let [actor (id actors)
         {{hip :hip} :masses color :color :as actor} actor
         ;; look for gun
@@ -277,6 +277,7 @@
   [{:keys [level commands-world ui-drawer] :as state}]
   (reduce
    (fn [oldstate {text :text :as command}]
+     (println "text" text)
      (let [hero (get-in oldstate [:worlds :actors :hero])
            path-metrics [:world :actors :hero :metrics]]
        (cond

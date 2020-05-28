@@ -18,7 +18,7 @@
 (defn send-commands
   "send commands if needed"
   [{:keys [id commands dragged-gun dragged-body] {:keys [down]} :control :as state}]
-  (if (and down (or (not= nil dragged-gun) (not= nil dragged-body)))
+  (if (and down (or (= nil dragged-gun) (= nil dragged-body)))
     (update state :commands into [{:text "pickup" :id id}])
     state))
 

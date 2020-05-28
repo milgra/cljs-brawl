@@ -203,12 +203,11 @@
   ;;     (if dragged-body
   ;;       (update actors :dragged-body assoc-in [:masses :hip :p] hand_l))))
   ;; state
-  dragged
-  )
+  dragged)
 
 
-(defn update-gun [gun {{hand_l :hand_l} :masses :as actor}]
-  (assoc gun :p hand_l))
+(defn update-gun [gun {{hand_l :hand_l} :masses facing :facing :as actor}]
+  (assoc gun :p (:p hand_l) :f (- facing)))
 
 
 (defn update-mode
