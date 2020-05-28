@@ -2,7 +2,9 @@
   (:require [brawl.floatbuffer :as fb])
   (:use [mpd.math2 :only [rotate-up-v2 resize-v2 scale-v2 rotate-90-cw rotate-90-ccw add-v2 sub-v2]]))
 
+
 (def black [0.0 0.0 0.0 1.0])
+
 
 (defn getpoints [{{{[e f] :p} :hip :as masses} :masses} floatbuffer [l r b t]]
   (if (and (< l e) (> r e) (< t f) (> b f)) 
