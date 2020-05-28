@@ -96,13 +96,17 @@
 
 (defn update-world
   "updates phyisics and actors"
-  [{{:keys [actors surfaces particles inited loaded endpos view-rect finished] :as world} :world keycodes :keycodes level :level commands-world :commands-world sounds :sounds controls :controls :as state} msg]
+  [{{:keys [actors guns surfaces particles inited loaded endpos view-rect finished] :as world} :world keycodes :keycodes level :level commands-world :commands-world sounds :sounds controls :controls :as state} msg]
   (if loaded
     (let [newactors (reduce (fn [result [id actor]]
                               (let [newactor (cond
-                                               (not= :hero id) (actor/update-actor actor nil surfaces actors 1.0)
-                                               :else (actor/update-actor actor controls surfaces actors 1.0))]
-                                (assoc result id newactor)))
+                                               (not= :hero id) (actor/update-actor actor nil surfaces actors guns 1.0)
+                                               :else (actor/update-actor actor controls surfaces actors guns 1.0))
+                                    newnewactor (if-not (:dragger newactor)
+                                                  newactor
+                                                  (actor/update-dragged newactor ((:dragger newactor) result)))]                                    
+                                
+                                (assoc result id newnewactor)))
                             {}
                             actors)
 
@@ -123,6 +127,12 @@
                                      (assoc result id (-> actor (assoc :commands []) (assoc :action-sent true)))))
                                  newactors
                                  newactors))
+
+          newguns (reduce (fn [result [id gun]]
+                            (if-not (:actor gun)
+                              result
+                              (assoc result id (actor/update-gun gun ((:actor gun) newnewactors))))) guns guns)
+          
           ;; finished sign?
           ended (let [[ex ey] endpos
                       [bx by] (get-in newactors [:hero :bases :base_l :p])

@@ -50,6 +50,8 @@
      :update-fn jump/update-jump
      :commands []
      :idle-angle 0
+     :dragged-gun nil
+     :dragged-body nil
      ;; ai state
      :ai-state :idle
      :ai-enemy nil
@@ -192,6 +194,24 @@
       result)))
 
 
+(defn update-dragged [dragged dragger]
+  ;; (if (< health 0.0)
+  ;;   state
+  ;;   (do
+  ;;     (if dragged-gun
+  ;;       (update guns :dragged-gun assoc :p hand_l))
+  ;;     (if dragged-body
+  ;;       (update actors :dragged-body assoc-in [:masses :hip :p] hand_l))))
+  ;; state
+  dragged
+  )
+
+
+(defn update-gun [gun actor]
+  gun
+  )
+
+
 (defn update-mode
   "if next mode is set, switch to that mode"
   [{:keys [masses next speed update-fn] {hip :hip fl :foot_l fr :foot_r :as masses} :masses  {ba :base_l bb :base_r} :bases :as state}]
@@ -288,7 +308,7 @@
     (update state :idle-angle + 0.05)))
 
 
-(defn update-actor [{mode :mode update-fn :update-fn :as state} control surfaces actors time]
+(defn update-actor [{mode :mode update-fn :update-fn :as state} control surfaces actors guns time]
   "update actor state"
   ;;(if (= (:id state) :enemy) (println "BEFORE UPDATE" (:version state) (get-in state [:masses :knee_l :d] )))
   (let [result (-> state
