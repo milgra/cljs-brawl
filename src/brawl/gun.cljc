@@ -5,12 +5,12 @@
 
 (defn init
   "new gun"
-  [pos name]
-  {:p pos ; point
+  [id pos]
+  {:id id
+   :p pos ; point
    :d [-10 0] ; direction
    :f 1.0 ; facing
-   :s false ; shot
-   :n name}) ; name
+   :s false}) ; shot
 
 
 (defn get-skin-triangles

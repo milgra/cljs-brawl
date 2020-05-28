@@ -15,6 +15,14 @@
         (math2/add-v2 (math2/add-v2 a ab2) normal)))))
 
 
+(defn send-commands
+  "send commands if needed"
+  [{:keys [id commands dragged-gun dragged-body] {:keys [down]} :control :as state}]
+  (if (and down (or (not= nil dragged-gun) (not= nil dragged-body)))
+    (update state :commands into [{:text "pickup" :id id}])
+    state))
+
+
 (defn move-head-walk
   "move head point"
   [{:keys [facing squat-size punch-pressed speed] {{[hx hy] :p} :hip} :masses
@@ -59,7 +67,7 @@
         elbow_r (triangle_with_bases neck hand_r (* arml 0.5) facing)
         command (if (and punch (not action-sent) (not left) (not right)) {:id id :text "attack" :base neck :target (if (= punch-hand :hand_l) hand_l hand_r) :time time :power 10}) ]
     (-> state
-        (assoc :commands (if command (conj command command) commands))
+        (assoc :commands (if command (into commands command) commands))
         (assoc-in [:masses :hand_l :p] hand_l)
         (assoc-in [:masses :hand_r :p] hand_r)
         (assoc-in [:masses :elbow_l :p] elbow_l)
@@ -135,7 +143,7 @@
                  pas)
         command (if (and kick (not action-sent)) {:id id :text "attack" :base (:p (:hip masses)) :target kick-point :time time :power 40})]
     (-> state
-        (assoc :commands (if command (conj command command) commands))
+        (assoc :commands (if command (into commands command) commands))
         (assoc-in [:masses :foot_l :p] foot_l) 
         (assoc-in [:masses :foot_r :p] foot_r)
         (assoc :base-target nil))))
@@ -275,6 +283,6 @@
                   (move-hip-walk time)
                   (move-knee-walk time)
                   (move-head-walk time)
-                  (move-hand-walk surfaces time))]
-    (if (= result nil) println "UPDATEWALK ERROR!!!")
+                  (move-hand-walk surfaces time)
+                  (send-commands))]
     result))

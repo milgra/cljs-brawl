@@ -58,9 +58,9 @@
                                    metrics (if (= level 0) herometrics (metrics/basemetrics-random))
                                    actor (actor/init (first pos) (second pos) name color metrics)]
                                (update oldstate :actors assoc name actor))
-                (= type "g") (let [name (str "gun" (rand 1000))
-                                   gun (gun/init pos name)]
-                               (update oldstate :guns assoc name gun))
+                (= type "g") (let [id (keyword (str "gun" (rand 1000)))
+                                   gun (gun/init id pos)]
+                               (update oldstate :guns assoc id gun))
                 (= type "e") (assoc oldstate :endpos pos)
                 (= type "i") (let [index (js/parseInt (second type))]
                                (assoc oldstate :infos (conj infos {:pos pos :index index})))))) state pivots))
@@ -149,7 +149,7 @@
   (let [new-commands (reduce (fn [result [id actor]]
                                (if (empty? (:commands actor))
                                  result
-                                 (conj result (:commands actor))))
+                                 (into result (:commands actor))))
                              commands-world
                              actors)
         new-actors (if (empty? new-commands)
@@ -254,13 +254,36 @@
         (assoc :level next-level))))
 
 
+(defn pickup-object [{{:keys [actors guns]} :world :as oldstate} {:keys [id text]}]
+  (let [actor (id actors)
+        {{hip :hip} :masses color :color :as actor} actor
+        ;; look for gun
+        nearby-gun (first (remove nil? (map (fn [[_ {:keys [id p d]}]]
+                                        (if-not (< (math2/length-v2 (math2/sub-v2 p (:p hip))) 80.0) nil id)) guns)))
+
+        nearby-actor (first (remove nil? (map (fn [[_ {:keys [id] {ehip :hip} :masses ecolor :color}]]
+                                          (if-not (and (not= color ecolor) (< (math2/length-v2 (math2/sub-v2 (:p ehip) (:p hip))) 80.0)) nil id)) actors)))
+
+        new-actor (cond-> actor
+                    nearby-gun
+                    (assoc :dragged-gun nearby-gun)
+                    nearby-actor
+                    (assoc :dragged-body nearby-actor))]
+
+    (assoc-in oldstate [:world :actors id] new-actor)))
+
+
 (defn execute-commands
-  [{:keys [level] commands :commands-world ui-drawer :ui-drawer :as state}]
+  [{:keys [level commands-world ui-drawer] :as state}]
   (reduce
    (fn [oldstate {text :text :as command}]
      (let [hero (get-in oldstate [:worlds :actors :hero])
            path-metrics [:world :actors :hero :metrics]]
        (cond
+
+         (= text "pickup")
+         (pickup-object oldstate command)
+
          (= text "attack")
          (execute-attack oldstate command)
 
@@ -280,4 +303,4 @@
 
          :else oldstate)))
    (assoc state :commands-world [])
-   commands))
+   commands-world))

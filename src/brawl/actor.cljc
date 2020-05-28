@@ -207,9 +207,8 @@
   )
 
 
-(defn update-gun [gun actor]
-  gun
-  )
+(defn update-gun [gun {{hand_l :hand_l} :masses :as actor}]
+  (assoc gun :p hand_l))
 
 
 (defn update-mode
