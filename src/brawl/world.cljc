@@ -87,20 +87,36 @@
 
 (defn execute-attack
   "hittest actors and modify if hit happened"
-  [{{:keys [actors particles]} :world sounds :sounds :as state} command]
-  (let [main-dir (math2/resize-v2 (math2/sub-v2 (:target command) (:base command)) 4.0)
-        contacts (remove nil? (map (fn [[id actor]] (actor/hitpoint actor command)) actors))
-        new-particles (create-particles contacts main-dir)
-        new-actors (hit-actors actors sounds command)]
-    (when-not (empty? contacts)
-      (.play ((keyword (str "punch" (rand-int 3))) sounds))
-      ;; start music at first punch, should do better but starting music needs user interaction
-      (set! (.-loop (:theme sounds)) true)
-      (.play (:theme sounds)))
-    (-> state
-        (assoc-in [:world :particles] (concat particles new-particles))
-        (assoc-in [:world :actors] new-actors))))
-
+  [{{:keys [actors particles]} :world sounds :sounds :as state} {id :id :as command}]
+  (let [sender (id actors)]
+    (if-not (:dragged-body sender)
+      ;; normal kick/puncj
+      (let [main-dir (math2/resize-v2 (math2/sub-v2 (:target command) (:base command)) 4.0)
+            contacts (remove nil? (map (fn [[id actor]] (actor/hitpoint actor command)) actors))
+            new-particles (create-particles contacts main-dir)
+            new-actors (hit-actors actors sounds command)]
+        (when-not (empty? contacts)
+          (.play ((keyword (str "punch" (rand-int 3))) sounds))
+          ;; start music at first punch, should do better but starting music needs user interaction
+          (set! (.-loop (:theme sounds)) true)
+          (.play (:theme sounds)))
+        (-> state
+            (assoc-in [:world :particles] (concat particles new-particles))
+            (assoc-in [:world :actors] new-actors)))
+      ;; throw dragged body
+      (let [dragged ((:dragged-body sender) actors)
+            masses (:masses dragged)
+            newmasses (reduce (fn [res [id mass]] ; reset mass directions for next rag
+                                      (assoc res id (assoc mass :d [(* 10.0 (:facing sender)) -10])))
+                                    masses
+                                    masses)
+            newdragged (assoc dragged :masses newmasses)
+            newsender (assoc sender :dragged-body nil)
+            ]
+        (-> state
+            (assoc-in [:world :actors id] newsender)
+            (assoc-in [:world :actors (:id dragged)] newdragged))))))
+    
 
 (defn calc-view-rect
   "calculates the visible rectangle of the world"

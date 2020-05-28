@@ -11,7 +11,20 @@
 
 (declare update-idle)
 (declare update-rag)
-(declare step-feet)
+
+
+(defn update-dragged [{update-fn :update-fn :as dragged} {{head :head hip :hip neck :neck} :masses :as dragger}]
+  (cond-> dragged
+    (not= update-fn update-rag) (assoc :update-fn update-rag)
+    true (assoc :hittime 0)
+    true (assoc-in [:masses :hip :d] [0 0])
+    true (assoc-in [:masses :hip :p] (math2/add-v2 (:p head) [-20 0] ))
+    true (assoc-in [:masses :neck :d] [0 0])
+    true (assoc-in [:masses :neck :p] (math2/add-v2 [-20 0] (math2/add-v2 (:p head)(math2/rotate-90-ccw (math2/sub-v2 (:p neck) (:p hip))))))))
+
+
+(defn update-gun [gun {{hand_l :hand_l elbow_l :elbow_l} :masses facing :facing :as actor}]
+  (assoc gun :p (:p hand_l) :f (- facing) :d (math2/sub-v2 (:p hand_l) (:p elbow_l))))
 
 
 (defn int-to-rgba [color]
@@ -90,6 +103,8 @@
      :colorf (int-to-rgba color)
      :randoms (vec (repeatedly 40 #(+ -1.5 (rand 3))))
      :step-zone [x y]})); random sizes for skin phasing
+
+
 
 
 (defn hitpoint
@@ -180,6 +195,7 @@
 
       (if (= result nil) println "UPDATERAG ERROR!!!")
       result)
+    
     (let [newmasses (-> masses
                         (phys2/add-gravity [0.0 0.4])
                         (phys2/keep-angles (:aguards state))
@@ -192,14 +208,6 @@
                      (update :hittime inc))]
       (if (= result nil) println "UPDATERAG ERROR!!!")
       result)))
-
-
-(defn update-dragged [dragged {{hip :hip} :masses :as dragger}]
-  (assoc-in dragged [:masses :hip :p] (:p hip)))
-
-
-(defn update-gun [gun {{hand_l :hand_l} :masses facing :facing :as actor}]
-  (assoc gun :p (:p hand_l) :f (- facing)))
 
 
 (defn update-mode
