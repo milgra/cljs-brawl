@@ -6,14 +6,11 @@
 
 (def MPI2 (* Math/PI 2))
 
-
 (declare update-jump)
 (declare update-walk)
 (declare update-idle)
 (declare update-rag)
 (declare step-feet)
-
-
 
 
 (defn int-to-rgba [color]
@@ -42,15 +39,16 @@
     
     {:id id
      :color color
-     :colorf (int-to-rgba color)
-     :next nil ; next mode walk / jump / idle
+     :metrics metrics
+     ;; base states
+     :next nil
      :speed 0.0
      :power 100.0
      :health 100.0
      :facing 1.0
      :update-fn update-jump
-     :idle-angle 0
      :commands []
+     :idle-angle 0
      ;; ai state
      :ai-state :idle
      :ai-enemy nil
@@ -70,9 +68,7 @@
      :step-length 0
      ;; masses
      :masses masses
-     :metrics metrics
-     :dguards [
-               (phys2/dguard2 masses :head :neck (:headl metrics) 0.0)
+     :dguards [(phys2/dguard2 masses :head :neck (:headl metrics) 0.0)
                (phys2/dguard2 masses :neck :hip (:bodyl metrics) 0.0)
                (phys2/dguard2 masses :hip :knee_l (* 0.5 (:legl metrics)) 0.0)
                (phys2/dguard2 masses :hip :knee_r (* 0.5 (:legl metrics)) 0.0)
@@ -81,37 +77,21 @@
                (phys2/dguard2 masses :neck :elbow_l (* 0.5 (:arml metrics)) 0.0)
                (phys2/dguard2 masses :neck :elbow_r (* 0.5 (:arml metrics)) 0.0)
                (phys2/dguard2 masses :elbow_l :hand_l (* 0.5 (:arml metrics)) 0.0)
-               (phys2/dguard2 masses :elbow_r :hand_r (* 0.5 (:arml metrics)) 0.0)
-               ]
-     :aguards [
-               (phys2/aguard2 masses :head :neck :hip 0 Math/PI 0.5)
+               (phys2/dguard2 masses :elbow_r :hand_r (* 0.5 (:arml metrics)) 0.0)]
+     :aguards [(phys2/aguard2 masses :head :neck :hip 0 Math/PI 0.5)
                (phys2/aguard2 masses :hip :knee_l :foot_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
                (phys2/aguard2 masses :hip :knee_r :foot_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
                (phys2/aguard2 masses :neck :elbow_r :hand_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
-               (phys2/aguard2 masses :neck :elbow_l :hand_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
-               ]
-     
-                                        ; debug
-     :step-zone [x y]
-                                        ; body metrics
-     :randoms (vec (repeatedly 40 #(+ -1.5 (rand 3))))})); random sizes for skin phasing
+               (phys2/aguard2 masses :neck :elbow_l :hand_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)]
+     ;; skin drawing related
+     :colorf (int-to-rgba color)
+     :randoms (vec (repeatedly 40 #(+ -1.5 (rand 3))))
+     :step-zone [x y]})); random sizes for skin phasing
 
 
-
-(defn triangle_with_bases
-  "calculates third point of triangle based on the two base points, side length and direction, used for knee and elbow"
-  [a b size dir]
-  (let [[x y :as ab2] (math2/scale-v2 (math2/sub-v2 b a) 0.5)
-        ab2l (math2/length-v2 ab2)]
-    (if (< ab2l size)
-      (let [needed (Math/sqrt (- (* size size) (* ab2l ab2l)))
-            normal (math2/resize-v2 [(* dir (- y)) (* dir x)] needed)]
-        (math2/add-v2 (math2/add-v2 a ab2) normal))
-      (math2/add-v2 a ab2))))
-
-
-(defn hitpoint [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health :as actor} {:keys [id base target time]}]
-  ;; check distance from nect first
+(defn hitpoint
+  "get hitpoint"
+  [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health :as actor} {:keys [id base target time]}]
   (let [dist (math2/length-v2 (math2/sub-v2 target (:p hip)))]
     (if (and (not= id (:id actor)) (< dist 80.0))
       (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
@@ -131,10 +111,12 @@
             (first (remove nil? [headisp bodyisp footlisp footrisp]))))))
             
 
-(defn hit [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r] :as masses} :masses health :health metrics :metrics update-fn :update-fn :as actor} {:keys [id base target time power] :as command}]
-  ;; check distance from nect first
+(defn hit
+  "hit actor"
+  [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r] :as masses} :masses health :health metrics :metrics update-fn :update-fn :as actor} {:keys [id base target time power] :as command}]
   (let [ [dx dy] (math2/sub-v2 target (:p hip))]
-    (if (and (not= id (:id actor)) (< dx 80.0) (< dy 80.0) (not= update-fn update-rag))
+    (if-not (and (not= id (:id actor)) (< dx 80.0) (< dy 80.0) (not= update-fn update-rag))
+      actor
       (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
             hitsm (math2/resize-v2 hitv (if (< health 20) 10 2))
             hitbg (math2/resize-v2 hitv (if (< health 20) 20 4))
@@ -173,11 +155,20 @@
                        footlisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
                        footlisp (assoc-in [:masses :knee_l :d] (math2/add-v2 (:d knee_l) hitsm))
                        footrisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
-                       footrisp (assoc-in [:masses :knee_r :d] (math2/add-v2 (:d knee_r) hitsm))
-                       ))]
+                       footrisp (assoc-in [:masses :knee_r :d] (math2/add-v2 (:d knee_r) hitsm))))]
+        result))))
 
-        result)
-      actor)))
+
+(defn triangle_with_bases
+  "calculates third point of triangle based on the two base points, side length and direction, used for knee and elbow"
+  [a b size dir]
+  (let [[x y :as ab2] (math2/scale-v2 (math2/sub-v2 b a) 0.5)
+        ab2l (math2/length-v2 ab2)]
+    (if-not (< ab2l size)
+      (math2/add-v2 a ab2)
+      (let [needed (Math/sqrt (- (* size size) (* ab2l ab2l)))
+            normal (math2/resize-v2 [(* dir (- y)) (* dir x)] needed)]
+        (math2/add-v2 (math2/add-v2 a ab2) normal)))))
 
 
 (defn move-hand-walk
