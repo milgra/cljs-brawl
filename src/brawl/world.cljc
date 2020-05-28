@@ -7,22 +7,23 @@
    [mpd.phys2 :as phys2]
    [mpd.math2 :as math2]
    [gui.math4 :as math4]
-   [brawl.defaults :as defaults]
-   [brawl.names :as names]
-   [brawl.particle :as particle]
-   [brawl.webgl :as webgl]
-   [brawl.svg :as svg]
    [brawl.ui :as brawlui]
+   [brawl.svg :as svg]
+   [brawl.gun :as gun]
+   [brawl.webgl :as webgl]
+   [brawl.actor :as actor]
+   [brawl.names :as names]
    [brawl.metrics :as metrics]
    [brawl.layouts :as layouts]
-   [brawl.actor :as actor]
+   [brawl.defaults :as defaults]
+   [brawl.particle :as particle]
    [brawl.actorskin :as actorskin]))
 
 
 (defn init []
   {:inited false
    :loaded false
-   :guns []
+   :guns {}
    :infos []
    :actors {}
    :endpos [0 0]
@@ -49,7 +50,8 @@
                                    color (nth colors team)
                                    metrics (if (= level 0) herometrics (metrics/basemetrics-random))]
                                (update oldstate :actors assoc name (actor/init (first pos) (second pos) name color metrics)))
-                (= type "g") (assoc oldstate :guns (conj guns {:pos pos}))
+                (= type "g") (let [name (str "gun" (rand 1000))]
+                               (update oldstate :guns assoc name (gun/init pos name)))
                 (= type "e") (assoc oldstate :endpos pos)
                 (= type "i") (assoc oldstate :infos (conj infos {:pos pos :index (js/parseInt (second type))})))     
               )) state pivots))
@@ -156,7 +158,7 @@
           seeds (map #(particle/init 0.0 0.0 [1.0 1.0 1.0 0.5] [(+ 0.1 (rand 0.6)) (+ 0.05 (rand 0.3))]  :seed) (range 0 20))
           newdrawer (webgl/loadshapes world-drawer (filter #(if (:id %) (not (clojure.string/includes? (:id %) "Pivot")) true) (:shapes msg)))
           newworld (-> {:actors {}
-                        :guns []
+                        :guns {}
                         :infos []
                         :inited true
                         :loaded true

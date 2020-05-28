@@ -6,6 +6,7 @@
    [gui.math4 :as math4]
    [gui.webgl :as uiwebgl]
    [brawl.ui :as brawlui]
+   [brawl.gun :as gun]
    [brawl.world :as world]
    [brawl.webgl :as webgl]
    [brawl.audio :as audio]
@@ -105,13 +106,14 @@
 (defn draw-world
   "draws background, actors, masses with projection"
   [{:keys [world-drawer buffer physics]
-    {:keys [actors particles surfacelines view-rect projection] :as world} :world :as state} frame]
+    {:keys [actors guns particles surfacelines view-rect projection] :as world} :world :as state} frame]
   (if-not (:inited world)
     state
     (let [variation (Math/floor (mod (/ frame 10.0) 3.0 ))
           buffer-triangle (-> buffer
                               (floatbuffer/empty!)
-                              ((partial reduce (fn [oldbuf [id actor]] (actorskin/get-skin-triangles actor oldbuf variation view-rect))) actors))]
+                              ((partial reduce (fn [oldbuf [id actor]] (actorskin/get-skin-triangles actor oldbuf variation view-rect))) actors)
+                              ((partial reduce (fn [oldbuf [id gun]] (gun/get-skin-triangles gun oldbuf view-rect))) guns))]
       ;; draw triangles
       (webgl/clear! world-drawer)
       (webgl/drawshapes! world-drawer projection variation)
@@ -178,7 +180,7 @@
                :world (world/init)
                :ui-drawer (uiwebgl/init)
                :world-drawer (webgl/init)
-               :level 0
+               :level 4
                :msgch (chan)
                :sounds (audio/sounds)
                :buffer (floatbuffer/create!)
