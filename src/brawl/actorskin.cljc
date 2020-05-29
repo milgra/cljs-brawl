@@ -84,12 +84,12 @@
 
 (defn gen-foot-triangles [buf pa pb size facing [x y z w]]
   (let [ab (resize-v2 (sub-v2 pb pa) (+ 20.0 size))
-        npb (add-v2 pb (resize-v2 ab size))
+        npb (add-v2 pb (resize-v2 ab (+ 10 size)))
         [a b :as leftp] (if (= facing -1)
                 (add-v2 npb (resize-v2 (rotate-90-cw ab) (+ 2.0 size)))
-                (add-v2 pb (resize-v2 (rotate-90-cw ab) 30.0)))
+                (add-v2 npb (resize-v2 (rotate-90-cw ab) 30.0)))
         [c d :as rightp] (if (= facing -1)
-                (add-v2 pb (resize-v2 (rotate-90-ccw ab) 30.0))
+                (add-v2 npb (resize-v2 (rotate-90-ccw ab) 30.0))
                 (add-v2 npb (resize-v2 (rotate-90-ccw ab) (+ 2.0 size))))
         [e f :as topp] (if (= facing -1)
                 (add-v2 leftp (resize-v2 ab (+ -15.0 size)))
@@ -139,22 +139,22 @@
         true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_r) (:p foot_r)] [1.0 (+ hipw r3) (+ legw r4) (+ legw r5)] colb)
         
         ;; passive right
-        (and (= pf :base_r) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_r) (rotate-up-v2 (:b ps))) (:p foot_r) (+ r6 5.0) facing black)
+        (and (= pf :base_r) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_r) (rotate-up-v2 (:b ps))) (:p foot_r) (+ r6 3.0) facing black)
         (and (= pf :base_r) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_r) (rotate-up-v2 (:b ps))) (:p foot_r) r6 facing colb)
 
         ;; active right
-        (and (= af :base_r) (not= ps nil)) (gen-foot-triangles (:p knee_r) (:p foot_r) (+ r6 5.0) facing black)
+        (and (= af :base_r) (not= ps nil)) (gen-foot-triangles (:p knee_r) (:p foot_r) (+ r6 3.0) facing black)
         (and (= af :base_r) (not= ps nil)) (gen-foot-triangles (:p knee_r) (:p foot_r) r6 facing colb)
 
         true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [6.0 (+ hipw 5 r7 ) (+ legw 5 r8) (+ legw 5 r9)] black) ; stroke
         true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [1.0 (+ hipw r0) (+ legw r1) (+ legw r2)] cola)
 
         ;; passive left
-        (and (= pf :base_l) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_l) (rotate-up-v2 (:b ps))) (:p foot_l) (+ r3 5.0) facing black)
+        (and (= pf :base_l) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_l) (rotate-up-v2 (:b ps))) (:p foot_l) (+ r3 3.0) facing black)
         (and (= pf :base_l) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_l) (rotate-up-v2 (:b ps))) (:p foot_l) r3 facing cola)
 
         ;; active left
-        (and (= af :base_l) (not= ps nil)) (gen-foot-triangles (:p knee_l) (:p foot_l) (+ r3 5.0) facing black)
+        (and (= af :base_l) (not= ps nil)) (gen-foot-triangles (:p knee_l) (:p foot_l) (+ r3 3.0) facing black)
         (and (= af :base_l) (not= ps nil)) (gen-foot-triangles (:p knee_l) (:p foot_l) r3 facing cola)
         
         true (gen-tube-triangles [(:p neck) (:p elbow_l) (:p hand_l)] [(+ armw 5.0 r4) (+ armw 5.0 r5) (+ armw 5.0 r6)] black) ; stroke
