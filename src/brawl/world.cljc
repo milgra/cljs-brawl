@@ -111,8 +111,7 @@
                                     masses
                                     masses)
             newdragged (assoc dragged :masses newmasses :injure-when-dropped true)
-            newsender (assoc sender :dragged-body nil)
-            ]
+            newsender (assoc sender :dragged-body nil)]
         (-> state
             (assoc-in [:world :actors id] newsender)
             (assoc-in [:world :actors (:id dragged)] newdragged))))))

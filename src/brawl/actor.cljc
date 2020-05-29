@@ -13,7 +13,8 @@
 (declare update-rag)
 
 
-(defn update-dragged [{update-fn :update-fn :as dragged} {{head :head hip :hip neck :neck} :masses :as dragger}]
+(defn update-dragged [{update-fn :update-fn :as dragged}
+                      {{:keys [head hip neck]} :masses :as dragger}]
   (cond-> dragged
     (not= update-fn update-rag) (assoc :update-fn update-rag)
     true (assoc :hittime 0)
@@ -113,9 +114,9 @@
 
 (defn hitpoint
   "get hitpoint"
-  [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health :as actor} {:keys [id base target time]}]
-  (let [dist (math2/length-v2 (math2/sub-v2 target (:p hip)))]
-    (if (and (not= id (:id actor)) (< dist 80.0))
+  [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health update-fn :update-fn :as actor} {:keys [id base target time]}]
+  (let [[dx dy] (math2/sub-v2 base (:p hip))]
+    (if (and (not= id (:id actor)) (< dx 80.0) (< dy 80.0) (not= update-fn update-rag))
       (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
             hitsm (math2/resize-v2 hitv (if (< health 20) 10 2))
             hitbg (math2/resize-v2 hitv (if (< health 20) 20 4))
@@ -136,7 +137,7 @@
 (defn hit
   "hit actor"
   [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r] :as masses} :masses health :health metrics :metrics update-fn :update-fn :as actor} {:keys [id base target time power] :as command}]
-  (let [ [dx dy] (math2/sub-v2 base (:p hip))]
+  (let [[dx dy] (math2/sub-v2 base (:p hip))]
     (if-not (and (not= id (:id actor)) (< dx 80.0) (< dy 80.0) (not= update-fn update-rag))
       actor
       (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
