@@ -45,9 +45,12 @@
    time]
   (let [foot_l (if kick [(+ hx (* legl facing) -10.0 ) (+ hy (* legl 0.5))] (:p base_l))
         foot_r (if kick [(+ hx (* legl facing)) (+ hy (* legl 0.5) -10.0)] (:p base_r))
-        command (if (and kick (not action-sent)) [{:id id :text "attack" :base [hx hy] :target foot_l :time time :power 50.0}])]
+        newcommands (if-not (and kick (not action-sent))
+                      commands
+                      (into commands [{:id id :text "attack" :base [hx hy] :target foot_l :time time :power 50.0}]))]
     (-> state
-        (assoc :commands (if command (into commands command) commands))
+        (assoc :commands newcommands)
+        (assoc :action-sent (if (and kick (not action-sent)) true action-sent))
         (assoc-in [:masses :foot_l :p] foot_l) 
         (assoc-in [:masses :foot_r :p] foot_r))))
 

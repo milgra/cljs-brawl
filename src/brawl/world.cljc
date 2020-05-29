@@ -107,10 +107,10 @@
       (let [dragged ((:dragged-body sender) actors)
             masses (:masses dragged)
             newmasses (reduce (fn [res [id mass]] ; reset mass directions for next rag
-                                      (assoc res id (assoc mass :d [(* 10.0 (:facing sender)) -10])))
+                                      (assoc res id (assoc mass :d [(* 10.0 (:facing sender)) -6])))
                                     masses
                                     masses)
-            newdragged (assoc dragged :masses newmasses)
+            newdragged (assoc dragged :masses newmasses :injure-when-dropped true)
             newsender (assoc sender :dragged-body nil)
             ]
         (-> state
@@ -124,9 +124,9 @@
   (let [actor (:hero actors)
         [fax fay] (:p (get-in actor [:bases :base_l]))
         [fbx fby] (:p (get-in actor [:bases :base_r]))
-        [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2))  ]
+        [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2) -50.0)  ]
         r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
-        h 350.0
+        h 300.0
         w (* h r)
         [l r b t :as new-rect] [(- tx w) (+ tx w) (+ ty h) (- ty h)]
         new-proj (math4/proj_ortho (+ l 50) (- r 50) (- b 50) (+ t 50) -1.0 1.0)]
@@ -181,7 +181,7 @@
                      (reduce (fn [result [id actor]]
                                (if (empty? (:commands actor))
                                  result
-                                 (assoc result id (-> actor (assoc :commands []) (assoc :action-sent true)))))
+                                 (assoc result id (-> actor (assoc :commands [])))))
                              actors
                              actors))]
     (-> state
@@ -194,8 +194,7 @@
   (let [new-actors (reduce (fn [result [id actor]]
                              (let [newactor (cond
                                               (not= :hero id) (actor/update-actor actor nil surfaces result guns 1.0)
-                                              :else (actor/update-actor actor controls surfaces result guns 1.0))]
-                               
+                                              :else (actor/update-actor actor controls surfaces result guns 1.0))]                   
                                (assoc result id newactor)))
                            {}
                            actors)]
@@ -298,7 +297,8 @@
   [{:keys [level commands-world ui-drawer] :as state}]
   (reduce
    (fn [oldstate {text :text :as command}]
-     (println "text" text)
+
+     (println "command" command)
      (let [hero (get-in oldstate [:worlds :actors :hero])
            path-metrics [:world :actors :hero :metrics]]
        (cond
@@ -319,7 +319,7 @@
            ;; load next level
            (-> oldstate
                (brawlui/load-ui layouts/info)
-               (update :commands conj {:text "load-level"})))
+               (update :commands-world conj {:text "load-level"})))
 
          (= text "load-level") (load-next-level oldstate)
 

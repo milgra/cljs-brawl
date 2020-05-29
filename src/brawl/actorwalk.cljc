@@ -17,9 +17,11 @@
 
 (defn send-commands
   "send commands if needed"
-  [{:keys [id commands dragged-gun dragged-body] {:keys [down]} :control :as state}]
-  (if (and down (or (= nil dragged-gun) (= nil dragged-body)))
-    (update state :commands into [{:text "pickup" :id id}])
+  [{:keys [id commands dragged-gun dragged-body pickup-sent] {:keys [down]} :control :as state}]
+  (if (and down (or (= nil dragged-gun) (= nil dragged-body)) (not pickup-sent))
+      (-> state
+      (update :commands into [{:text "pickup" :id id}])
+      (assoc :pickup-sent true))
     state))
 
 
@@ -65,9 +67,18 @@
                  :else [(+ nx nrx) (+ ny nry)])
         elbow_l (triangle_with_bases neck hand_l (* arml 0.5) facing)
         elbow_r (triangle_with_bases neck hand_r (* arml 0.5) facing)
-        command (if (and punch (not action-sent) (not left) (not right)) [{:id id :text "attack" :base neck :target (if (= punch-hand :hand_l) hand_l hand_r) :time time :power 10}])]
+        newcommands (if-not (and punch (not action-sent) (not left) (not right))
+                      commands
+                      (into commands
+                            [{:id id
+                              :text "attack"
+                              :base neck
+                              :target (if (= punch-hand :hand_l) hand_l hand_r)
+                              :time time
+                              :power 10}]))]
     (-> state
-        (assoc :commands (if command (into commands command) commands))
+        (assoc :commands newcommands)
+        (assoc :action-sent (if  (and punch (not action-sent)) true action-sent))
         (assoc-in [:masses :hand_l :p] hand_l)
         (assoc-in [:masses :hand_r :p] hand_r)
         (assoc-in [:masses :elbow_l :p] elbow_l)
@@ -141,9 +152,12 @@
         foot_r (if (= :base_r (:active base-order))
                  (if kick kick-point act)
                  pas)
-        command (if (and kick (not action-sent)) [{:id id :text "attack" :base (:p (:hip masses)) :target kick-point :time time :power 40}])]
+        newcommands (if-not (and kick (not action-sent))
+                      commands
+                      (into commands [{:id id :text "attack" :base (:p (:hip masses)) :target kick-point :time time :power 40}]))]
     (-> state
-        (assoc :commands (if command (into commands command) commands))
+        (assoc :commands newcommands)
+        (assoc :action-sent (if (and kick (not action-sent)) true action-sent))
         (assoc-in [:masses :foot_l :p] foot_l) 
         (assoc-in [:masses :foot_r :p] foot_r)
         (assoc :base-target nil))))

@@ -152,9 +152,9 @@
                    (assoc-in [:volumes :effects] ratio)
                    (audio/set-effects-volume)                 
                    (defaults/save-defaults!))
-               (and (= text "show physics") (= type "down")) ; shows options view
+               (and (= text "show physics") (= type "up")) ; shows options view
                (defaults/save-defaults! (update oldstate :physics not))
-               (and (= text "randomize") (= type "down")) ; randomizes generator values
+               (and (= text "randomize") (= type "up")) ; randomizes generator values
                (let [nbase (-> (metrics/basemetrics-random)
                                (metrics/basemetrics-normalize :height))
                      nmetrics (metrics/generate-metrics nbase)]
@@ -163,7 +163,7 @@
                      (assoc :metrics nbase)
                      (defaults/save-defaults!)
                      (update-gen-sliders)))         
-               (and (= text "show-menu") (= type "down")) ; shows menu view
+               (and (= text "show-menu") (= type "up")) ; shows menu view
                (load-ui oldstate layouts/menu)
                (and (= text "continue") (= type "down")) ; shows hud
                (if (= (:level oldstate) 0)
@@ -172,25 +172,29 @@
                      (update-gen-sliders))
                  (-> oldstate
                      (load-ui layouts/hud)))
-               (and (= text "new game") (= type "down"))
+               (and (= text "new game") (= type "up"))
                (update oldstate :commands-world conj {:text "new game"})
-               (and (= text "options") (= type "down")) ; shows options view
+               (and (= text "options") (= type "up")) ; shows options view
                (let [newstate (load-ui oldstate layouts/options)]
                  (-> newstate ;  set slider values
                      (set-slider-value :Music (get-in newstate [:volumes :music]))
                      (set-slider-value :Effects (get-in newstate [:volumes :effects]))
                      (align)))
-               (and (= text "fullscreen") (= type "down")) ; randomizes generator values
+               (and (= text "fullscreen") (= type "up")) ; randomizes generator values
                (do
                  (if (.-fullscreenElement js/document)
                    (.exitFullscreen js/document)
                    (.requestFullscreen (.-documentElement js/document)))
                  oldstate)
-               (and (= text "donate") (= type "down")) ; opens donate link in browser
+               (and (= text "donate") (= type "up")) ; opens donate link in browser
                (do
                  (goog.window/open "https://paypal.me/milgra")
                  oldstate)
-               (and (= text "options back") (= type "down")) ; opens menu view
+               (and (= text "source code") (= type "up")) ; opens donate link in browser
+               (do
+                 (goog.window/open "https://github.com/milgra/cljs-brawl")
+                 oldstate)
+               (and (= text "options back") (= type "up")) ; opens menu view
                (load-ui oldstate layouts/menu)
                ;; on-screen control buttons
                (and (= text "left") (= type "down")) (assoc-in oldstate [:keycodes 37] true)

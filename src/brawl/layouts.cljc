@@ -280,6 +280,16 @@
      :top "NewGame 4 px" 
      :center-x "Edge 50 %"}
 
+    {:id "Source"
+     :class "Button"
+     :command "source code"
+     :texture {:type "Color" :color 0xFFFFFF0F}
+     :label {:type "Label" :text "Source Code" :size 25 :color 0xFFFFFFFF}
+     :width "350 px" 
+     :height "50 px" 
+     :top "Options 4 px" 
+     :center-x "Edge 50 %"}
+    
     {:id "Donate"
      :class "Button"
      :command "donate"
@@ -287,7 +297,7 @@
      :label {:type "Label" :text "Donate" :size 25 :color 0xFFFFFFFF}
      :width "350 px" 
      :height "50 px" 
-     :top "Options 4 px" 
+     :top "Source 4 px" 
      :center-x "Edge 50 %"}]})
 
 
