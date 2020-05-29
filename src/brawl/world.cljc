@@ -51,13 +51,20 @@
                   tokens (clojure.string/split id #"_")
                   type (first (second tokens))]
               (cond
-                (= type "l") (let [team (js/parseInt (second (nth tokens 2)))
-                                   level (js/parseInt (second (second tokens)))
-                                   name (if (= level 0) :hero (keyword (names/getname)))
-                                   color (nth colors team)
-                                   metrics (if (= level 0) herometrics (metrics/basemetrics-random))
-                                   actor (actor/init (first pos) (second pos) name color metrics)]
-                               (update oldstate :actors assoc name actor))
+                (= type "l") (let [count (if (> (count tokens) 3)
+                                           (js/parseInt (second (nth tokens 4)))
+                                           1)]
+                               (assoc oldstate :actors
+                                      (reduce (fn [result _]
+                                                (let [team (js/parseInt (second (nth tokens 2)))
+                                                      level (js/parseInt (second (second tokens)))
+                                                      name (if (= level 0) :hero (keyword (names/getname)))
+                                                      color (nth colors team)
+                                                      metrics (if (= level 0) herometrics (metrics/basemetrics-random))
+                                                      actor (actor/init (+ -20 (rand-int 40) (first pos)) (second pos) name color metrics)]
+                                                  (assoc result name actor)))
+                                                  actors
+                                                  (range 0 count))))
                 (= type "g") (let [id (keyword (str "gun" (rand 1000)))
                                    gun (gun/init id pos)]
                                (update oldstate :guns assoc id gun))

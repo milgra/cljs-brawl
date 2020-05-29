@@ -30,7 +30,6 @@ Download/checkout the repo and start it up with :
 ## Todo
 
 * weighted injures
-* use enemy countsfrom svg
 * block mukodjon, ne forduljon meg blokk alatt
 * lassab punch rate
 * random punch / kick heights
