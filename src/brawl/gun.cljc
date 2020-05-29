@@ -10,7 +10,8 @@
    :p pos ; point
    :d [-10 0] ; direction
    :f 1.0 ; facing
-   :s false}) ; shot
+   :b 6 ; bullets
+   :s 0}) ; shot frames
 
 
 (defn get-skin-triangles
@@ -49,7 +50,7 @@
                                 a b 0 0 0 1
                                 k l 0 0 0 1
                                 m n 0 0 0 1))
-        s (fb/append! (array c d 0.9 0.9 0 1.0
-                             o p 0.9 0.9 0 1.0
-                             e f 0.9 0.9 0 1.0))))))
+        (and (< s 5) (> s 0)) (fb/append! (array c d 0.9 0.9 0 1.0
+                                                 o p 0.9 0.9 0 1.0
+                                                 e f 0.9 0.9 0 1.0))))))
                                                   

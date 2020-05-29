@@ -24,12 +24,12 @@
     true (assoc-in [:masses :neck :p] (math2/add-v2 [-20 0] (math2/add-v2 (:p head)(math2/rotate-90-ccw (math2/sub-v2 (:p neck) (:p hip))))))))
 
 
-(defn update-gun [gun {{hand_l :hand_l elbow_l :elbow_l} :masses facing :facing commands :commands {:keys [shoot] } :control :as actor}]
+(defn update-gun [{s :s :as gun} {{hand_l :hand_l elbow_l :elbow_l} :masses :keys [bullets facing commands action-sent] {:keys [shoot] } :control :as actor}]
   (assoc gun
          :p (:p hand_l)
          :f (- facing)
          :d (if shoot [(* facing 100.0) 0.0] (math2/sub-v2 (:p hand_l) (:p elbow_l)))
-         :s shoot))
+         :s (if (and shoot (> bullets 0)) (inc s) 0)))
 
 
 (defn int-to-rgba [color]
@@ -79,6 +79,7 @@
      :power 100.0
      :health 100.0
      :facing 1.0
+     :bullets 6
      :update-fn jump/update-jump
      :commands []
      :idle-angle 0

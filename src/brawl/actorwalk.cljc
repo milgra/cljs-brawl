@@ -45,7 +45,7 @@
 
 (defn move-hand-walk
   "move head point"
-  [{:keys [id facing punch-hand action-sent commands speed]
+  [{:keys [id facing punch-hand action-sent commands speed bullets]
     {{[hx hy] :p} :hip {[nx ny :as neck] :p} :neck } :masses
     {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
     {arml :arml} :metrics angle :idle-angle
@@ -76,17 +76,18 @@
                               :radius 100.0
                               :time time
                               :power 10}])
-                      (and shoot (not action-sent))
+                      (and shoot (not action-sent) (> bullets 0))
                       (into [{:id id
                               :text "attack"
                               :base neck
                               :target (math2/add-v2 neck [(* facing 500.0) 0.0])
                               :radius 500.0
                               :time time
-                              :power 10}]))]
+                              :power 110}]))]
     (-> state
         (assoc :commands newcommands)
         (assoc :action-sent (if (and (or punch shoot) (not action-sent)) true action-sent))
+        (assoc :bullets (if (and shoot (not action-sent)) (dec bullets) bullets))
         (assoc-in [:masses :hand_l :p] hand_l)
         (assoc-in [:masses :hand_r :p] hand_r)
         (assoc-in [:masses :elbow_l :p] elbow_l)
