@@ -49,7 +49,7 @@
     {{[hx hy] :p} :hip {[nx ny :as neck] :p} :neck } :masses
     {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
     {arml :arml} :metrics angle :idle-angle
-    {:keys [down up left right punch block]} :control
+    {:keys [down up left right punch shoot block]} :control
     :as state}
    surfaces
    time]
@@ -59,7 +59,7 @@
         nry (- (* arml 0.14 )(* (Math/cos angle ) 5.0))
         hand_l (cond
                  block [(+ nx (* facing arml 0.3)) (- ny (* arml 0.4))]
-                 (and punch (= punch-hand :hand_l) (not left) (not right)) [(+ nx (* facing arml 0.99)) ny]
+                 (or shoot (and punch (= punch-hand :hand_l) (not left) (not right))) [(+ nx (* facing arml 0.99)) ny]
                  :else [(+ nx nlx) (+ ny nly)])
         hand_r (cond
                  block [(+ nx (* facing arml 0.3)) (- ny (* arml 0.4))]
@@ -67,18 +67,26 @@
                  :else [(+ nx nrx) (+ ny nry)])
         elbow_l (triangle_with_bases neck hand_l (* arml 0.5) facing)
         elbow_r (triangle_with_bases neck hand_r (* arml 0.5) facing)
-        newcommands (if-not (and punch (not action-sent) (not left) (not right))
-                      commands
-                      (into commands
-                            [{:id id
+        newcommands (cond-> commands
+                      (and punch (not action-sent) (not left) (not right))
+                      (into [{:id id
                               :text "attack"
                               :base neck
                               :target (if (= punch-hand :hand_l) hand_l hand_r)
+                              :radius 100.0
+                              :time time
+                              :power 10}])
+                      (and shoot (not action-sent))
+                      (into [{:id id
+                              :text "attack"
+                              :base neck
+                              :target (math2/add-v2 neck [(* facing 500.0) 0.0])
+                              :radius 500.0
                               :time time
                               :power 10}]))]
     (-> state
         (assoc :commands newcommands)
-        (assoc :action-sent (if  (and punch (not action-sent)) true action-sent))
+        (assoc :action-sent (if (and (or punch shoot) (not action-sent)) true action-sent))
         (assoc-in [:masses :hand_l :p] hand_l)
         (assoc-in [:masses :hand_r :p] hand_r)
         (assoc-in [:masses :elbow_l :p] elbow_l)
@@ -154,7 +162,12 @@
                  pas)
         newcommands (if-not (and kick (not action-sent))
                       commands
-                      (into commands [{:id id :text "attack" :base (:p (:hip masses)) :target kick-point :time time :power 40}]))]
+                      (into commands [{:id id :text "attack"
+                                       :base (:p (:hip masses))
+                                       :target kick-point
+                                       :radius 100.0
+                                       :time time
+                                       :power 40}]))]
     (-> state
         (assoc :commands newcommands)
         (assoc :action-sent (if (and kick (not action-sent)) true action-sent))

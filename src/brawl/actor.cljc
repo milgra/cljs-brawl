@@ -24,12 +24,12 @@
     true (assoc-in [:masses :neck :p] (math2/add-v2 [-20 0] (math2/add-v2 (:p head)(math2/rotate-90-ccw (math2/sub-v2 (:p neck) (:p hip))))))))
 
 
-(defn update-gun [gun {{hand_l :hand_l elbow_l :elbow_l} :masses facing :facing commands :commands {:keys [punch] } :control :as actor}]
+(defn update-gun [gun {{hand_l :hand_l elbow_l :elbow_l} :masses facing :facing commands :commands {:keys [shoot] } :control :as actor}]
   (assoc gun
          :p (:p hand_l)
          :f (- facing)
-         :d (if punch [(* facing 100.0) 0.0] (math2/sub-v2 (:p hand_l) (:p elbow_l)))
-         :s punch))
+         :d (if shoot [(* facing 100.0) 0.0] (math2/sub-v2 (:p hand_l) (:p elbow_l)))
+         :s shoot))
 
 
 (defn int-to-rgba [color]
@@ -41,21 +41,35 @@
   
 
 (defn init [x y id color basemetrics]
-  (let [bases {:base_l (phys2/mass2 (+ x 20.0) y 2.0 1.0 0.0 0.0)
-               :base_r (phys2/mass2 (- x 20.0) y 2.0 1.0 0.0 0.0)}    
-        masses {:head (phys2/mass2 x y 4.0 1.0 0.2 0.7)
-                :neck (phys2/mass2 x y 4.0 1.0 0.2 0.7)
-                :hip (phys2/mass2 x y 4.0 1.0 0.2 0.7)
-                :hand_l (phys2/mass2 x y 4.0 1.0 0.2 0.7)
-                :hand_r (phys2/mass2 x y 4.0 1.0 0.2 0.7)
+  (let [bases {:base_l   (phys2/mass2 (+ x 20.0) y 2.0 1.0 0.0 0.0)
+               :base_r   (phys2/mass2 (- x 20.0) y 2.0 1.0 0.0 0.0)}    
+        masses {:head    (phys2/mass2 x y 4.0 1.0 0.2 0.7)
+                :neck    (phys2/mass2 x y 4.0 1.0 0.2 0.7)
+                :hip     (phys2/mass2 x y 4.0 1.0 0.2 0.7)
+                :hand_l  (phys2/mass2 x y 4.0 1.0 0.2 0.7)
+                :hand_r  (phys2/mass2 x y 4.0 1.0 0.2 0.7)
                 :elbow_l (phys2/mass2 x y 4.0 1.0 0.2 0.7)
                 :elbow_r (phys2/mass2 x y 4.0 1.0 0.2 0.7)
-                :knee_l (phys2/mass2 x y 4.0 1.0 0.2 0.7)
-                :knee_r (phys2/mass2 x y 4.0 1.0 0.2 0.7)
-                :foot_l (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.2 0.7)
-                :foot_r (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.2 0.7)}
-        metrics (metrics/generate-metrics basemetrics)]
-    
+                :knee_l  (phys2/mass2 x y 4.0 1.0 0.2 0.7)
+                :knee_r  (phys2/mass2 x y 4.0 1.0 0.2 0.7)
+                :foot_l  (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.2 0.7)
+                :foot_r  (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.2 0.7)}
+        metrics (metrics/generate-metrics basemetrics)
+        dguards [(phys2/dguard2 masses :head :neck (:headl metrics) 0.0)
+                 (phys2/dguard2 masses :neck :hip (:bodyl metrics) 0.0)
+                 (phys2/dguard2 masses :hip :knee_l (* 0.5 (:legl metrics)) 0.0)
+                 (phys2/dguard2 masses :hip :knee_r (* 0.5 (:legl metrics)) 0.0)
+                 (phys2/dguard2 masses :knee_l :foot_l (* 0.5 (:legl metrics)) 0.0)
+                 (phys2/dguard2 masses :knee_r :foot_r (* 0.5 (:legl metrics)) 0.0)
+                 (phys2/dguard2 masses :neck :elbow_l (* 0.5 (:arml metrics)) 0.0)
+                 (phys2/dguard2 masses :neck :elbow_r (* 0.5 (:arml metrics)) 0.0)
+                 (phys2/dguard2 masses :elbow_l :hand_l (* 0.5 (:arml metrics)) 0.0)
+                 (phys2/dguard2 masses :elbow_r :hand_r (* 0.5 (:arml metrics)) 0.0)]
+        aguards [(phys2/aguard2 masses :head :neck :hip 0 Math/PI 0.5)
+                 (phys2/aguard2 masses :hip :knee_l :foot_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
+                 (phys2/aguard2 masses :hip :knee_r :foot_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
+                 (phys2/aguard2 masses :neck :elbow_r :hand_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
+                 (phys2/aguard2 masses :neck :elbow_l :hand_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)]]
     {:id id
      :color color
      :metrics metrics
@@ -91,21 +105,8 @@
      :step-length 0
      ;; masses
      :masses masses
-     :dguards [(phys2/dguard2 masses :head :neck (:headl metrics) 0.0)
-               (phys2/dguard2 masses :neck :hip (:bodyl metrics) 0.0)
-               (phys2/dguard2 masses :hip :knee_l (* 0.5 (:legl metrics)) 0.0)
-               (phys2/dguard2 masses :hip :knee_r (* 0.5 (:legl metrics)) 0.0)
-               (phys2/dguard2 masses :knee_l :foot_l (* 0.5 (:legl metrics)) 0.0)
-               (phys2/dguard2 masses :knee_r :foot_r (* 0.5 (:legl metrics)) 0.0)
-               (phys2/dguard2 masses :neck :elbow_l (* 0.5 (:arml metrics)) 0.0)
-               (phys2/dguard2 masses :neck :elbow_r (* 0.5 (:arml metrics)) 0.0)
-               (phys2/dguard2 masses :elbow_l :hand_l (* 0.5 (:arml metrics)) 0.0)
-               (phys2/dguard2 masses :elbow_r :hand_r (* 0.5 (:arml metrics)) 0.0)]
-     :aguards [(phys2/aguard2 masses :head :neck :hip 0 Math/PI 0.5)
-               (phys2/aguard2 masses :hip :knee_l :foot_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
-               (phys2/aguard2 masses :hip :knee_r :foot_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
-               (phys2/aguard2 masses :neck :elbow_r :hand_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
-               (phys2/aguard2 masses :neck :elbow_l :hand_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)]
+     :dguards dguards
+     :aguards aguards
      ;; skin drawing related
      :colorf (int-to-rgba color)
      :randoms (vec (repeatedly 40 #(+ -1.5 (rand 3))))
@@ -114,9 +115,9 @@
 
 (defn hitpoint
   "get hitpoint"
-  [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health update-fn :update-fn :as actor} {:keys [id base target time]}]
+  [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health update-fn :update-fn :as actor} {:keys [id base target time radius]}]
   (let [[dx dy] (math2/sub-v2 base (:p hip))]
-    (if (and (not= id (:id actor)) (< dx 80.0) (< dy 80.0) (not= update-fn update-rag))
+    (if (and (not= id (:id actor)) (< dx radius) (< dy radius) (not= update-fn update-rag))
       (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
             hitsm (math2/resize-v2 hitv (if (< health 20) 10 2))
             hitbg (math2/resize-v2 hitv (if (< health 20) 20 4))
@@ -136,9 +137,9 @@
 
 (defn hit
   "hit actor"
-  [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r] :as masses} :masses health :health metrics :metrics update-fn :update-fn :as actor} {:keys [id base target time power] :as command}]
+  [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r] :as masses} :masses health :health metrics :metrics update-fn :update-fn :as actor} {:keys [id base target time power radius] :as command}]
   (let [[dx dy] (math2/sub-v2 base (:p hip))]
-    (if-not (and (not= id (:id actor)) (< dx 80.0) (< dy 80.0) (not= update-fn update-rag))
+    (if-not (and (not= id (:id actor)) (< dx radius) (< dy radius) (not= update-fn update-rag))
       actor
       (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
             hitsm (math2/resize-v2 hitv (if (< health 20) 10 2))
@@ -211,8 +212,8 @@
                         commands
                         (into commands [{:id id
                                          :text "attack"
-                                         :base (get-in masses [:hip :p])
-                                         :target (get-in masses (math2/resize-v2 [:hip :d] 10.0))
+                                         :base (get-in masses [:neck :p])
+                                         :target (get-in masses (math2/resize-v2 [:neck :d] 10.0))
                                          :time time
                                          :power 50}]))
           result (-> state
@@ -282,30 +283,23 @@
     result))
 
 
-(defn update-controls [{:keys [punch-hand action-sent pickup-sent vert-direction] :as state} {:keys [left right up down punch kick block run] :as control}]
+(defn update-controls [{:keys [punch-hand action-sent pickup-sent vert-direction] :as state} {:keys [left right up down punch kick shoot block run] :as control}]
   (if-not control
     state
-    (let [p-pressed (cond
-                      (and (not (:punch control)) punch) true
-                      (and (:punch control) (not punch)) false
-                      :else (:punch control))
-          k-pressed (cond
-                      (and (not (:kick control)) kick) true
-                      (and (:kick control) (not kick)) false
-                      :else (:kick control))
-          p-hand (if (and (not (:punch control)) punch)
+    (let [p-hand (if (and (not (:punch control)) punch)
                    (if (= punch-hand :hand_l) :hand_r :hand_l)
                    punch-hand)]
       (-> state
-          (assoc :action-sent (if (and (not p-pressed) (not k-pressed)) false action-sent))
+          (assoc :action-sent (if (and (not punch) (not kick) (not shoot)) false action-sent))
           (assoc :pickup-sent (if (not down) false pickup-sent))
           (assoc :punch-hand p-hand)
           (assoc :vert-direction (cond
                                    down -1
                                    up 1
                                    :else vert-direction))
-          (assoc-in [:control :punch] p-pressed)
-          (assoc-in [:control :kick] k-pressed)
+          (assoc-in [:control :punch] punch)
+          (assoc-in [:control :kick] kick)
+          (assoc-in [:control :shoot] shoot)
           (assoc-in [:control :left] left)
           (assoc-in [:control :right] right)
           (assoc-in [:control :up] up)

@@ -47,7 +47,13 @@
         foot_r (if kick [(+ hx (* legl facing)) (+ hy (* legl 0.5) -10.0)] (:p base_r))
         newcommands (if-not (and kick (not action-sent))
                       commands
-                      (into commands [{:id id :text "attack" :base [hx hy] :target foot_l :time time :power 50.0}]))]
+                      (into commands [{:id id
+                                       :text "attack"
+                                       :base [hx hy]
+                                       :target foot_l
+                                       :radius 100.0
+                                       :time time
+                                       :power 50.0}]))]
     (-> state
         (assoc :commands newcommands)
         (assoc :action-sent (if (and kick (not action-sent)) true action-sent))

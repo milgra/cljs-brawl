@@ -14,7 +14,6 @@
   (println "load-defaults saved" (.getItem js/localStorage "state-saved?") "state" (.getItem js/localStorage "state"))
   (if (and (local-storage-supported?) (= "true" (.getItem js/localStorage "state-saved?")))
     (let [state-js (cljs.reader/read-string (.getItem js/localStorage "state"))]
-      (println "state-js" (:curr-level state-js))
       ;; todo validate with specs
       (merge state state-js))
     state))

@@ -146,7 +146,6 @@
                         (= (:type texture) "Label")
                         ;; show glyph
                         (let [bmp (bitmap-for-glyph tempcanvas w h texture)]
-                          (println "generating texture")
                           (texmap/setbmp tmap bmp texture 0))
 
                         :default

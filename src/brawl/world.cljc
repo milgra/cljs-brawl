@@ -95,11 +95,13 @@
             contacts (remove nil? (map (fn [[id actor]] (actor/hitpoint actor command)) actors))
             new-particles (create-particles contacts main-dir)
             new-actors (hit-actors actors sounds command)]
-        (when-not (empty? contacts)
-          (.play ((keyword (str "punch" (rand-int 3))) sounds))
-          ;; start music at first punch, should do better but starting music needs user interaction
-          (set! (.-loop (:theme sounds)) true)
-          (.play (:theme sounds)))
+        (if (get-in sender [:control :shoot]) (.play (:shot sounds))           
+            (when-not (empty? contacts)
+              (.play ((keyword (str "punch" (rand-int 3))) sounds))
+              ;; TODO MOVE THIS!!!
+              ;; start music at first punch, should do better but starting music needs user interaction
+              (set! (.-loop (:theme sounds)) true)
+              (.play (:theme sounds))))
         (-> state
             (assoc-in [:world :particles] (concat particles new-particles))
             (assoc-in [:world :actors] new-actors)))

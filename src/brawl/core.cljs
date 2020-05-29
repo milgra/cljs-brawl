@@ -151,6 +151,7 @@
                       :up (new-codes 38)
                       :down (new-codes 40)
                       :punch (new-codes 70)
+                      :shoot (new-codes 86)
                       :run (new-codes 32)
                       :kick (new-codes 83)
                       :block (new-codes 68)}]
