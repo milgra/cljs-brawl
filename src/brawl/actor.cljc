@@ -192,16 +192,7 @@
                         (phys2/keep-distances (:dguards state))
                         (phys2/move-masses surfaces 0.4))
           newnext (if (= hittime hitduration) "jump" next) 
-          newcommands (if-not (and injure-when-dropped (= (mod time 10) 0))
-                        commands
-                        (into commands [{:id id
-                                         :text "attack"
-                                         :base (get-in masses [:hip :p])
-                                         :target (get-in masses [:neck :p])
-                                         :time time
-                                         :power 10}]))
           result (-> state
-                     (assoc :commands newcommands)
                      (assoc :next newnext)
                      (assoc :masses newmasses)
                      (update :hittime inc))]
@@ -215,7 +206,16 @@
                         (phys2/keep-distances (:dguards state))
                         (phys2/move-masses surfaces 0.4))
           newnext (if (= hittime 150) "idle" next) 
+          newcommands (if-not (and injure-when-dropped (= 0 (mod hittime 5)) (< hittime 100) (> hittime 0))
+                        commands
+                        (into commands [{:id id
+                                         :text "attack"
+                                         :base (get-in masses [:hip :p])
+                                         :target (get-in masses (math2/resize-v2 [:hip :d] 10.0))
+                                         :time time
+                                         :power 50}]))
           result (-> state
+                     (assoc :commands newcommands)
                      (assoc :next newnext)
                      (assoc :masses newmasses)
                      (update :hittime inc))]
@@ -268,6 +268,7 @@
           (= next "idle")
           ;; reset jump state
           (-> state
+              (assoc :injure-when-dropped false)
               (assoc :next nil)
               (assoc :update-fn update-idle))
 
@@ -326,7 +327,7 @@
   (let [result (-> state
                    (update-angle)
                    (update-controls control) ;; manual controls for hero
-                   (ai/update-ai control surfaces actors time) ;; ai controls for others
+                   ;;(ai/update-ai control surfaces actors time) ;; ai controls for others
                    (update-fn surfaces time)
                    (update-mode))]
     ;;(if (= (:id state) :enemy) (println "AFTER UPDATE" (:version result) (get-in result [:masses :knee_l :d] )))

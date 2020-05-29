@@ -220,7 +220,7 @@
   [{:keys [bases masses speed base-order base-target step-length facing kick-pressed] {legl :legl runs :runs walks :walks} :metrics {kick :kick} :control :as state}
    surfaces
    time]
-  (if (> (Math/abs speed) 0.5)
+  (if (> (Math/abs speed) 1.0)
     (if base-target
       (let [active-base (:active base-order)
             passive-base (:passive base-order)
@@ -278,7 +278,7 @@
               left (if (< speed (- max))
                       (- (- max) 0.1)
                       (- speed (* 0.8 time)))
-              :else (* speed (- 1.0 (* 0.08 time))))
+              :else (* speed (- 1.0 (* 0.15 time))))
         dir (cond
               (and (> nsx 0.0 ) right) 1
               (and (< nsx 0.0 ) left ) -1

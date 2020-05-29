@@ -180,7 +180,7 @@
                :world (world/init)
                :ui-drawer (uiwebgl/init)
                :world-drawer (webgl/init)
-               :level 0
+               :level 4
                :msgch (chan)
                :sounds (audio/sounds)
                :buffer (floatbuffer/create!)

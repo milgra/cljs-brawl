@@ -10,7 +10,8 @@ run :
 
 ## Todo
 
-* gun, body injury
+* gun, body injury, shoot gomb
+* block mukodjon, ne forduljon meg blokk alatt
 * use enemy countsfrom svg
 * lassab punch rate
 * draw order

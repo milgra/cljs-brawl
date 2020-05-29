@@ -297,8 +297,6 @@
   [{:keys [level commands-world ui-drawer] :as state}]
   (reduce
    (fn [oldstate {text :text :as command}]
-
-     (println "command" command)
      (let [hero (get-in oldstate [:worlds :actors :hero])
            path-metrics [:world :actors :hero :metrics]]
        (cond
