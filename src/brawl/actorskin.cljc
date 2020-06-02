@@ -125,8 +125,7 @@
     facing :facing
     randoms :randoms
     health :health
-    color :colorf
-    }
+    color :colorf}
    floatbuffer
    variation
    [l r b t]]

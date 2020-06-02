@@ -29,19 +29,17 @@ Download/checkout the repo and start it up with :
 
 ## Todo
 
-* weighted injures
-* block mukodjon, ne forduljon meg blokk alatt
 * lassab punch rate
 * random punch / kick heights
-
+* slidingnal meroleges komponenst nezz, es azt gravityvel
 * story info screen a kezdesnel
 * hand changing
-* draw order
-* ai
-* összeesett ember guggolasbol alljon fol
 * szakadekrol lelepes csekk
 * palya szele csekk
-* slidingnal meroleges komponenst nezz, es azt gravityvel
+* draw order
+* ai
 * time scaling
+
+* összeesett ember guggolasbol alljon fol
 * update ui renderer and mpd
 * first aid box vagy auto health

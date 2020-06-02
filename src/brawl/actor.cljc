@@ -75,7 +75,7 @@
      :metrics metrics
      ;; base states
      :next nil
-     :speed 0.0
+     :speed 10.0
      :power 100.0
      :health 100.0
      :facing 1.0
@@ -138,7 +138,10 @@
 
 (defn hit
   "hit actor"
-  [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r] :as masses} :masses health :health metrics :metrics update-fn :update-fn :as actor} {:keys [id base target time power radius] :as command}]
+  [{:keys [health metrics update-fn]
+    {:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r] :as masses} :masses
+    {:keys [block] :as control} :control :as actor}
+   {:keys [id base target time power radius facing] :as command}]
   (let [[dx dy] (math2/sub-v2 base (:p hip))]
     (if-not (and (not= id (:id actor)) (< dx radius) (< dy radius) (not= update-fn update-rag))
       actor
@@ -156,33 +159,45 @@
             footlisp (math2/intersect-v2-v2 base hitv (:p hip) footlv)
             footrisp (math2/intersect-v2-v2 base hitv (:p hip) footrv)
 
-            has-isp (or headisp bodyisp footlisp footrisp)
-            neck-part (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p neck))))
-            hip-part  (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p hip))))
-            neck-ratio (if bodyisp (/ hip-part (:bodyl metrics)))
-            hip-ratio (if bodyisp (/ neck-part (:bodyl metrics)))
+            has-isp (or headisp bodyisp footlisp footrisp)]
+        (if-not has-isp
+          actor
+          (if (and block (not= facing (:facing actor)))
+            ;; move actor slightly when blocking and facing the sender
+            (do
+              (println "power" power)
+              (-> actor
+                  (update :health - (/ power 2.0)) 
+                  (update :speed + (* facing (/ power 2.0)))))
+            ;; hit actor
+            (let [neck-part (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p neck))))
+                  hip-part  (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p hip))))
+                  neck-ratio (if bodyisp (/ hip-part (:bodyl metrics)))
+                  hip-ratio (if bodyisp (/ neck-part (:bodyl metrics)))
 
-            ;;(let [newmasses (reduce (fn [oldmasses [id mass]] (assoc oldmasses id (assoc mass :d [0 0]))) {} masses)] 
+                  hitpower (cond
+                             headisp power
+                             bodyisp (* power 0.6)
+                             footlisp (* power 0.4)
+                             footrisp (* power 0.4))]
+                  ;;(let [newmasses (reduce (fn [oldmasses [id mass]] (assoc oldmasses id (assoc mass :d [0 0]))) {} masses)] 
 
-            result (if-not has-isp
-                     actor
-                     (cond-> actor
-                       true (assoc :hittime time)
-                       true (assoc :hitduration (if (and headisp (> power 39)) 100 20))
-                       true (assoc :next "rag")
-                       true (update :health - power) 
-                       true (update :speed  + (* (/ hvx (Math/abs hvx)) 5.0))
-                       ;; true (assoc :masses (reduce (fn [oldmasses [id mass]] (assoc oldmasses id (assoc mass :d [0 0]))) {} masses))
-                       headisp (assoc-in [:masses :head :d] (math2/add-v2 (:d head) hitbg))
-                       headisp (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) hitsm))
-                       bodyisp (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) (math2/scale-v2 hitbg (+ 0.4 neck-ratio))))
-                       bodyisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) (math2/scale-v2 hitbg (+ 0.4 hip-ratio))))
-                       footlisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
-                       footlisp (assoc-in [:masses :knee_l :d] (math2/add-v2 (:d knee_l) hitsm))
-                       footrisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
-                       footrisp (assoc-in [:masses :knee_r :d] (math2/add-v2 (:d knee_r) hitsm))))]
-        result))))
-
+              (cond-> actor
+                true (assoc :hittime time)
+                true (assoc :hitduration (if (and headisp (> hitpower 39)) 100 20))
+                true (assoc :next "rag")
+                true (update :health - hitpower) 
+                true (update :speed  + (* (/ hvx (Math/abs hvx)) 5.0))
+                ;; true (assoc :masses (reduce (fn [oldmasses [id mass]] (assoc oldmasses id (assoc mass :d [0 0]))) {} masses))
+                headisp (assoc-in [:masses :head :d] (math2/add-v2 (:d head) hitbg))
+                headisp (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) hitsm))
+                bodyisp (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) (math2/scale-v2 hitbg (+ 0.4 neck-ratio))))
+                bodyisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) (math2/scale-v2 hitbg (+ 0.4 hip-ratio))))
+                footlisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
+                footlisp (assoc-in [:masses :knee_l :d] (math2/add-v2 (:d knee_l) hitsm))
+                footrisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
+                footrisp (assoc-in [:masses :knee_r :d] (math2/add-v2 (:d knee_r) hitsm))))))))))
+  
 
 (defn update-idle [state] state)
 
@@ -216,6 +231,8 @@
                                          :base (get-in masses [:neck :p])
                                          :target (get-in masses (math2/resize-v2 [:neck :d] 10.0))
                                          :time time
+                                         :facing 0
+                                         :radius 50.0
                                          :power 50}]))
           result (-> state
                      (assoc :commands newcommands)
@@ -323,7 +340,7 @@
   (let [result (-> state
                    (update-angle)
                    (update-controls control) ;; manual controls for hero
-                   ;;(ai/update-ai control surfaces actors time) ;; ai controls for others
+                   (ai/update-ai control surfaces actors time) ;; ai controls for others
                    (update-fn surfaces time)
                    (update-mode))]
     ;;(if (= (:id state) :enemy) (println "AFTER UPDATE" (:version result) (get-in result [:masses :knee_l :d] )))

@@ -52,6 +52,7 @@
                                        :base [hx hy]
                                        :target foot_l
                                        :radius 100.0
+                                       :facing facing
                                        :time time
                                        :power 50.0}]))]
     (-> state

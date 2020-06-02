@@ -74,14 +74,16 @@
                               :base neck
                               :target (if (= punch-hand :hand_l) hand_l hand_r)
                               :radius 100.0
+                              :facing facing
                               :time time
-                              :power 10}])
+                              :power 20}])
                       (and shoot (not action-sent) (> bullets 0))
                       (into [{:id id
                               :text "attack"
                               :base neck
                               :target (math2/add-v2 neck [(* facing 500.0) 0.0])
                               :radius 500.0
+                              :facing facing
                               :time time
                               :power 110}]))]
     (-> state
@@ -166,6 +168,7 @@
                       (into commands [{:id id :text "attack"
                                        :base (:p (:hip masses))
                                        :target kick-point
+                                       :facing facing
                                        :radius 100.0
                                        :time time
                                        :power 40}]))]
@@ -226,7 +229,7 @@
         (assoc :dostep! false)
         (assoc :base-order base-order)
         (assoc :base-target base-target)
-        (assoc :base-surfaces {:active newactivesurf :passive newpassivesurf}))))
+        (assoc :base-surfaces {:active newactivesurf :passive (or newpassivesurf newactivesurf)}))))
 
 
 (defn move-feet-walk
@@ -282,7 +285,7 @@
 
 (defn update-speed
   "update speed based on pressed buttons"
-  [{:keys [speed facing metrics]  {:keys [left right up down run]} :control :as state}
+  [{:keys [speed facing metrics]  {:keys [left right up down run block]} :control :as state}
    time]
   (let [max (if (or (not run) down) (:walks metrics) (:runs metrics))
         nsx (cond
@@ -294,8 +297,8 @@
                       (- speed (* 0.8 time)))
               :else (* speed (- 1.0 (* 0.15 time))))
         dir (cond
-              (and (> nsx 0.0 ) right) 1
-              (and (< nsx 0.0 ) left ) -1
+              (and (> nsx 0.0) right (not block)) 1
+              (and (< nsx 0.0) left (not block)) -1
               :else facing)]
     (-> state
         (assoc :speed nsx)
