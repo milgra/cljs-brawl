@@ -35,7 +35,7 @@
   
 (defn update-ui
   "update view based on user actions"
-  [{{:keys [baseid views commands-ui projection]} :ui :as state} msg]
+  [{{:keys [baseid views commands-ui projection]} :ui :as state} msg time delta]
   (let [pressed-views (if-not (and msg (= (:id msg) "mouse"))
                         nil
                         (kinetix/collect-pressed-views views (:point msg)))

@@ -83,9 +83,9 @@
           contacts))
 
 
-(defn hit-actors [actors sounds command]
+(defn hit-actors [actors sounds command time]
   (reduce (fn [result [id actor]]
-            (let [newactor (actor/hit actor command)]
+            (let [newactor (actor/hit actor command time)]
               (if (and (> (:health actor) 0 ) (< (:health newactor) 0)) (.play ((keyword (str "death" (rand-int 2))) sounds)))
               (assoc result id newactor)))
           {}
@@ -94,14 +94,14 @@
 
 (defn execute-attack
   "hittest actors and modify if hit happened"
-  [{{:keys [actors particles]} :world sounds :sounds :as state} {id :id :as command}]
+  [{{:keys [actors particles]} :world sounds :sounds :as state} {id :id :as command} time]
   (let [sender (id actors)]
     (if-not (:dragged-body sender)
       ;; normal kick/puncj
       (let [main-dir (math2/resize-v2 (math2/sub-v2 (:target command) (:base command)) 4.0)
             contacts (remove nil? (map (fn [[id actor]] (actor/hitpoint actor command)) actors))
             new-particles (create-particles contacts main-dir)
-            new-actors (hit-actors actors sounds command)]
+            new-actors (hit-actors actors sounds command time)]
         (if (get-in sender [:control :shoot]) (.play (:shot sounds))           
             (when-not (empty? contacts)
               (.play ((keyword (str "punch" (rand-int 3))) sounds))
@@ -198,11 +198,13 @@
 
 
 (defn update-actors [{:keys [controls]
-                      {:keys [actors surfaces guns] :as world} :world :as state}]
+                      {:keys [actors surfaces guns] :as world} :world :as state}
+                     time
+                     delta]
   (let [new-actors (reduce (fn [result [id actor]]
                              (let [newactor (cond
-                                              (not= :hero id) (actor/update-actor actor nil surfaces result guns 1.0)
-                                              :else (actor/update-actor actor controls surfaces result guns 1.0))]                   
+                                              (not= :hero id) (actor/update-actor actor nil surfaces result guns time delta)
+                                              :else (actor/update-actor actor controls surfaces result guns time delta))]
                                (assoc result id newactor)))
                            {}
                            actors)]
@@ -211,11 +213,11 @@
 
 (defn update-world
   "updates phyisics and actors"
-  [{{loaded :loaded} :world :as state} msg]
+  [{{loaded :loaded} :world :as state} msg time delta]
   (if-not loaded
     state
     (-> state
-        (update-actors)
+        (update-actors time delta)
         (extract-actor-commands)
         (update-guns)
         (update-dragged)
@@ -302,7 +304,7 @@
 
 
 (defn execute-commands
-  [{:keys [level commands-world ui-drawer] :as state}]
+  [{:keys [level commands-world ui-drawer] :as state} time]
   (reduce
    (fn [oldstate {text :text :as command}]
      (let [hero (get-in oldstate [:worlds :actors :hero])
@@ -313,7 +315,7 @@
          (pickup-object oldstate command)
 
          (= text "attack")
-         (execute-attack oldstate command)
+         (execute-attack oldstate command time)
 
          (= text "new game")
          (load-first-level oldstate)

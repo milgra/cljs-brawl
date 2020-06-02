@@ -89,7 +89,7 @@
      ;; ai state
      :ai-state :idle
      :ai-enemy nil
-     :ai-duration 0
+     :ai-timeout 0
      ;; control state
      :control {:left false :right false :up false :down false :punch false :kick false :block false :run false }
      :pickup-sent false
@@ -116,7 +116,7 @@
 
 (defn hitpoint
   "get hitpoint"
-  [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health update-fn :update-fn :as actor} {:keys [id base target time radius]}]
+  [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health update-fn :update-fn :as actor} {:keys [id base target radius]}]
   (let [[dx dy] (math2/sub-v2 base (:p hip))]
     (if (and (not= id (:id actor)) (< dx radius) (< dy radius) (not= update-fn update-rag))
       (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
@@ -141,7 +141,8 @@
   [{:keys [health metrics update-fn]
     {:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r] :as masses} :masses
     {:keys [block] :as control} :control :as actor}
-   {:keys [id base target time power radius facing] :as command}]
+   {:keys [id base target power radius facing] :as command}
+   time]
   (let [[dx dy] (math2/sub-v2 base (:p hip))]
     (if-not (and (not= id (:id actor)) (< dx radius) (< dy radius) (not= update-fn update-rag))
       actor
@@ -164,11 +165,9 @@
           actor
           (if (and block (not= facing (:facing actor)))
             ;; move actor slightly when blocking and facing the sender
-            (do
-              (println "power" power)
-              (-> actor
-                  (update :health - (/ power 2.0)) 
-                  (update :speed + (* facing (/ power 2.0)))))
+            (-> actor
+                (update :health - (/ power 2.0)) 
+                (update :speed + (* facing (/ power 2.0))))
             ;; hit actor
             (let [neck-part (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p neck))))
                   hip-part  (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p hip))))
@@ -183,8 +182,7 @@
                   ;;(let [newmasses (reduce (fn [oldmasses [id mass]] (assoc oldmasses id (assoc mass :d [0 0]))) {} masses)] 
 
               (cond-> actor
-                true (assoc :hittime time)
-                true (assoc :hitduration (if (and headisp (> hitpower 39)) 100 20))
+                true (assoc :hittimeout (if (and headisp (> hitpower 39)) (+ time 1000) (+ time 200)))
                 true (assoc :next "rag")
                 true (update :health - hitpower) 
                 true (update :speed  + (* (/ hvx (Math/abs hvx)) 5.0))
@@ -202,19 +200,18 @@
 (defn update-idle [state] state)
 
 
-(defn update-rag [{:keys [masses dguards hittime hitduration next health injure-when-dropped commands id] :as state } surfaces time]
+(defn update-rag [{:keys [masses dguards hittimeout next health injure-when-dropped commands id] :as state } surfaces time delta]
   (if (> health 0)
     (let [newmasses (-> masses
                         (phys2/add-gravity [0.0 0.4])
                         ;;(phys2/keep-angles (:aguards state))
                         (phys2/keep-distances (:dguards state))
                         (phys2/move-masses surfaces 0.4))
-          newnext (if (= hittime hitduration) "jump" next) 
+          newnext (if (> time hittimeout) "jump" next) 
           result (-> state
                      (assoc :next newnext)
-                     (assoc :masses newmasses)
-                     (update :hittime inc))]
-
+                     (assoc :masses newmasses))]
+      (println "updaterag hittimeout" hittimeout time)
       (if (= result nil) println "UPDATERAG ERROR!!!")
       result)
     
@@ -223,22 +220,20 @@
                         (phys2/keep-angles (:aguards state))
                         (phys2/keep-distances (:dguards state))
                         (phys2/move-masses surfaces 0.4))
-          newnext (if (= hittime 150) "idle" next) 
-          newcommands (if-not (and injure-when-dropped (= 0 (mod hittime 5)) (< hittime 100) (> hittime 0))
+          newnext (if (> time (+ hittimeout 5000)) "idle" next) 
+          newcommands (if-not (and injure-when-dropped (= 0 (mod (int (* time 10.0)) 2)))
                         commands
                         (into commands [{:id id
                                          :text "attack"
                                          :base (get-in masses [:neck :p])
                                          :target (get-in masses (math2/resize-v2 [:neck :d] 10.0))
-                                         :time time
                                          :facing 0
                                          :radius 50.0
                                          :power 50}]))
           result (-> state
                      (assoc :commands newcommands)
                      (assoc :next newnext)
-                     (assoc :masses newmasses)
-                     (update :hittime inc))]
+                     (assoc :masses newmasses))]
       (if (= result nil) println "UPDATERAG ERROR!!!")
       result)))
 
@@ -327,21 +322,21 @@
 
 
 (defn update-angle
-  [{angle :idle-angle health :health :as state}]
+  [{angle :idle-angle health :health :as state} delta]
   (cond-> state
-    (and (< health 100.0) (> health 0.0)) (update :health + 0.05) 
+    (and (< health 100.0) (> health 0.0)) (update :health + (* 0.05 delta)) 
     (> angle MPI2) (assoc :idle-angle (- angle MPI2))
-    (< angle MPI2) (update :idle-angle + 0.05)))
+    (< angle MPI2) (update :idle-angle + (* 0.05 delta))))
 
 
-(defn update-actor [{mode :mode update-fn :update-fn :as state} control surfaces actors guns time]
+(defn update-actor [{mode :mode update-fn :update-fn :as state} control surfaces actors guns time delta]
   "update actor state"
   ;;(if (= (:id state) :enemy) (println "BEFORE UPDATE" (:version state) (get-in state [:masses :knee_l :d] )))
   (let [result (-> state
-                   (update-angle)
+                   (update-angle delta)
                    (update-controls control) ;; manual controls for hero
-                   (ai/update-ai control surfaces actors time) ;; ai controls for others
-                   (update-fn surfaces time)
+                   (ai/update-ai control surfaces actors time delta) ;; ai controls for others
+                   (update-fn surfaces time delta)
                    (update-mode))]
     ;;(if (= (:id state) :enemy) (println "AFTER UPDATE" (:version result) (get-in result [:masses :knee_l :d] )))
     result))

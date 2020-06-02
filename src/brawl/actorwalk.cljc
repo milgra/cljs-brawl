@@ -30,8 +30,7 @@
   [{:keys [facing squat-size punch-pressed speed] {{[hx hy] :p} :hip} :masses
     {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
     {legl :legl bodyl :bodyl headl :headl} :metrics
-    {:keys [down up left right punch]} :control :as state}
-   time]
+    {:keys [down up left right punch]} :control :as state}]
   (let [nx (* facing (+ (* (Math/abs speed) 1.0) (/ (Math/abs (- bx ax )) 15.0 ))) ; head move forward and backwards when stepping
         nnx (* facing squat-size 0.5) ; head move even forward when squatting
         ny (* squat-size 0.25) ; head should move lower when squatting
@@ -51,8 +50,7 @@
     {arml :arml} :metrics angle :idle-angle
     {:keys [down up left right punch shoot block]} :control
     :as state}
-   surfaces
-   time]
+   surfaces]
   (let [nlx (+ (* facing (+ (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
         nrx (- (* facing (- (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
         nly (+ (* arml 0.1 ) (* (Math/cos angle ) 5.0))
@@ -75,7 +73,6 @@
                               :target (if (= punch-hand :hand_l) hand_l hand_r)
                               :radius 100.0
                               :facing facing
-                              :time time
                               :power 20}])
                       (and shoot (not action-sent) (> bullets 0))
                       (into [{:id id
@@ -84,7 +81,6 @@
                               :target (math2/add-v2 neck [(* facing 500.0) 0.0])
                               :radius 500.0
                               :facing facing
-                              :time time
                               :power 110}]))]
     (-> state
         (assoc :commands newcommands)
@@ -102,8 +98,7 @@
      {:keys [down up left right run kick]} :control
      {{[hx hy] :p} :hip } :masses
      {{[lx ly] :p} :base_l {[rx ry] :p} :base_r} :bases
-     {legl :legl } :metrics :as state}
-   time]
+     {legl :legl } :metrics :as state}]
   (let [cx (if (or (< speed -0.5) (> speed 0.5) (not kick)) (+ lx (/ (- rx lx) 2)) ; x center of bases when walking
                (if (= :base_l (:active base-order)) rx lx)) ; passive foot when kic
                  
@@ -138,8 +133,7 @@
 
 
 (defn move-knee-walk
- [{:keys [masses speed base-order base-target step-length facing] {legl :legl} :metrics :as state}
-   time]
+ [{:keys [masses speed base-order base-target step-length facing] {legl :legl} :metrics :as state}]
   (let [knee_l (triangle_with_bases (get-in masses [:foot_l :p]) (get-in masses [:hip :p]) (/ legl 1.95) facing)
         knee_r (triangle_with_bases (get-in masses [:foot_r :p]) (get-in masses [:hip :p]) (/ legl 1.95) facing)]
     (-> state
@@ -150,8 +144,7 @@
 (defn move-feet-walk-still 
   "do kick if needed"
   [{:keys [id bases masses speed base-order base-target step-length facing action-sent commands] {legl :legl runs :runs walks :walks} :metrics {kick :kick} :control :as state}
-   surfaces
-   time]
+   surfaces]
   (let [active-base (:active base-order)
         passive-base (:passive base-order)
         [apx apy :as act] (:p (bases active-base)) ; active position
@@ -170,7 +163,6 @@
                                        :target kick-point
                                        :facing facing
                                        :radius 100.0
-                                       :time time
                                        :power 40}]))]
     (-> state
         (assoc :commands newcommands)
@@ -236,7 +228,7 @@
   "move active base towards target point"
   [{:keys [bases masses speed base-order base-target step-length facing kick-pressed] {legl :legl runs :runs walks :walks} :metrics {kick :kick} :control :as state}
    surfaces
-   time]
+   delta]
   (if (> (Math/abs speed) 1.0)
     (if base-target
       (let [active-base (:active base-order)
@@ -244,7 +236,7 @@
             actual-pos (:p (bases active-base))
             actual-vec (math2/sub-v2 base-target actual-pos)
             actual-size (math2/length-v2 actual-vec)
-            current-size (* (Math/abs speed) time)
+            current-size (* (Math/abs speed) delta)
             current-vec (math2/resize-v2 actual-vec current-size)
             remaining-size (- actual-size current-size)
             [cpx cpy :as current-pos] (math2/add-v2 actual-pos current-vec) ; current position
@@ -280,22 +272,22 @@
           true (assoc-in [:masses :foot_r :p] foot_r)
           step? (step-feet-walk surfaces))) ; step if base target is close
       (step-feet-walk state surfaces)) ; step if no base target
-    (move-feet-walk-still state surfaces time))) ; stay still or do kick if no speed
+    (move-feet-walk-still state surfaces))) ; stay still or do kick if no speed
 
 
 (defn update-speed
   "update speed based on pressed buttons"
-  [{:keys [speed facing metrics]  {:keys [left right up down run block]} :control :as state}
-   time]
+  [{:keys [speed facing metrics]
+    {:keys [left right up down run block]} :control :as state} delta]
   (let [max (if (or (not run) down) (:walks metrics) (:runs metrics))
         nsx (cond
               right (if (> speed max)
                       (+ max 0.1)
-                      (+ speed (* 0.8 time)))
+                      (+ speed (* 0.8 delta)))
               left (if (< speed (- max))
                       (- (- max) 0.1)
-                      (- speed (* 0.8 time)))
-              :else (* speed (- 1.0 (* 0.15 time))))
+                      (- speed (* 0.8 delta)))
+              :else (* speed (- 1.0 (* 0.15 delta))))
         dir (cond
               (and (> nsx 0.0) right (not block)) 1
               (and (< nsx 0.0) left (not block)) -1
@@ -307,13 +299,13 @@
 
 (defn update-walk
   "update walk state"
-  [state surfaces time]
+  [state surfaces time delta]
   (let [result (-> state
-                  (update-speed time)
-                  (move-feet-walk surfaces time)
-                  (move-hip-walk time)
-                  (move-knee-walk time)
-                  (move-head-walk time)
-                  (move-hand-walk surfaces time)
+                  (update-speed delta)
+                  (move-feet-walk surfaces delta)
+                  (move-hip-walk)
+                  (move-knee-walk)
+                  (move-head-walk)
+                  (move-hand-walk surfaces)
                   (send-commands))]
     result))

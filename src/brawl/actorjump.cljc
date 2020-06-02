@@ -9,8 +9,7 @@
   [{:keys [facing squat-size kick-pressed] {{[hx hy] :p} :hip} :masses
     {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
     {legl :legl bodyl :bodyl headl :headl} :metrics
-    {:keys [down up left right kick]} :control :as state}
-   time]
+    {:keys [down up left right kick]} :control :as state}]
   (let [nx (* facing (/ (Math/abs (- bx ax )) 8.0 )) ; head move forward and backwards when stepping
         nnx (* facing squat-size 0.5) ; head move even forward when squatting
         ny (* squat-size 0.25) ; head should move lower when squatting
@@ -26,8 +25,7 @@
   "move hip points, handle jumping"
   [{:keys [next jump-state] {{[hx hy] :p} :hip} :masses
     {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
-    { legl :legl } :metrics :as state}
-   time]
+    { legl :legl } :metrics :as state}]
   (let [x (+ ax (/ (- bx ax) 2))
         y (+ ay (/ (- by ay) 2))]
     (assoc-in state [:masses :hip :p] [x (- y (* legl 0.8))])))
@@ -41,8 +39,7 @@
     {legl :legl runs :runs walks :walks} :metrics
     {kick :kick} :control
     :as state}
-   surfaces
-   time]
+   surfaces]
   (let [foot_l (if kick [(+ hx (* legl facing) -10.0 ) (+ hy (* legl 0.5))] (:p base_l))
         foot_r (if kick [(+ hx (* legl facing)) (+ hy (* legl 0.5) -10.0)] (:p base_r))
         newcommands (if-not (and kick (not action-sent))
@@ -53,7 +50,6 @@
                                        :target foot_l
                                        :radius 100.0
                                        :facing facing
-                                       :time time
                                        :power 50.0}]))]
     (-> state
         (assoc :commands newcommands)
@@ -66,10 +62,11 @@
   "jump state update, update base masses in the world, check if they reached ground" 
   [{:keys [bases masses speed] :as state}
    surfaces
-   time]
+   time
+   delta]
   (let [newbases (-> bases 
-                     (phys2/add-gravity [0.0 0.5])
-                     (phys2/move-masses surfaces 0.5))
+                     (phys2/add-gravity [0.0 (* 0.5 delta)])
+                     (phys2/move-masses surfaces (* 0.5 delta)))
         ground (and (:q (:base_l newbases) (:base_r newbases))) ;; check quisence of bases
         next (cond
                ground "walk"
@@ -78,10 +75,10 @@
         result (cond-> state
                  next (assoc :next next)
                  true (assoc :bases newbases)
-                 true (move-hip-jump time)
-                 true (move-feet-jump surfaces time)
-                 true (walk/move-knee-walk time)
-                 true (move-head-jump time)
-                 true (walk/move-hand-walk surfaces time))]
+                 true (move-hip-jump)
+                 true (move-feet-jump surfaces)
+                 true (walk/move-knee-walk)
+                 true (move-head-jump)
+                 true (walk/move-hand-walk surfaces))]
     (if (= result nil) println "UPDATEJUMP ERROR!!!")
     result))

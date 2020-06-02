@@ -165,13 +165,12 @@
   [state draw-fn]
   (letfn [(loop [prestate frame]
             (fn [time]
-              (let [newstate (if (> time 0)
-                               (draw-fn prestate frame time)
-                               prestate)]
-                (.requestAnimationFrame
-                 js/window
-                 (loop newstate (inc frame))))))]
-    ((loop state 0) 0 )))
+              (let [delta (- time (:time prestate))
+                    state (if (< delta time)
+                            (draw-fn prestate frame time delta)
+                            prestate)]
+                (.requestAnimationFrame js/window (loop (assoc state :time time) (inc frame))))))]
+    ((loop state 0) 0)))
 
 
 (defn main
@@ -181,6 +180,7 @@
                :world (world/init)
                :ui-drawer (uiwebgl/init)
                :world-drawer (webgl/init)
+               :time 0
                :level 0
                :msgch (chan)
                :sounds (audio/sounds)
@@ -192,7 +192,7 @@
                :controls {}
                :commands-ui []
                :commands-world []}
-        
+
         final (-> state
                   (defaults/load-defaults!)
                   (audio/set-effects-volume)
@@ -206,21 +206,22 @@
 
     (animate
      final
-     (fn [prestate frame time]
+     (fn [prestate frame time delta]
        ;; frame skipping for development
        (if-not (= (mod frame 1) 0 )
          prestate
-         (let [msg (poll! (:msgch prestate))]
+         (let [msg (poll! (:msgch prestate))
+               rat (/ delta 16)]
            (-> prestate
                ;; get controls
                (update-controls msg)
                ;; world
-               (world/execute-commands)
+               (world/execute-commands time)
                (world/reset-world msg)
-               (world/update-world msg)
+               (world/update-world msg time rat)
                ;; ui
                (brawlui/execute-commands msg)
-               (brawlui/update-ui msg)
+               (brawlui/update-ui msg time rat)
                ;; drawing
                (draw-world frame)
                (draw-ui))))))))
