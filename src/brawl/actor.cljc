@@ -296,10 +296,10 @@
     result))
 
 
-(defn update-controls [{:keys [punch-hand action-sent pickup-sent vert-direction] :as state} {:keys [left right up down punch kick shoot block run] :as control}]
+(defn update-controls [{:keys [punch-hand action-sent pickup-sent vert-direction] self-control :control :as state} {:keys [left right up down punch kick shoot block run] :as control}]
   (if-not control
     state
-    (let [p-hand (if (and (not (:punch control)) punch)
+    (let [p-hand (if (and (not (:punch self-control)) punch)
                    (if (= punch-hand :hand_l) :hand_r :hand_l)
                    punch-hand)]
       (-> state

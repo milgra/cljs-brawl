@@ -33,7 +33,6 @@ Download/checkout the repo and start it up with :
 * random punch / kick heights
 * slidingnal meroleges komponenst nezz, es azt gravityvel
 * story info screen a kezdesnel
-* hand changing
 * szakadekrol lelepes csekk
 * palya szele csekk
 * draw order
