@@ -112,7 +112,9 @@
     (let [variation (Math/floor (mod (/ frame 10.0) 3.0 ))
           buffer-triangle (-> buffer
                               (floatbuffer/empty!)
-                              ((partial reduce (fn [oldbuf [id actor]] (actorskin/get-skin-triangles actor oldbuf variation view-rect))) actors)
+                              ((partial reduce (fn [oldbuf [id actor]]
+                                                 (if (not= id :hero) (actorskin/get-skin-triangles oldbuf actor variation view-rect) oldbuf))) actors)
+                              (actorskin/get-skin-triangles (:hero actors) variation view-rect)
                               ((partial reduce (fn [oldbuf [id gun]] (gun/get-skin-triangles gun oldbuf view-rect))) guns))]
       ;; draw triangles
       (webgl/clear! world-drawer)

@@ -44,7 +44,7 @@
 
 (defn move-hand-walk
   "move head point"
-  [{:keys [id facing punch-hand action-sent commands speed bullets]
+  [{:keys [id facing punch-hand action-sent commands speed bullets punch-y]
     {{[hx hy] :p} :hip {[nx ny :as neck] :p} :neck } :masses
     {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
     {arml :arml} :metrics angle :idle-angle
@@ -57,11 +57,11 @@
         nry (- (* arml 0.14 )(* (Math/cos angle ) 5.0))
         hand_l (cond
                  block [(+ nx (* facing arml 0.3)) (- ny (* arml 0.4))]
-                 (or shoot (and punch (= punch-hand :hand_l) (not left) (not right))) [(+ nx (* facing arml 0.99)) ny]
+                 (or shoot (and punch (= punch-hand :hand_l) (not left) (not right))) [(+ nx (* facing arml 0.99)) (+ ny punch-y)]
                  :else [(+ nx nlx) (+ ny nly)])
         hand_r (cond
                  block [(+ nx (* facing arml 0.3)) (- ny (* arml 0.4))]
-                 (and punch (= punch-hand :hand_r) (not left) (not right)) [(+ nx (* facing arml 0.99)) ny]                 
+                 (and punch (= punch-hand :hand_r) (not left) (not right)) [(+ nx (* facing arml 0.99)) (+ ny punch-y)]
                  :else [(+ nx nrx) (+ ny nry)])
         elbow_l (triangle_with_bases neck hand_l (* arml 0.5) facing)
         elbow_r (triangle_with_bases neck hand_r (* arml 0.5) facing)
@@ -143,13 +143,13 @@
 
 (defn move-feet-walk-still 
   "do kick if needed"
-  [{:keys [id bases masses speed base-order base-target step-length facing action-sent commands] {legl :legl runs :runs walks :walks} :metrics {kick :kick} :control :as state}
+  [{:keys [id bases masses speed base-order base-target step-length facing action-sent commands kick-y] {legl :legl runs :runs walks :walks} :metrics {kick :kick} :control :as state}
    surfaces]
   (let [active-base (:active base-order)
         passive-base (:passive base-order)
         [apx apy :as act] (:p (bases active-base)) ; active position
         [ppx ppy :as pas] (:p (bases passive-base)) ; passive position
-        kick-point [(+ ppx (* legl facing 1.2)) (- ppy (* legl 1.5))]
+        kick-point [(+ ppx (* legl facing 1.2)) (+ (- ppy (* legl 1.5)) kick-y)]
         foot_l (if (= :base_l (:active base-order))
                  (if kick kick-point act)
                  pas) ; final position

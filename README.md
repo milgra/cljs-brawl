@@ -29,11 +29,8 @@ Download/checkout the repo and start it up with :
 
 ## Todo
 
-* random punch / kick heights
-* slidingnal meroleges komponenst nezz, es azt gravityvel
-* story info screen a kezdesnel
-* draw order
-* ai
 * összeesett ember guggolasbol alljon fol
+* slidingnal meroleges komponenst nezz, es azt gravityvel
+* ai
 
 * update ui renderer and mpd

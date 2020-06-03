@@ -101,6 +101,8 @@
      :base-target nil
      :base-surfaces {:active nil :passive nil}
      :punch-hand :hand_l
+     :punch-y 0
+     :kick-y 0
      :vert-direction 1
      :jump-state 0
      :step-length 0
@@ -301,7 +303,9 @@
     state
     (let [p-hand (if (and (not (:punch self-control)) punch)
                    (if (= punch-hand :hand_l) :hand_r :hand_l)
-                   punch-hand)]
+                   punch-hand)
+          punch-y (if (and (not (:punch self-control)) punch) (rand 15) (:punch-y state))
+          kick-y (if (and (not (:kick self-control)) kick) (rand 30) (:kick-y state))]
       (-> state
           (assoc :action-sent (if (and (not punch) (not kick) (not shoot)) false action-sent))
           (assoc :pickup-sent (if (not down) false pickup-sent))
@@ -310,6 +314,8 @@
                                    down -1
                                    up 1
                                    :else vert-direction))
+          (assoc :punch-y punch-y)
+          (assoc :kick-y kick-y)
           (assoc-in [:control :punch] punch)
           (assoc-in [:control :kick] kick)
           (assoc-in [:control :shoot] shoot)

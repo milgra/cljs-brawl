@@ -118,7 +118,8 @@
 
 
 (defn get-skin-triangles
-  [{{:keys [head neck elbow_l elbow_r hand_l hand_r knee_l knee_r foot_l foot_r] {[x y] :p :as hip} :hip} :masses
+  [floatbuffer
+   {{:keys [head neck elbow_l elbow_r hand_l hand_r knee_l knee_r foot_l foot_r] {[x y] :p :as hip} :hip} :masses
     {:keys [headw neckw armw hipw legw cola colb colc cold]} :metrics
     {af :active pf :passive} :base-order
     {as :active ps :passive} :base-surfaces
@@ -126,7 +127,6 @@
     randoms :randoms
     health :health
     color :colorf}
-   floatbuffer
    variation
    [l r b t]]
   (if (and (< l x) (> r x) (< t y) (> b y)) 
