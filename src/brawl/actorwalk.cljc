@@ -197,7 +197,9 @@
 
 (defn step-feet-walk
   "puts a triangle from the passive base on the surfaces, collision ponit is the new base target for the active base"
-  [{ :keys [bases masses speed base-surfaces vert-direction] :as state} surfaces]
+  [{ :keys [bases masses speed base-surfaces vert-direction] :as state}
+   surfaces
+   time]
   ; speed must not be 0
   (let [base-order (get-base-order bases speed)
         base-point (:p (bases (:passive base-order)))
@@ -211,23 +213,42 @@
         surf (first collided)
         base-target (if surf (nth surf 1) (:A step-zone))
         newpassivesurf (:active base-surfaces)
-        newactivesurf (if surf (nth surf 2) nil)]
+        newactivesurf (if surf (nth surf 2) nil)
+        newslope (if (= nil newactivesurf)
+                   0
+                   (math2/rad-to-degree (math2/angle-x-v2 (:b (nth surf 2)))))]
 
-    (-> state
-        (assoc :step-zone {:A (:A step-zone)
-                           :B (math2/add-v2 (:A step-zone)(:B step-zone))
-                           :C (math2/add-v2 (:A step-zone)(:C step-zone))})
-        (assoc :step-length (math2/length-v2 (math2/sub-v2 base-target (:p (bases (:active base-order))))))
-        (assoc :dostep! false)
-        (assoc :base-order base-order)
-        (assoc :base-target base-target)
-        (assoc :base-surfaces {:active newactivesurf :passive (or newpassivesurf newactivesurf)}))))
+    (if (and (< newslope 40) (> newslope -40))
+      ;; slope is okay
+      (if (and (= nil newpassivesurf) (empty? collided))
+        ;; we have no surface under feet, fall
+        (-> state
+            (assoc :next "rag")
+            (assoc :hittimeout time)
+            (assoc :health -1))
+        ;; normal step
+        (-> state
+            (assoc :step-zone {:A (:A step-zone)
+                               :B (math2/add-v2 (:A step-zone)(:B step-zone))
+                               :C (math2/add-v2 (:A step-zone)(:C step-zone))})
+            (assoc :step-length (math2/length-v2 (math2/sub-v2 base-target (:p (bases (:active base-order))))))
+            (assoc :dostep! false)
+            (assoc :base-order base-order)
+            (assoc :base-target base-target)
+            (assoc :base-surfaces {:active newactivesurf :passive (or newpassivesurf newactivesurf)})))
+      ;; too steep slope, stop stepping
+      (-> state
+          (assoc :dostep! false)
+          (assoc :speed 0.0)))))
+
+    
 
 
 (defn move-feet-walk
   "move active base towards target point"
   [{:keys [bases masses speed base-order base-target step-length facing kick-pressed] {legl :legl runs :runs walks :walks} :metrics {kick :kick} :control :as state}
    surfaces
+   time
    delta]
   (if (> (Math/abs speed) 1.0)
     (if base-target
@@ -270,8 +291,8 @@
           true (assoc-in [:bases active-base :p] current-pos)
           true (assoc-in [:masses :foot_l :p] foot_l) 
           true (assoc-in [:masses :foot_r :p] foot_r)
-          step? (step-feet-walk surfaces))) ; step if base target is close
-      (step-feet-walk state surfaces)) ; step if no base target
+          step? (step-feet-walk surfaces time))) ; step if base target is close
+      (step-feet-walk state surfaces time)) ; step if no base target
     (move-feet-walk-still state surfaces))) ; stay still or do kick if no speed
 
 
@@ -302,7 +323,7 @@
   [state surfaces time delta]
   (let [result (-> state
                   (update-speed delta)
-                  (move-feet-walk surfaces delta)
+                  (move-feet-walk surfaces time delta)
                   (move-hip-walk)
                   (move-knee-walk)
                   (move-head-walk)

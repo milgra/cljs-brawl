@@ -33,6 +33,10 @@
   (Math/atan2 y x))
 
 
+(defn rad-to-degree [rad]
+  (/ (* 180 rad) 3.14))
+
+
 (defn normalize-angle [angle]
   "bring angle between 0 and 2PI radians"
   (if (< angle 0)

@@ -29,8 +29,6 @@ Download/checkout the repo and start it up with :
 
 ## Todo
 
-* szakadekrol lelepes csekk
-* palya szele csekk
 * random punch / kick heights
 * slidingnal meroleges komponenst nezz, es azt gravityvel
 * story info screen a kezdesnel
