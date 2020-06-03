@@ -29,16 +29,13 @@ Download/checkout the repo and start it up with :
 
 ## Todo
 
-* lassab punch rate
+* szakadekrol lelepes csekk
+* palya szele csekk
 * random punch / kick heights
 * slidingnal meroleges komponenst nezz, es azt gravityvel
 * story info screen a kezdesnel
-* szakadekrol lelepes csekk
-* palya szele csekk
 * draw order
 * ai
-* time scaling
-
 * összeesett ember guggolasbol alljon fol
+
 * update ui renderer and mpd
-* first aid box vagy auto health

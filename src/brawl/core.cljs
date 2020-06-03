@@ -168,8 +168,8 @@
               (let [delta (- time (:time prestate))
                     state (if (< delta time)
                             (draw-fn prestate frame time delta)
-                            prestate)]
-                (.requestAnimationFrame js/window (loop (assoc state :time time) (inc frame))))))]
+                            (assoc prestate :time time))]
+                (.requestAnimationFrame js/window (loop state (inc frame))))))]
     ((loop state 0) 0)))
 
 
@@ -181,6 +181,7 @@
                :ui-drawer (uiwebgl/init)
                :world-drawer (webgl/init)
                :time 0
+               :gametime 0
                :level 0
                :msgch (chan)
                :sounds (audio/sounds)
@@ -211,20 +212,28 @@
        (if-not (= (mod frame 1) 0 )
          prestate
          (let [msg (poll! (:msgch prestate))
-               rat (/ delta 16)]
-           (-> prestate
-               ;; get controls
-               (update-controls msg)
-               ;; world
-               (world/execute-commands time)
-               (world/reset-world msg)
-               (world/update-world msg time rat)
-               ;; ui
-               (brawlui/execute-commands msg)
-               (brawlui/update-ui msg time rat)
+               ngt (+ (:gametime prestate) delta)
+               nst (loop [old-time ngt ;; gametime
+                          old-state prestate]
+                     (if (< old-time 16)
+                       (assoc old-state :gametime old-time)
+                       (let [new-state (-> old-state
+                                           ;; get controls
+                                           (update-controls msg)
+                                           ;; world
+                                           (world/execute-commands time)
+                                           (world/reset-world msg)
+                                           (world/update-world msg time 1.0)
+                                           ;; ui
+                                           (brawlui/execute-commands msg)
+                                           (brawlui/update-ui msg time 1.0))]
+                         (recur (- old-time 16) new-state))))]
+           (-> nst
                ;; drawing
                (draw-world frame)
-               (draw-ui))))))))
+               (draw-ui)
+               ;; time TODO remove this after dev
+               (assoc :time time))))))))
 
 ;; start main once, avoid firing new runloops with new reloads
 (defonce mainloop (main))
