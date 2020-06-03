@@ -160,6 +160,25 @@
         (assoc :controls new-controls))))
 
 
+(defn simulate [state time]
+  (loop [old-time (:gametime state) ;; gametime
+         old-state state]
+    (if (< old-time 16.6)
+      (assoc old-state :gametime old-time)
+      (let [message (poll! (:msgch state))
+            new-state (-> old-state
+                          ;; get controls
+                          (update-controls message)
+                          ;; world
+                          (world/execute-commands time)
+                          (world/reset-world message)
+                          (world/update-world message time 1.0)
+                          ;; ui
+                          (brawlui/execute-commands message)
+                          (brawlui/update-ui message time 1.0))]
+        (recur (- old-time 16.6) new-state)))))
+
+
 (defn animate
   "main runloop, syncs animation to display refresh rate"
   [state draw-fn]
@@ -168,8 +187,8 @@
               (let [delta (- time (:time prestate))
                     state (if (< delta time)
                             (draw-fn prestate frame time delta)
-                            (assoc prestate :time time))]
-                (.requestAnimationFrame js/window (loop state (inc frame))))))]
+                            prestate)]
+                (.requestAnimationFrame js/window (loop (assoc state :time time) (inc frame))))))]
     ((loop state 0) 0)))
 
 
@@ -207,33 +226,18 @@
 
     (animate
      final
-     (fn [prestate frame time delta]
-       ;; frame skipping for development
-       (if-not (= (mod frame 1) 0 )
-         prestate
-         (let [msg (poll! (:msgch prestate))
-               ngt (+ (:gametime prestate) delta)
-               nst (loop [old-time ngt ;; gametime
-                          old-state prestate]
-                     (if (< old-time 16)
-                       (assoc old-state :gametime old-time)
-                       (let [new-state (-> old-state
-                                           ;; get controls
-                                           (update-controls msg)
-                                           ;; world
-                                           (world/execute-commands time)
-                                           (world/reset-world msg)
-                                           (world/update-world msg time 1.0)
-                                           ;; ui
-                                           (brawlui/execute-commands msg)
-                                           (brawlui/update-ui msg time 1.0))]
-                         (recur (- old-time 16) new-state))))]
-           (-> nst
+     (fn [{gametime :gametime :as prestate}
+          frame
+          time
+          delta]
+       (let [usedstate (assoc prestate :gametime (+ delta gametime))]
+         (if-not (= (mod frame 1) 0 ) ;; frame skipping for development
+           usedstate
+           (-> usedstate
+               (simulate time)
                ;; drawing
                (draw-world frame)
-               (draw-ui)
-               ;; time TODO remove this after dev
-               (assoc :time time))))))))
+               (draw-ui))))))))
 
 ;; start main once, avoid firing new runloops with new reloads
 (defonce mainloop (main))
