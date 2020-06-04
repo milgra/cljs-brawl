@@ -14,10 +14,11 @@
 
 
 (defn update-dragged [{update-fn :update-fn :as dragged}
-                      {{:keys [head hip neck]} :masses :as dragger}]
+                      {{:keys [head hip neck]} :masses :as dragger}
+                      time]
   (cond-> dragged
     (not= update-fn update-rag) (assoc :update-fn update-rag)
-    true (assoc :hittime 0)
+    true (assoc :hittimeout (+ time 5000))
     true (assoc-in [:masses :hip :d] [0 0])
     true (assoc-in [:masses :hip :p] (math2/add-v2 (:p head) [-20 0] ))
     true (assoc-in [:masses :neck :d] [0 0])
@@ -43,28 +44,28 @@
 (defn init [x y id color basemetrics]
   (let [bases {:base_l   (phys2/mass2 (+ x 20.0) y 2.0 1.0 0.0 0.0)
                :base_r   (phys2/mass2 (- x 20.0) y 2.0 1.0 0.0 0.0)}    
-        masses {:head    (phys2/mass2 x y 4.0 1.0 0.2 0.7)
-                :neck    (phys2/mass2 x y 4.0 1.0 0.2 0.7)
-                :hip     (phys2/mass2 x y 4.0 1.0 0.2 0.7)
-                :hand_l  (phys2/mass2 x y 4.0 1.0 0.2 0.7)
-                :hand_r  (phys2/mass2 x y 4.0 1.0 0.2 0.7)
-                :elbow_l (phys2/mass2 x y 4.0 1.0 0.2 0.7)
-                :elbow_r (phys2/mass2 x y 4.0 1.0 0.2 0.7)
-                :knee_l  (phys2/mass2 x y 4.0 1.0 0.2 0.7)
-                :knee_r  (phys2/mass2 x y 4.0 1.0 0.2 0.7)
-                :foot_l  (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.2 0.7)
-                :foot_r  (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.2 0.7)}
+        masses {:head    (phys2/mass2 x y 4.0 1.0 0.5 0.7)
+                :neck    (phys2/mass2 x y 4.0 1.0 0.5 0.7)
+                :hip     (phys2/mass2 x y 4.0 1.0 0.5 0.7)
+                :hand_l  (phys2/mass2 x y 4.0 1.0 0.5 0.7)
+                :hand_r  (phys2/mass2 x y 4.0 1.0 0.5 0.7)
+                :elbow_l (phys2/mass2 x y 4.0 1.0 0.5 0.7)
+                :elbow_r (phys2/mass2 x y 4.0 1.0 0.5 0.7)
+                :knee_l  (phys2/mass2 x y 4.0 1.0 0.5 0.7)
+                :knee_r  (phys2/mass2 x y 4.0 1.0 0.5 0.7)
+                :foot_l  (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.5 0.7)
+                :foot_r  (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.5 0.7)}
         metrics (metrics/generate-metrics basemetrics)
-        dguards [(phys2/dguard2 masses :head :neck (:headl metrics) 0.0)
-                 (phys2/dguard2 masses :neck :hip (:bodyl metrics) 0.0)
-                 (phys2/dguard2 masses :hip :knee_l (* 0.5 (:legl metrics)) 0.0)
-                 (phys2/dguard2 masses :hip :knee_r (* 0.5 (:legl metrics)) 0.0)
-                 (phys2/dguard2 masses :knee_l :foot_l (* 0.5 (:legl metrics)) 0.0)
-                 (phys2/dguard2 masses :knee_r :foot_r (* 0.5 (:legl metrics)) 0.0)
-                 (phys2/dguard2 masses :neck :elbow_l (* 0.5 (:arml metrics)) 0.0)
-                 (phys2/dguard2 masses :neck :elbow_r (* 0.5 (:arml metrics)) 0.0)
-                 (phys2/dguard2 masses :elbow_l :hand_l (* 0.5 (:arml metrics)) 0.0)
-                 (phys2/dguard2 masses :elbow_r :hand_r (* 0.5 (:arml metrics)) 0.0)]
+        dguards [(phys2/dguard2 masses :head :neck (:headl metrics) 0.3)
+                 (phys2/dguard2 masses :neck :hip (:bodyl metrics) 0.3)
+                 (phys2/dguard2 masses :hip :knee_l (* 0.5 (:legl metrics)) 0.3)
+                 (phys2/dguard2 masses :hip :knee_r (* 0.5 (:legl metrics)) 0.3)
+                 (phys2/dguard2 masses :knee_l :foot_l (* 0.5 (:legl metrics)) 0.3)
+                 (phys2/dguard2 masses :knee_r :foot_r (* 0.5 (:legl metrics)) 0.3)
+                 (phys2/dguard2 masses :neck :elbow_l (* 0.5 (:arml metrics)) 0.3)
+                 (phys2/dguard2 masses :neck :elbow_r (* 0.5 (:arml metrics)) 0.3)
+                 (phys2/dguard2 masses :elbow_l :hand_l (* 0.5 (:arml metrics)) 0.3)
+                 (phys2/dguard2 masses :elbow_r :hand_r (* 0.5 (:arml metrics)) 0.3)]
         aguards [(phys2/aguard2 masses :head :neck :hip 0 Math/PI 0.5)
                  (phys2/aguard2 masses :hip :knee_l :foot_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
                  (phys2/aguard2 masses :hip :knee_r :foot_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
@@ -75,7 +76,7 @@
      :metrics metrics
      ;; base states
      :next nil
-     :speed 10.0
+     :speed -2.0
      :power 100.0
      :health 100.0
      :facing 1.0
@@ -184,7 +185,10 @@
                   ;;(let [newmasses (reduce (fn [oldmasses [id mass]] (assoc oldmasses id (assoc mass :d [0 0]))) {} masses)] 
 
               (cond-> actor
-                true (assoc :hittimeout (if (and headisp (> hitpower 39)) (+ time 1000) (+ time 200)))
+                true (assoc :hittimeout (cond
+                                          (and headisp (> hitpower 39)) (+ time 1000)
+                                          (< health hitpower) (+ time 2000)
+                                          :else (+ time 200)))
                 true (assoc :next "rag")
                 true (update :health - hitpower) 
                 true (update :speed  + (* (/ hvx (Math/abs hvx)) 5.0))
@@ -209,7 +213,7 @@
                         ;;(phys2/keep-angles (:aguards state))
                         (phys2/keep-distances (:dguards state))
                         (phys2/move-masses surfaces 0.4))
-          newnext (if (> time hittimeout) "jump" next) 
+          newnext (if (> time hittimeout) "walk" next) 
           result (-> state
                      (assoc :next newnext)
                      (assoc :masses newmasses))]
@@ -219,10 +223,10 @@
     
     (let [newmasses (-> masses
                         (phys2/add-gravity [0.0 0.4])
-                        (phys2/keep-angles (:aguards state))
+                        ;;(phys2/keep-angles (:aguards state))
                         (phys2/keep-distances (:dguards state))
                         (phys2/move-masses surfaces 0.4))
-          newnext (if (> time (+ hittimeout 5000)) "idle" next) 
+          newnext (if (> time hittimeout) "idle" next) 
           newcommands (if-not (and injure-when-dropped (= 0 (mod (int (* time 10.0)) 2)))
                         commands
                         (into commands [{:id id
@@ -256,6 +260,7 @@
                                     masses)]
                                         ; reset walk state
               (cond-> state
+                (= update-fn update-rag) (assoc :squat-size (* 1.0 (get-in state [:metrics :legl]))) ; squat when reaching ground
                 (= update-fn jump/update-jump) (assoc :squat-size (* 0.5 (get-in state [:metrics :legl]))) ; squat when reaching ground
                 true (assoc :jump-state 0) ; reset jump state
                 true (assoc :next nil)
@@ -341,7 +346,7 @@
   (let [result (-> state
                    (update-angle delta)
                    (update-controls control) ;; manual controls for hero
-                   (ai/update-ai control surfaces actors time delta) ;; ai controls for others
+                   ;;(ai/update-ai control surfaces actors time delta) ;; ai controls for others
                    (update-fn surfaces time delta)
                    (update-mode))]
     ;;(if (= (:id state) :enemy) (println "AFTER UPDATE" (:version result) (get-in result [:masses :knee_l :d] )))

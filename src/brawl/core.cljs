@@ -163,7 +163,7 @@
 
 
 (defn simulate [state time]
-  (loop [old-time (:gametime state) ;; gametime
+  (loop [old-time (min (:gametime state) 1660) ;; shouldn't go over 10 steps
          old-state state]
     (if (< old-time 16.6)
       (assoc old-state :gametime old-time)

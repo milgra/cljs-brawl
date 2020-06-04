@@ -29,8 +29,8 @@ Download/checkout the repo and start it up with :
 
 ## Todo
 
-* összeesett ember guggolasbol alljon fol
+point oustide, jump slope angle, hiher level higher hp, ai squat
 * slidingnal meroleges komponenst nezz, es azt gravityvel
-* ai
+* ai, eloszor testeket akarjon felvenni
 
 * update ui renderer and mpd

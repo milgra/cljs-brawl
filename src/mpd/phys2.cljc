@@ -149,7 +149,9 @@
        dguards))
 
 
-(defn keep-angles [masses aguards]
+(defn keep-angles
+  "maintain min and max angles between two vectors"
+  [masses aguards]
   (reduce
    (fn [result aguard]
      (let [{:keys [a b c p ra rc min max]} aguard
@@ -201,8 +203,9 @@
 ;; mirror dir on surface and reduce it with passed distance
 ;; if dir is smaller than radius stop movement
 
-(defn move-mass [{:keys [p d r f e s] :as mass} surfaces gravity]
-  "check collision of mass dir with all surfaces, moves mass to next iteration point based on time"
+(defn move-mass
+  "check collision of mass dir with surfaces, move mass to next iteration point and modify direction"
+  [{:keys [p d r f e s] :as mass} surfaces gravity]
   (loop [prev-p p ;; previous position
          prev-d d ;; previous direction
          full-d d ;; final direction
@@ -217,12 +220,19 @@
             [dst isp {strans :t sbasis :b :as segment}] (first results)]
         (if segment
           ;; collision, calculate full and used size
-          (let [full-size (math2/length-v2 prev-d)
+          (let [normal-with-surface-component (math2/norm-p2-l2 (math2/add-v2 strans full-d) strans sbasis)
+                parallel-with-surface-component (math2/norm-p2-l2 (math2/add-v2 strans full-d) strans (math2/rotate-90-cw sbasis))
+                para-length (math2/length-v2 parallel-with-surface-component)
+                norm-length (math2/length-v2 normal-with-surface-component)
+                full-size (math2/length-v2 prev-d)
                 used-size (- full-size dst)]
-            (if (< full-size (* 2.0 gravity))
-              ;; full size is smaller than radius, start sliding
-              (let [gravity-normal (math2/scale-v2 (math2/norm-p2-l2 isp strans sbasis) gravity)
-                    newfull-d (math2/scale-v2 (math2/add-v2 gravity-normal [0 gravity]) f)]
+            (if (< norm-length (+ gravity 0.1))
+              ;; normal component is smaller than gravity, start sliding
+              (let [newfull-d (math2/scale-v2 parallel-with-surface-component (- 1.0 f))]
+                ;;(println "norm-length" norm-length "gravity" gravity)
+                ;;(println "coll surf" strans sbasis)
+                ;;(println "coll point dir" prev-p prev-d)
+                ;;(println "slide norm" normal-with-surface-component "para" parallel-with-surface-component "new" newfull-d "sbasis" sbasis)
                 (recur isp
                        newfull-d
                        newfull-d
@@ -232,6 +242,7 @@
               ;; full size is bigger than radius, bounce
               (let [newfull-d (math2/scale-v2 (math2/mirror-v2-bases sbasis full-d) e) ;; mirror full size of direction
                     new-d (math2/resize-v2 newfull-d used-size)]
+                ;;(println "bounce")
                 (recur isp
                        new-d
                        newfull-d

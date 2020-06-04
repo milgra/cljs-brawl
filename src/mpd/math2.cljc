@@ -88,7 +88,9 @@
      (Math/sqrt (+ (* bx bx) (* by by))))))
 
 
-(defn norm-p2-l2 [[px py] [tx ty] [bx by]]
+(defn norm-p2-l2
+  "creates vector normal to line defined by [t b] from p"
+  [[px py] [tx ty] [bx by]]
   (let [[cx cy] (isp-l2-l2 [tx ty] [bx by] [px py] [by (- bx)])]
     [(- px cx) (- py cy)]))
 
@@ -105,37 +107,58 @@
        cp
        nil))))
 
+
+(defn point-outside-rect
+  "check if point outside rect defined by two points"
+  [[px py][ax ay][bx by]]
+  (or (< px ax bx)
+      (> px ax bx)
+      (< py ay by)
+      (> py ay by)))
+
+
+(defn rect-outside-rect
+  "check if point outside rect defined by two points"
+  [[ax ay][bx by][cx cy][dx dy]]
+  (or (and (< ax cx dx) (< bx cx dx))
+      (and (> ax cx dx) (> bx cx dx))
+      (and (< ay cy dy) (< by cy dy))
+      (and (> ay cy dy) (> by cy dy))))
+
+
 ;; todo!!! p2-in-v2 can be too heavy with radius, do something else with too close points
 (defn collide-v2-v2
   "gets the point wheren vector touches the other vector translated towards the first vector by radius"
   [ta [bax bay :as ba] tb [bbx bby :as bb] radius]
   ; should fast check first with radiuses
-  (if (or
-       (and (= bax 0)(= bay 0))
-       (and (= bbx 0)(= bby 0)))
-    ;; invalid lines
-    nil
-    ;; valid lines
-    (let [isp (isp-l2-l2 tb bb ta ba)
-          isp-to-ta (sub-v2 ta isp)
-          dot-ta-isp (dot-v2 ba isp-to-ta)]
+  (let [ea (add-v2 ta ba)
+        eb (add-v2 tb bb)]
+    (if (or
+         (and (= bax 0)(= bay 0))
+         (and (= bbx 0)(= bby 0)))
+      ;; invalid lines or no collision in rects
+      nil
+      ;; valid lines
+      (let [isp (isp-l2-l2 tb bb ta ba)
+            isp-to-ta (sub-v2 ta isp)
+            dot-ta-isp (dot-v2 ba isp-to-ta)]
 
-      (if (< dot-ta-isp 0)
-        ;; vectors are in the opposing direction, check collision
-        (let [psp (isp-l2-l2 tb bb ta [bby (- bbx)]) ;; intersection of surface perpendicular from trans
-              per-vec (sub-v2 ta psp) ; vector from isp to vector trans
-              rad-vec (resize-v2 per-vec radius)
-              rad-pnt (add-v2 tb rad-vec) ; move tb towards vector trans with radius
-              rad-isp (isp-l2-l2 rad-pnt bb ta ba)] ; isp of vector and translated surface          
-          (if (and
-               (p2-in-v2? rad-isp ta ba radius) ; point is on first vector
-               (p2-in-v2? rad-isp rad-pnt bb radius)) ; point is on translated second vector
-            ;; isp is on both vectors, collision
-            rad-isp
-            ;; isp is not on both vectors
-            nil))
-        ;; vectors are in the same direction, no collision
-        nil))))
+        (if (< dot-ta-isp 0)
+          ;; vectors are in the opposing direction, check collision
+          (let [psp (isp-l2-l2 tb bb ta [bby (- bbx)]) ;; intersection of surface perpendicular from trans
+                per-vec (sub-v2 ta psp) ; vector from isp to vector trans
+                rad-vec (resize-v2 per-vec radius)
+                rad-pnt (add-v2 tb rad-vec) ; move tb towards vector trans with radius
+                rad-isp (isp-l2-l2 rad-pnt bb ta ba)] ; isp of vector and translated surface
+            (if (and
+                 (p2-in-v2? rad-isp ta ba radius) ; point is on first vector
+                 (p2-in-v2? rad-isp rad-pnt bb radius)) ; point is on translated second vector
+              ;; isp is on both vectors, collision
+              rad-isp
+              ;; isp is not on both vectors
+              nil))
+          ;; vectors are in the same direction, no collision
+          nil)))))
 
 
 (defn dist-p2-v2 [[px py] [tx ty] [bx by]]

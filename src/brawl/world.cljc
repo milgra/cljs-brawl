@@ -168,11 +168,11 @@
     (assoc-in state [:world :guns] new-guns)))
 
 
-(defn update-dragged [{{:keys [guns actors] :as world} :world :as state}]
+(defn update-dragged [{{:keys [guns actors] :as world} :world :as state} time]
   (let [new-actors (reduce (fn [result [id {:keys [dragged-body] :as actor}]]
                            (if-not dragged-body
                              result
-                             (assoc result dragged-body (actor/update-dragged (dragged-body result) actor)))) actors actors)]
+                             (assoc result dragged-body (actor/update-dragged (dragged-body result) actor time)))) actors actors)]
     (assoc-in state [:world :actors] new-actors)))
 
 
@@ -220,7 +220,7 @@
         (update-actors time delta)
         (extract-actor-commands)
         (update-guns)
-        (update-dragged)
+        (update-dragged time)
         (check-ended)
         (calc-view-rect)
         (update-particles))))
