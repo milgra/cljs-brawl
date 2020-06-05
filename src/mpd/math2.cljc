@@ -126,6 +126,17 @@
       (and (> ay cy dy) (> by cy dy))))
 
 
+(defn collide-v2-v2-b [pa da pb db]
+
+  ;; check if vector is outside other vectors rect with radiuses
+  
+  ;; check if endpoint is on right side
+
+  ;; check if normal from endpoint is opposing direction of parallel
+
+  )
+
+
 ;; todo!!! p2-in-v2 can be too heavy with radius, do something else with too close points
 (defn collide-v2-v2
   "gets the point wheren vector touches the other vector translated towards the first vector by radius"
