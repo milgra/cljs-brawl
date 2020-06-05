@@ -134,40 +134,41 @@
 
 
 (defn collide-v2-v2
-  "check intersection points of the two lines, if it is in the bounding box of the two vectors
-  if not then check if point is on the left side of the vector and the projection point is in the bounding box
+  "check intersection points of the two lines, if it is in the bounding box of the two vectors return isp
+  if not then check if point is on the right side of the vector and the projection point is in the bounding box
   of the second vector"
   [pa [ax ay :as da] pb [bx by :as db] radius]
-  (if (or
-       (and (= ax 0)(= ay 0))
-       (and (= bx 0)(= by 0)))
-    ;; invalid lines or no collision in rects
-    nil
-    ;; valid lines
-    (let [isp (isp-l2-l2 pa da pb db)
-          end-a (add-v2 pa da)
-          end-b (add-v2 pb db)
-          normal [by (- bx)]
-          normal-min (resize-v2 normal 0.2)]
-      (if (or
-           (point-outside-rect pb end-b isp 0.1)
-           (point-outside-rect pa end-a isp 0.1))
-        ;; isp is outside vectors, check if projection point is on the right side of the vector
-        (let [prj (isp-l2-l2 pb db pa [by (- bx)])]
-          (if (point-outside-rect pb end-b prj 0.1)
-            ;; projection point is outside surface
-            nil
-            ;; projection point is inside surface, return with it
-            (let [tos (sub-v2 prj pa) ;; to surface
-                  dot (dot-v2 tos normal)] ;; dot product of to surface vector and surface normal vector
-              (if (and (> dot 0) (< (length-v2 tos) radius))
-                ;; to surface vector is in the same direction as normal vector
-                (add-v2 prj normal-min) ;; push over surface a little bit to avoid intersection in next iteration
-                ;; to surface vector is in the opposing direction
-                nil))))
-        
-        ;; isp is inside vectors, return with it
-        (add-v2 isp normal-min))))) ;; push over surface
+  (let [end-a (add-v2 pa da)
+        end-b (add-v2 pb db)]
+    (if (rect-outside-rect pa end-a pb end-b)
+      ;; rects don't cover each other
+      nil
+      ;; rects cover each other
+      (if (or (and (= ax 0)(= ay 0)) (and (= bx 0)(= by 0)))
+        ;; invalid lines or no collision in rects
+        nil
+        ;; valid lines
+        (let [isp (isp-l2-l2 pa da pb db)
+              normal [by (- bx)]
+              normal-min (resize-v2 normal 0.2)]
+          (if (or
+               (point-outside-rect pb end-b isp 0.1)
+               (point-outside-rect pa end-a isp 0.1))
+            ;; isp is outside vectors, check if projection point is on the right side of the vector
+            (let [prj (isp-l2-l2 pb db pa [by (- bx)])]
+              (if (point-outside-rect pb end-b prj 0.1)
+                ;; projection point is outside surface
+                nil
+                ;; projection point is inside surface, check if direction is okay
+                (let [tos (sub-v2 prj pa) ;; to surface
+                      dot (dot-v2 tos normal)] ;; dot product of to surface vector and surface normal vector
+                  (if (and (> dot 0) (< (length-v2 tos) radius))
+                    ;; to surface vector is in the same direction as normal vector and in radius distance
+                    (add-v2 prj normal-min) ;; push over surface a little bit to avoid intersection in next iteration
+                    ;; to surface vector is in the opposing direction
+                    nil))))
+            ;; isp is inside vectors, return with it
+            (add-v2 isp normal-min))))))) ;; push over surface
 
 
 (defn dist-p2-v2 [[px py] [tx ty] [bx by]]
