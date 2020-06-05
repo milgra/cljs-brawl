@@ -44,9 +44,10 @@
 
 (defn segment2
   "creates segment 2d structure as [trans basis]"
-  [[x y][ z v]]
-  {:t [x y]
-   :b [(- z x) (- v y)]})
+  [[x y :as a][z v :as b]]
+  ;; segment should be oriented from left to right
+  {:t (if (< x z) a b)
+   :b (if (< x z) (math2/sub-v2 b a) (math2/sub-v2 a b))})
 
 
 (defn timescale [masses delta]
@@ -66,7 +67,7 @@
      (concat
       result
       (reduce
-       (fn builder [res [x y]] (conj res (segment2 x y)))
+       (fn [res [x y]] (conj res (segment2 x y)))
        []
        (partition 2 1 points))))
    []

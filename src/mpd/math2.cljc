@@ -110,66 +110,64 @@
 
 (defn point-outside-rect
   "check if point outside rect defined by two points"
-  [[px py][ax ay][bx by]]
-  (or (< px ax bx)
-      (> px ax bx)
-      (< py ay by)
-      (> py ay by)))
+  [[ax ay] [bx by] [px py] r]
+  (or (and (< px (- ax r)) (< px (- bx r)))
+      (and (> px (+ ax r)) (> px (+ bx r)))
+      (and (< py (- ay r)) (< py (- by r)))
+      (and (> py (+ ay r)) (> py (+ by r)))))
 
 
 (defn rect-outside-rect
-  "check if point outside rect defined by two points"
+  "check if rect outside rect defined by two points"
   [[ax ay][bx by][cx cy][dx dy]]
-  (or (and (< ax cx dx) (< bx cx dx))
-      (and (> ax cx dx) (> bx cx dx))
-      (and (< ay cy dy) (< by cy dy))
-      (and (> ay cy dy) (> by cy dy))))
+  (or (and (< ax cx) (< ax dx) (< bx cx) (< bx dx))
+      (and (> ax cx) (> ax dx) (> bx cx) (> bx dx)) 
+      (and (< ay cy) (< ay dy) (< by cy) (< by dy))
+      (and (> ay cy) (> ay dy) (> by cy) (> by dy))))
 
 
-(defn collide-v2-v2-b [pa da pb db]
-
-  ;; check if vector is outside other vectors rect with radiuses
-  
-  ;; check if endpoint is on right side
-
-  ;; check if normal from endpoint is opposing direction of parallel
-
-  )
+(defn get-line-side
+  "checks that pc is on which side of the line defined by pa pb using determinant of vectors (AB,AC)
+  negative is left side, zero is on line, positive is right side"
+  [[ax ay][bx by][cx cy]]
+  (- (* (- bx ax ) (- cy ay)) (* (- by ay) (- cx ax))))
 
 
-;; todo!!! p2-in-v2 can be too heavy with radius, do something else with too close points
 (defn collide-v2-v2
-  "gets the point wheren vector touches the other vector translated towards the first vector by radius"
-  [ta [bax bay :as ba] tb [bbx bby :as bb] radius]
-  ; should fast check first with radiuses
-  (let [ea (add-v2 ta ba)
-        eb (add-v2 tb bb)]
-    (if (or
-         (and (= bax 0)(= bay 0))
-         (and (= bbx 0)(= bby 0)))
-      ;; invalid lines or no collision in rects
-      nil
-      ;; valid lines
-      (let [isp (isp-l2-l2 tb bb ta ba)
-            isp-to-ta (sub-v2 ta isp)
-            dot-ta-isp (dot-v2 ba isp-to-ta)]
-
-        (if (< dot-ta-isp 0)
-          ;; vectors are in the opposing direction, check collision
-          (let [psp (isp-l2-l2 tb bb ta [bby (- bbx)]) ;; intersection of surface perpendicular from trans
-                per-vec (sub-v2 ta psp) ; vector from isp to vector trans
-                rad-vec (resize-v2 per-vec radius)
-                rad-pnt (add-v2 tb rad-vec) ; move tb towards vector trans with radius
-                rad-isp (isp-l2-l2 rad-pnt bb ta ba)] ; isp of vector and translated surface
-            (if (and
-                 (p2-in-v2? rad-isp ta ba radius) ; point is on first vector
-                 (p2-in-v2? rad-isp rad-pnt bb radius)) ; point is on translated second vector
-              ;; isp is on both vectors, collision
-              rad-isp
-              ;; isp is not on both vectors
-              nil))
-          ;; vectors are in the same direction, no collision
-          nil)))))
+  "check intersection points of the two lines, if it is in the bounding box of the two vectors
+  if not then check if point is on the left side of the vector and the projection point is in the bounding box
+  of the second vector"
+  [pa [ax ay :as da] pb [bx by :as db] radius]
+  (if (or
+       (and (= ax 0)(= ay 0))
+       (and (= bx 0)(= by 0)))
+    ;; invalid lines or no collision in rects
+    nil
+    ;; valid lines
+    (let [isp (isp-l2-l2 pa da pb db)
+          end-a (add-v2 pa da)
+          end-b (add-v2 pb db)
+          normal [by (- bx)]
+          normal-min (resize-v2 normal 0.2)]
+      (if (or
+           (point-outside-rect pb end-b isp 0.1)
+           (point-outside-rect pa end-a isp 0.1))
+        ;; isp is outside vectors, check if projection point is on the right side of the vector
+        (let [prj (isp-l2-l2 pb db pa [by (- bx)])]
+          (if (point-outside-rect pb end-b prj 0.1)
+            ;; projection point is outside surface
+            nil
+            ;; projection point is inside surface, return with it
+            (let [tos (sub-v2 prj pa) ;; to surface
+                  dot (dot-v2 tos normal)] ;; dot product of to surface vector and surface normal vector
+              (if (and (> dot 0) (< (length-v2 tos) radius))
+                ;; to surface vector is in the same direction as normal vector
+                (add-v2 prj normal-min) ;; push over surface a little bit to avoid intersection in next iteration
+                ;; to surface vector is in the opposing direction
+                nil))))
+        
+        ;; isp is inside vectors, return with it
+        (add-v2 isp normal-min))))) ;; push over surface
 
 
 (defn dist-p2-v2 [[px py] [tx ty] [bx by]]

@@ -217,7 +217,6 @@
           result (-> state
                      (assoc :next newnext)
                      (assoc :masses newmasses))]
-      (println "updaterag hittimeout" hittimeout time)
       (if (= result nil) println "UPDATERAG ERROR!!!")
       result)
     

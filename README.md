@@ -29,8 +29,10 @@ Download/checkout the repo and start it up with :
 
 ## Todo
 
-point oustide, jump slope angle, hiher level higher hp, ai squat
-* slidingnal meroleges komponenst nezz, es azt gravityvel
+* jump slope angle,
+* higher level higher hp
+* ai squat
+* retina
 * ai, eloszor testeket akarjon felvenni
 
 * update ui renderer and mpd
