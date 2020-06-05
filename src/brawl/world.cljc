@@ -116,7 +116,7 @@
       (let [dragged ((:dragged-body sender) actors)
             masses (:masses dragged)
             newmasses (reduce (fn [res [id mass]] ; reset mass directions for next rag
-                                      (assoc res id (assoc mass :d [(* 10.0 (:facing sender)) -6])))
+                                      (assoc res id (assoc mass :d [(+ (* 6.0 (:facing sender)) (:speed sender)) -5])))
                                     masses
                                     masses)
             newdragged (assoc dragged :masses newmasses :injure-when-dropped true)
