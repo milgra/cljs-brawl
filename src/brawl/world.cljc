@@ -61,7 +61,7 @@
                                                       name (if (= level 0) :hero (keyword (names/getname)))
                                                       color (nth colors team)
                                                       metrics (if (= level 0) herometrics (metrics/basemetrics-random))
-                                                      actor (actor/init (+ -20 (rand-int 40) (first pos)) (second pos) name color metrics)]
+                                                      actor (actor/init (+ -20 (rand-int 40) (first pos)) (second pos) name color metrics (:level state))]
                                                   (assoc result name actor)))
                                                   actors
                                                   (range 0 count))))

@@ -41,7 +41,7 @@
     [r g b a]))
   
 
-(defn init [x y id color basemetrics]
+(defn init [x y id color basemetrics level]
   (let [bases {:base_l   (phys2/mass2 (+ x 20.0) y 2.0 1.0 0.0 0.0)
                :base_r   (phys2/mass2 (- x 20.0) y 2.0 1.0 0.0 0.0)}    
         masses {:head    (phys2/mass2 x y 4.0 1.0 0.5 0.6)
@@ -78,7 +78,7 @@
      :next nil
      :speed -2.0
      :power 100.0
-     :health 100.0
+     :health (+ 100.0 (* level 50.0))
      :facing 1.0
      :bullets 6
      :update-fn jump/update-jump
@@ -183,6 +183,7 @@
                              footlisp (* power 0.4)
                              footrisp (* power 0.4))]
                   ;;(let [newmasses (reduce (fn [oldmasses [id mass]] (assoc oldmasses id (assoc mass :d [0 0]))) {} masses)] 
+              (println "health" health)
 
               (cond-> actor
                 true (assoc :hittimeout (cond
@@ -345,7 +346,7 @@
   (let [result (-> state
                    (update-angle delta)
                    (update-controls control) ;; manual controls for hero
-                   ;;(ai/update-ai control surfaces actors time delta) ;; ai controls for others
+                   (ai/update-ai control surfaces actors time delta) ;; ai controls for others
                    (update-fn surfaces time delta)
                    (update-mode))]
     ;;(if (= (:id state) :enemy) (println "AFTER UPDATE" (:version result) (get-in result [:masses :knee_l :d] )))
