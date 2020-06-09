@@ -218,7 +218,7 @@
                    0
                    (math2/rad-to-degree (math2/angle-x-v2 (:b (nth surf 2)))))]
 
-    (if (and (< newslope 40) (> newslope -40))
+    (if (and (< newslope 50) (> newslope -50))
       ;; slope is okay
       (if (and (= nil newpassivesurf) (empty? collided))
         ;; we have no surface under feet, fall

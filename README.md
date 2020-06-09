@@ -29,7 +29,6 @@ Download/checkout the repo and start it up with :
 
 ## Todo
 
-* jump slope angle,
 * higher level higher hp
 * ai squat
 * retina
