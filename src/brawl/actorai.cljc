@@ -23,7 +23,6 @@
                                          health (:health actor)
                                          col (:color actor)
                                          [dx dy] (math2/sub-v2 pos-enemy pos)]
-                                     (if (= aid :hero) (println id color "enemy?" aid col dx dy))
                                      (if (and (< (Math/abs dx) 500) (< (Math/abs dy) 500) (not= col color) (> health 0)) [(+ dx dy) aid] nil)))
                                  actors)))
               enemy (first by-distance)]

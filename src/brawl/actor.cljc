@@ -190,7 +190,7 @@
                                           (and headisp (> hitpower 39)) (+ time 1000)
                                           (< health hitpower) (+ time 2000)
                                           :else (+ time 200)))
-                true (assoc :next "rag")
+                (= update-fn walk/update-walk) (assoc :next "rag")
                 true (update :health - hitpower) 
                 true (update :speed  + (* (/ hvx (Math/abs hvx)) 5.0))
                 ;; true (assoc :masses (reduce (fn [oldmasses [id mass]] (assoc oldmasses id (assoc mass :d [0 0]))) {} masses))
