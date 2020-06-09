@@ -22,7 +22,7 @@
 (defn save-defaults! [state]
   (println "save-defaults" (get-in state [:world :actors :hero :metrics :base]))
   (if (local-storage-supported?)
-    (let [state-js {:curr-level (:curr-level state)
+    (let [state-js {:level (:level state)
                     :physics (:physics state)
                     :volumes {:music (get-in state [:volumes :music])
                               :effects (get-in state [:volumes :effects])}

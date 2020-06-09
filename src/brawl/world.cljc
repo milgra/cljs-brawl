@@ -273,7 +273,8 @@
   (load-level! state 0)
   (-> state
       (assoc-in [:world :loaded] false)
-      (assoc :level 0)))
+      (assoc :level 0)
+      (defaults/save-defaults!)))
 
 
 (defn load-next-level [{:keys [level sounds] :as state}]
@@ -281,7 +282,8 @@
     (load-level! state next-level)
     (-> state
         (assoc-in [:world :loaded] false)
-        (assoc :level next-level))))
+        (assoc :level next-level)
+        (defaults/save-defaults!))))
 
 
 (defn pickup-object [{{:keys [actors guns dragged-gun dragged-body]} :world :as oldstate} {:keys [id text]}]
