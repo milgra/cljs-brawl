@@ -71,8 +71,10 @@
                  (phys2/aguard2 masses :hip :knee_r :foot_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
                  (phys2/aguard2 masses :neck :elbow_r :hand_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
                  (phys2/aguard2 masses :neck :elbow_l :hand_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)]]
+    (println "init actor" id "level" level)
     {:id id
      :color color
+     :level level
      :metrics metrics
      ;; base states
      :next nil
@@ -89,7 +91,7 @@
      :injure-when-dropped false
      ;; ai state
      :ai-state :idle
-     :ai-enemy nil
+     :ai-target nil
      :ai-timeout 0
      ;; control state
      :control {:left false :right false :up false :down false :punch false :kick false :block false :run false }
@@ -146,8 +148,9 @@
     {:keys [block] :as control} :control col :color :as actor}
    {:keys [id color base target power radius facing] :as command}
    time]
+
   (let [[dx dy] (math2/sub-v2 base (:p hip))]
-    (if-not (and (not= id (:id actor)) (< dx radius) (< dy radius) (not= update-fn update-rag) (not= color col))
+    (if-not (and (not= id (:id actor)) (< dx radius) (< dy radius) (not= update-fn update-rag) (not= color col) (> health 0))
       actor
       (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
             hitsm (math2/resize-v2 hitv (if (< health 20) 10 2))
@@ -164,13 +167,16 @@
             footrisp (math2/intersect-v2-v2 base hitv (:p hip) footrv)
 
             has-isp (or headisp bodyisp footlisp footrisp)]
+
         (if-not has-isp
           actor
           (if (and block (not= facing (:facing actor)))
             ;; move actor slightly when blocking and facing the sender
-            (-> actor
-                (update :health - (/ power 2.0)) 
-                (update :speed + (* facing (/ power 2.0))))
+            (cond-> actor
+                true (assoc :hittimeout (+ time 1000))
+                true (update :health - (/ power 2.0)) 
+                true (update :speed + (* facing (/ power 2.0)))
+                (< (- health (/ power 2.0)) 0) (assoc :next "rag"))
             ;; hit actor
             (let [neck-part (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p neck))))
                   hip-part  (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p hip))))
@@ -183,16 +189,16 @@
                              footlisp (* power 0.4)
                              footrisp (* power 0.4))]
                   ;;(let [newmasses (reduce (fn [oldmasses [id mass]] (assoc oldmasses id (assoc mass :d [0 0]))) {} masses)] 
-              (println "health" health)
 
               (cond-> actor
                 true (assoc :hittimeout (cond
+                                          (= update-fn jump/update-jump) (+ time 2000)
                                           (and headisp (> hitpower 39)) (+ time 1000)
                                           (< health hitpower) (+ time 2000)
                                           :else (+ time 200)))
-                (= update-fn walk/update-walk) (assoc :next "rag")
+                true (assoc :next "rag")
                 true (update :health - hitpower) 
-                true (update :speed  + (* (/ hvx (Math/abs hvx)) 5.0))
+                true (update :speed + (* (/ hvx (Math/abs hvx)) 5.0))
                 ;; true (assoc :masses (reduce (fn [oldmasses [id mass]] (assoc oldmasses id (assoc mass :d [0 0]))) {} masses))
                 headisp (assoc-in [:masses :head :d] (math2/add-v2 (:d head) hitbg))
                 headisp (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) hitsm))
@@ -226,7 +232,7 @@
                         ;;(phys2/keep-angles (:aguards state))
                         (phys2/keep-distances (:dguards state))
                         (phys2/move-masses surfaces 0.4))
-          finished (and (:q (:neck newmasses)) (:q (:hip newmasses)))
+          finished (or (> time hittimeout) (and (:q (:neck newmasses)) (:q (:hip newmasses))))
           newnext (if finished "idle" next) 
           newcommands (if-not (and injure-when-dropped (= 0 (mod (int (* time 10.0)) 2)))
                         commands
@@ -241,7 +247,7 @@
                      (assoc :commands newcommands)
                      (assoc :next newnext)
                      (assoc :masses newmasses))]
-      (println "finished" finished (:neck newmasses) (:hip newmasses))
+
       (if (= result nil) println "UPDATERAG ERROR!!!")
       result)))
 
@@ -262,6 +268,8 @@
                                     masses)]
                                         ; reset walk state
               (cond-> state
+                (= update-fn update-rag) (assoc-in [:bases :base_l :p] (:p fl))
+                (= update-fn update-rag) (assoc-in [:bases :base_r :p] (:p fr))
                 (= update-fn update-rag) (assoc :squat-size (* 1.0 (get-in state [:metrics :legl]))) ; squat when reaching ground
                 (= update-fn jump/update-jump) (assoc :squat-size (* 0.5 (get-in state [:metrics :legl]))) ; squat when reaching ground
                 true (assoc :jump-state 0) ; reset jump state
@@ -287,7 +295,7 @@
           ;; reset jump state
           (-> state
               (assoc :next nil)
-              (assoc :update-fn update-rag))
+             (assoc :update-fn update-rag))
 
           (= next "idle")
           ;; reset jump state

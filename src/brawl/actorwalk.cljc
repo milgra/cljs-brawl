@@ -19,10 +19,10 @@
   "send commands if needed"
   [{:keys [id commands dragged-gun dragged-body pickup-sent] {:keys [down]} :control :as state}]
   (if (and down (or (= nil dragged-gun) (= nil dragged-body)) (not pickup-sent))
-      (-> state
-      (update :commands into [{:text "pickup" :id id}])
-      (assoc :pickup-sent true))
-    state))
+    (-> state
+        (update :commands into [{:text "pickup" :id id}])
+        (assoc :pickup-sent true))
+  state))
 
 
 (defn move-head-walk

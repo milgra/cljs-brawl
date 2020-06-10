@@ -29,7 +29,7 @@
    :endpos [0 0]
    :surfaces []
    :particles []
-   :surfacelines []
+v   :surfacelines []
    :view-rect [0 0 0 0]
    :projection (math4/proj_ortho 50 50 -50 -50 -1.0 1.0)})
 
@@ -228,7 +228,7 @@
 
 (defn init-seeds [{{:keys [view-rect] :as world} :world :as state}]
   (let [[l r b t] (:view-rect world)
-        seeds (map #(particle/init (+ l (rand (- r l))) (+ t (rand (- b t))) [1.0 1.0 1.0 0.5] [(+ 0.1 (rand 0.6)) (+ 0.05 (rand 0.3))] :seed) (range 0 20))]
+        seeds (map #(particle/init (+ l (rand (- r l))) t [1.0 1.0 1.0 0.5] [(+ 0.1 (rand 0.6)) (+ 0.05 (rand 0.3))] :seed) (range 0 20))]
     (assoc-in state [:world :particles] seeds)))
  
 
@@ -295,18 +295,19 @@
   (let [actor (id actors)
         {{hip :hip} :masses color :color :as actor} actor
         ;; look for gun
-        nearby-gun (first (remove nil? (map (fn [[_ {:keys [id p d]}]]
-                                        (if-not (< (math2/length-v2 (math2/sub-v2 p (:p hip))) 80.0) nil id)) guns)))
+        nearby-gun (first (remove nil? (map (fn [[_ {:keys [eid p d]}]]
+                                        (if-not (< (math2/length-v2 (math2/sub-v2 p (:p hip))) 80.0) nil eid)) guns)))
 
-        nearby-actor (first (remove nil? (map (fn [[_ {:keys [id] {ehip :hip} :masses ecolor :color ehealth :health}]]
-                                          (if-not (and (< ehealth 0) (not= color ecolor) (< (math2/length-v2 (math2/sub-v2 (:p ehip) (:p hip))) 80.0)) nil id)) actors)))
-
+        nearby-actor (first (remove nil? (map (fn [[_ {{ehip :hip} :masses ecolor :color ehealth :health eid :id}]]
+                                                (println "pickup from" id "to" eid (not= id eid))
+                                                (let [dist (math2/length-v2 (math2/sub-v2 (:p ehip) (:p hip)))]
+                                                  (println "dist" dist  (< ehealth 0) (not= id eid) (< dist 200.0))
+                                                  (if (and (< ehealth 0) (not= id eid) (< dist 150.0)) eid nil))) actors)))
         new-actor (cond-> actor
                     nearby-gun
                     (assoc :dragged-gun nearby-gun)
                     nearby-actor
                     (assoc :dragged-body nearby-actor))]
-
     (assoc-in oldstate [:world :actors id] new-actor)))
 
 
