@@ -227,7 +227,7 @@
                 norm-length (math2/length-v2 normal-with-surface-component)
                 full-size (math2/length-v2 prev-d)
                 used-size (- full-size dst)]
-            (if (< norm-length (+ gravity 0.1))
+            (if (< norm-length (+ gravity 0.5))
               ;; normal component is smaller than gravity, start sliding
               (let [newfull-d (math2/scale-v2 parallel-with-surface-component (- 1.0 f))]
                 ;;(println "norm-length" norm-length "gravity" gravity)

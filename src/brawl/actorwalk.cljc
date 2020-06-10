@@ -44,7 +44,7 @@
 
 (defn move-hand-walk
   "move head point"
-  [{:keys [id facing punch-hand action-sent commands speed bullets punch-y]
+  [{:keys [id facing color punch-hand action-sent commands speed bullets punch-y]
     {{[hx hy] :p} :hip {[nx ny :as neck] :p} :neck } :masses
     {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
     {arml :arml} :metrics angle :idle-angle
@@ -73,6 +73,7 @@
                               :target (if (= punch-hand :hand_l) hand_l hand_r)
                               :radius 100.0
                               :facing facing
+                              :color color
                               :power 20}])
                       (and shoot (not action-sent) (> bullets 0))
                       (into [{:id id
@@ -81,6 +82,7 @@
                               :target (math2/add-v2 neck [(* facing 500.0) 0.0])
                               :radius 500.0
                               :facing facing
+                              :color color
                               :power 110}]))]
     (-> state
         (assoc :commands newcommands)
@@ -143,7 +145,7 @@
 
 (defn move-feet-walk-still 
   "do kick if needed"
-  [{:keys [id bases masses speed base-order base-target step-length facing action-sent commands kick-y] {legl :legl runs :runs walks :walks} :metrics {kick :kick} :control :as state}
+  [{:keys [id color bases masses speed base-order base-target step-length facing action-sent commands kick-y] {legl :legl runs :runs walks :walks} :metrics {kick :kick} :control :as state}
    surfaces]
   (let [active-base (:active base-order)
         passive-base (:passive base-order)
@@ -163,6 +165,7 @@
                                        :target kick-point
                                        :facing facing
                                        :radius 100.0
+                                       :color color
                                        :power 40}]))]
     (-> state
         (assoc :commands newcommands)

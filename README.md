@@ -33,7 +33,6 @@ Download/checkout the repo and start it up with :
 * pickup dead body
 * picked attribute to actor
 * with higher level set faster hit/kick for actors
-* follow actor if buddy
 
 * retina
 * update ui renderer and mpd

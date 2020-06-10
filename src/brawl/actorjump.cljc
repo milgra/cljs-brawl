@@ -33,7 +33,7 @@
 
 (defn move-feet-jump
   "move active base towards target point"
-  [{:keys [id speed base-order base-target step-length facing action-sent commands]
+  [{:keys [id color speed base-order base-target step-length facing action-sent commands]
     {{[hx hy] :p} :hip :as masses } :masses
     {base_l :base_l base_r :base_r} :bases
     {legl :legl runs :runs walks :walks} :metrics
@@ -50,6 +50,7 @@
                                        :target foot_l
                                        :radius 100.0
                                        :facing facing
+                                       :color color
                                        :power 50.0}]))]
     (-> state
         (assoc :commands newcommands)

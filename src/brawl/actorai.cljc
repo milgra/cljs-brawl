@@ -3,45 +3,55 @@
             [mpd.phys2 :as phys2]))
 
 
+(defn collect-enemies [id actors color [x y]]
+  (->> (vals actors)
+       (filter #(not= (:color %) color)) ;; filter actors with different colors
+       (filter #(> (:health %) 0)) ;; filter dead actors
+       (map (fn [{{{[ex ey] :p} :head} :masses id :id :as actor}] [(Math/abs (- ex x)) (Math/abs (- ey y)) id])) ;; extract distance
+       (filter (fn [[dx dy id]] (and (< dx 500) (< dy 500)))) ;; filter far away actors
+       (map (fn [[dx dy id]] [(+ dx dy) id])) ;; map to distance sum
+       (sort-by first))) ;; sort by distance sum
+
+
+(defn follow-hero? [{:keys [color] {{pos :p} :head} :masses :as state} actors]
+  (if-not (= color 0xFF0000FF)
+    false
+    (let [actor (:hero actors)
+          health (:health actor)
+          pos-actor (get-in actor [:masses :head :p])
+          [dx dy] (math2/sub-v2 pos-actor pos)]
+      (if (and (< (Math/abs dx) 500)
+               (< (Math/abs dy) 500)
+               (> (Math/abs dx) 50)
+               (> (Math/abs dx) 50)
+               (> health 0)) true false))))
+
+
 (defn update-idle
   "look for enemy, if there's no enemy and if our color is red look for hero to follow"
-  [{:keys [id color ai-state ai-timeout ai-enemy]
-    {{[x y :as pos] :p} :head} :masses
-    {:keys [arml legl]} :metrics
-    :as state}
-   control
-   surfaces
+  [{:keys [color ai-timeout id]
+    {{pos :p} :head} :masses :as state}
    actors
-   time
-   delta]
-      (if-not (> time ai-timeout)
-        state
-        (let [by-distance (sort-by
-                           first
-                           (remove
-                            nil?
-                            (map (fn [[aid actor]]
-                                   (let [pos-enemy (get-in actor [:masses :head :p])
-                                         health (:health actor)
-                                         col (:color actor)
-                                         [dx dy] (math2/sub-v2 pos-enemy pos)]
-                                     (if (and (< (Math/abs dx) 500) (< (Math/abs dy) 500) (not= col color) (> health 0)) [(+ dx dy) aid] nil)))
-                                 actors)))
-              enemy (first by-distance)]
-          ;; look for enemy
-          (if enemy
-            (-> state
-                (assoc :ai-enemy (if enemy (second enemy) nil))
-                (assoc :ai-timeout 0)
-                (assoc :ai-state :follow))
-            (assoc state :ai-timeout (+ time 1000)))))
-  
-  
-  )
+   time]
+  (if-not (> time ai-timeout)
+    state
+    (let [enemies (collect-enemies id actors color pos) ;; get nearby enemies
+          target (if-not (empty? enemies)
+                     (second (first enemies))
+                     (if (follow-hero? state actors) :hero nil))] ;; or follow hero
+      (if target
+        ;; change to follow state
+        (-> state
+            (assoc :ai-enemy target)
+            (assoc :ai-timeout 0)
+            (assoc :ai-state :follow))
+        ;; if no target re-check everything after 1 sec
+        (assoc state :ai-timeout (+ time 1000))))))
+
 
 (defn update-follow
   "go after enemy/hero"
-  [{:keys [id color ai-state ai-timeout ai-enemy]
+  [{:keys [color ai-state ai-timeout ai-enemy]
     {{[x y :as pos] :p} :head} :masses
     {:keys [arml legl]} :metrics
     :as state}
@@ -55,27 +65,38 @@
     (let [enemy (ai-enemy actors)
           health (:health enemy)
           [px py] (get-in enemy [:bases :base_l :p])
-          reached  (and (< x (+ px arml)) (> x (- px arml)))
+          reached  (and (< x (+ px arml)) (> x (- px arml)) (> health 0))
           dead (<= health 0)
           pick (rand-int 3)]
-      (cond-> state
-        (<= x (- px arml)) (assoc-in [:control :right] true)
-        (<= x (- px arml)) (assoc-in [:control :left] false)
-        (>= x (+ px arml)) (assoc-in [:control :left] true)
-        (>= x (+ px arml)) (assoc-in [:control :right] false)
-        reached (assoc-in [:control :left] false)
-        reached (assoc-in [:control :right] false)
-        reached (assoc :ai-state :attack)
-        reached (assoc :ai-timeout (+ time 200))
-        dead (assoc :ai-state :idle)
-        dead (assoc-in [:control :punch] false)
-        dead (assoc-in [:control :kick] false)
-        dead (assoc-in [:control :block] false)
-        dead (assoc-in [:control :down] false)
-        (and reached (not dead)) (assoc-in [:control :down] (if (= (rand-int 2) 0) true false))
-        (and reached (= pick 0) (not dead)) (assoc-in [:control :punch] true)
-        (and reached (= pick 1) (not dead)) (assoc-in [:control :kick] true)
-        (and reached (= pick 2) (not dead)) (assoc-in [:control :block] true)))))
+      (cond
+        ;; start attack if target is enemy or idle if target is hero
+        reached (let [newstate (-> state
+                                   (assoc-in [:control :left] false)
+                                   (assoc-in [:control :right] false)
+                                   (assoc :ai-timeout (+ time 200)))]
+                  (if (and (= color 0xFF0000FF) (= ai-enemy :hero))
+                    (assoc newstate :ai-state :idle)
+                    (cond-> newstate
+                        true (assoc :ai-state :attack)
+                        true (assoc-in [:control :down] (if (= (rand-int 2) 0) true false))
+                        (= pick 0) (assoc-in [:control :punch] true)
+                        (= pick 1) (assoc-in [:control :kick] true)
+                        (= pick 2) (assoc-in [:control :block] true))))
+        ;; stop attack if target is dead
+        dead (-> state
+                 (assoc :ai-state :idle)
+                 (assoc-in [:control :punch] false)
+                 (assoc-in [:control :kick] false)
+                 (assoc-in [:control :block] false)
+                 (assoc-in [:control :down] false))
+        ;; follow target
+        :else (cond-> state
+                (<= x (- px arml)) (assoc-in [:control :right] true)
+                (<= x (- px arml)) (assoc-in [:control :left] false)
+                (>= x (+ px arml)) (assoc-in [:control :left] true)
+                (>= x (+ px arml)) (assoc-in [:control :right] false))))))
+        
+
 
 (defn update-pickup
   "go after dead body to pickup"
@@ -89,6 +110,7 @@
    time
    delta]
   state)
+
 
 (defn update-attack
   "keep last move until timeout"
@@ -121,7 +143,7 @@
   (if control
     state
     (cond
-      (= :idle ai-state) (update-idle state control surfaces actors time delta)
+      (= :idle ai-state) (update-idle state actors time)
       (= :follow ai-state) (update-follow state control surfaces actors time delta)
       (= :pickup ai-state) (update-pickup state control surfaces actors time delta)
       (= :attack ai-state) (update-attack state control surfaces actors time delta))))

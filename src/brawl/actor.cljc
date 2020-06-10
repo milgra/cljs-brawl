@@ -119,9 +119,9 @@
 
 (defn hitpoint
   "get hitpoint"
-  [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health update-fn :update-fn :as actor} {:keys [id base target radius]}]
+  [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health col :color update-fn :update-fn :as actor} {:keys [id base color target radius]}]
   (let [[dx dy] (math2/sub-v2 base (:p hip))]
-    (if (and (not= id (:id actor)) (< dx radius) (< dy radius) (not= update-fn update-rag))
+    (if (and (not= id (:id actor)) (< dx radius) (< dy radius) (not= update-fn update-rag) (not= color col))
       (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
             hitsm (math2/resize-v2 hitv (if (< health 20) 10 2))
             hitbg (math2/resize-v2 hitv (if (< health 20) 20 4))
@@ -143,11 +143,11 @@
   "hit actor"
   [{:keys [health metrics update-fn]
     {:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r] :as masses} :masses
-    {:keys [block] :as control} :control :as actor}
-   {:keys [id base target power radius facing] :as command}
+    {:keys [block] :as control} :control col :color :as actor}
+   {:keys [id color base target power radius facing] :as command}
    time]
   (let [[dx dy] (math2/sub-v2 base (:p hip))]
-    (if-not (and (not= id (:id actor)) (< dx radius) (< dy radius) (not= update-fn update-rag))
+    (if-not (and (not= id (:id actor)) (< dx radius) (< dy radius) (not= update-fn update-rag) (not= color col))
       actor
       (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
             hitsm (math2/resize-v2 hitv (if (< health 20) 10 2))
@@ -226,7 +226,8 @@
                         ;;(phys2/keep-angles (:aguards state))
                         (phys2/keep-distances (:dguards state))
                         (phys2/move-masses surfaces 0.4))
-          newnext (if (> time hittimeout) "idle" next) 
+          finished (and (:q (:neck newmasses)) (:q (:hip newmasses)))
+          newnext (if finished "idle" next) 
           newcommands (if-not (and injure-when-dropped (= 0 (mod (int (* time 10.0)) 2)))
                         commands
                         (into commands [{:id id
@@ -240,6 +241,7 @@
                      (assoc :commands newcommands)
                      (assoc :next newnext)
                      (assoc :masses newmasses))]
+      (println "finished" finished (:neck newmasses) (:hip newmasses))
       (if (= result nil) println "UPDATERAG ERROR!!!")
       result)))
 
