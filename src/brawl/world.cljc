@@ -224,17 +224,21 @@
         (check-ended)
         (calc-view-rect)
         (update-particles))))
-  
 
-(defn reset-world [{:keys [level view-rect world-drawer metrics] :as state} msg]
+
+(defn init-seeds [{{:keys [view-rect] :as world} :world :as state}]
+  (let [[l r b t] (:view-rect world)
+        seeds (map #(particle/init (+ l (rand (- r l))) (+ t (rand (- b t))) [1.0 1.0 1.0 0.5] [(+ 0.1 (rand 0.6)) (+ 0.05 (rand 0.3))] :seed) (range 0 20))]
+    (assoc-in state [:world :particles] seeds)))
+ 
+
+(defn reset-world [{:keys [level world world-drawer metrics] :as state} msg]
   (if (and msg (= (:id msg) "level"))
     (let [svglevel (:shapes msg)
-          [l r b t] view-rect
           points (map :path (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) svglevel ))
           pivots (filter #(if (:id %) (clojure.string/includes? (:id %) "Pivot") false) svglevel)
           surfaces (phys2/surfaces-from-pointlist points)
           lines (clj->js (reduce (fn [result {[tx ty] :t [bx by] :b}] (concat result [tx ty 1.0 1.0 1.0 1.0 (+ tx bx) (+ ty by) 1.0 1.0 1.0 1.0])) [] surfaces))
-          seeds (map #(particle/init 0.0 0.0 [1.0 1.0 1.0 0.5] [(+ 0.1 (rand 0.6)) (+ 0.05 (rand 0.3))]  :seed) (range 0 20))
           newdrawer (webgl/loadshapes world-drawer (filter #(if (:id %) (not (clojure.string/includes? (:id %) "Pivot")) true) (:shapes msg)))
           newworld (-> {:actors {}
                         :guns {}
@@ -242,15 +246,16 @@
                         :inited true
                         :loaded true
                         :finished false
-                        :particles seeds
+                        :particles []
                         :surfaces surfaces
                         :surfacelines lines}
                        (create-actors pivots metrics))]
-
       (cond-> state
         true (assoc :world-drawer newdrawer)
         true (assoc :world newworld)
         true (assoc :commands-world [])
+        true (calc-view-rect)
+        true (init-seeds)
         (= level 0) (brawlui/load-ui layouts/generator)
         (= level 0) (brawlui/update-gen-sliders)
         (> level 0) (brawlui/load-ui layouts/hud)))

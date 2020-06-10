@@ -29,8 +29,11 @@ Download/checkout the repo and start it up with :
 
 ## Todo
 
-* ai squat
-* retina
-* ai, eloszor testeket akarjon felvenni
+* when attacking consider dead body
+* pickup dead body
+* picked attribute to actor
+* with higher level set faster hit/kick for actors
+* follow actor if buddy
 
+* retina
 * update ui renderer and mpd
