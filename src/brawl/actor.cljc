@@ -254,29 +254,33 @@
 
 (defn update-mode
   "if next mode is set, switch to that mode"
-  [{:keys [masses next speed update-fn] {hip :hip fl :foot_l fr :foot_r :as masses} :masses  {ba :base_l bb :base_r} :bases :as state}]
+  [{:keys [masses next speed update-fn] {hip :hip fl :foot_l fr :foot_r :as masses} :masses  {ba :base_l bb :base_r} :bases :as state} surfaces]
   (let [result
         (cond
 
           (= next nil) state
 
           (= next "walk")
-          (do
-            (let [newmasses (reduce (fn [res [id mass]] ; reset mass directions for next rag
-                                      (assoc res id (assoc mass :d [0 0])))
-                                    masses
-                                    masses)]
+          (let [newmasses (reduce (fn [res [id mass]] ; reset mass directions for next rag
+                                    (assoc res id (assoc mass :d [0 0])))
+                                  masses
+                                  masses)
+                newfeetpoint (sort-by first (phys2/get-intersecting-surfaces (:p hip) [0 400] surfaces))
+                finalpoint (if-not (empty? newfeetpoint)
+                             (second (first newfeetpoint))
+                             (:p ba))]
+            (println "newfeet" finalpoint)
                                         ; reset walk state
-              (cond-> state
-                (= update-fn update-rag) (assoc-in [:bases :base_l :p] (:p fl))
-                (= update-fn update-rag) (assoc-in [:bases :base_r :p] (:p fr))
-                (= update-fn update-rag) (assoc :squat-size (* 1.0 (get-in state [:metrics :legl]))) ; squat when reaching ground
-                (= update-fn jump/update-jump) (assoc :squat-size (* 0.5 (get-in state [:metrics :legl]))) ; squat when reaching ground
-                true (assoc :jump-state 0) ; reset jump state
-                true (assoc :next nil)
-                true (assoc :base-target nil) ; reset stepping
-                true (assoc :update-fn walk/update-walk)
-                true (assoc :masses newmasses))))
+            (cond-> state
+              (= update-fn update-rag) (assoc-in [:bases :base_l :p] finalpoint)
+              (= update-fn update-rag) (assoc-in [:bases :base_r :p] finalpoint)
+              (= update-fn update-rag) (assoc :squat-size (* 1.0 (get-in state [:metrics :legl]))) ; squat when reaching ground
+              (= update-fn jump/update-jump) (assoc :squat-size (* 0.5 (get-in state [:metrics :legl]))) ; squat when reaching ground
+              true (assoc :jump-state 0) ; reset jump state
+              true (assoc :next nil)
+              true (assoc :base-target nil) ; reset stepping
+              true (assoc :update-fn walk/update-walk)
+              true (assoc :masses newmasses)))
 
           (= next "jump")
           (let [[hx hy] (:p hip)
@@ -295,8 +299,8 @@
           ;; reset jump state
           (-> state
               (assoc :next nil)
-             (assoc :update-fn update-rag))
-
+              (assoc :update-fn update-rag))
+          
           (= next "idle")
           ;; reset jump state
           (-> state
@@ -358,6 +362,6 @@
                    (update-controls control) ;; manual controls for hero
                    (ai/update-ai control surfaces actors time delta) ;; ai controls for others
                    (update-fn surfaces time delta)
-                   (update-mode))]
+                   (update-mode surfaces))]
     ;;(if (= (:id state) :enemy) (println "AFTER UPDATE" (:version result) (get-in result [:masses :knee_l :d] )))
     result))

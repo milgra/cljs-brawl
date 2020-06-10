@@ -29,10 +29,6 @@ Download/checkout the repo and start it up with :
 
 ## Todo
 
-* when attacking consider dead body
-* pickup dead body
 * picked attribute to actor
-* with higher level set faster hit/kick for actors
-
 * retina
 * update ui renderer and mpd

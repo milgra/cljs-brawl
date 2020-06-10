@@ -145,7 +145,7 @@
               (assoc :ai-timeout (+ time 300)))
           (-> newstate
               (assoc :ai-state :follow)
-              (assoc :ai-timeout (+ time 300 (* level -30)))))))))
+              (assoc :ai-timeout (+ time 300 (rand-int 20) (* level -30)))))))))
 
 
 ;; after every action ai should reconsider finding new enemy, finding dead body, following, etc

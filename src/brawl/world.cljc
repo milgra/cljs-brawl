@@ -29,7 +29,7 @@
    :endpos [0 0]
    :surfaces []
    :particles []
-v   :surfacelines []
+   :surfacelines []
    :view-rect [0 0 0 0]
    :projection (math4/proj_ortho 50 50 -50 -50 -1.0 1.0)})
 
@@ -44,7 +44,7 @@ v   :surfacelines []
 
 (defn create-actors
   "add actors, infos, guns and enpoint to scene based on pivot points in svg"
-  [state pivots herometrics]
+  [state pivots herometrics currlevel]
   (reduce (fn [{:keys [actors guns infos] :as oldstate}
                {:keys [id path] :as pivot}]         
             (let [pos (nth path 3)
@@ -61,7 +61,7 @@ v   :surfacelines []
                                                       name (if (= level 0) :hero (keyword (names/getname)))
                                                       color (nth colors team)
                                                       metrics (if (= level 0) herometrics (metrics/basemetrics-random))
-                                                      actor (actor/init (+ -20 (rand-int 40) (first pos)) (second pos) name color metrics (:level state))]
+                                                      actor (actor/init (+ -20 (rand-int 40) (first pos)) (second pos) name color metrics currlevel)]
                                                   (assoc result name actor)))
                                                   actors
                                                   (range 0 count))))
@@ -249,7 +249,7 @@ v   :surfacelines []
                         :particles []
                         :surfaces surfaces
                         :surfacelines lines}
-                       (create-actors pivots metrics))]
+                       (create-actors pivots metrics (:level state)))]
       (cond-> state
         true (assoc :world-drawer newdrawer)
         true (assoc :world newworld)
