@@ -88,6 +88,7 @@
      :idle-angle 0
      :dragged-gun nil
      :dragged-body nil
+     :is-dragged false
      :injure-when-dropped false
      ;; ai state
      :ai-state :idle
@@ -304,6 +305,7 @@
           (= next "idle")
           ;; reset jump state
           (-> state
+              (assoc :is-dragged false)
               (assoc :injure-when-dropped false)
               (assoc :next nil)
               (assoc :update-fn update-idle))

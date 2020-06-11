@@ -29,6 +29,6 @@ Download/checkout the repo and start it up with :
 
 ## Todo
 
-* picked attribute to actor
+* bugfix
 * retina
 * update ui renderer and mpd

@@ -298,17 +298,19 @@
         nearby-gun (first (remove nil? (map (fn [[_ {:keys [eid p d]}]]
                                         (if-not (< (math2/length-v2 (math2/sub-v2 p (:p hip))) 80.0) nil eid)) guns)))
 
-        nearby-actor (first (remove nil? (map (fn [[_ {{ehip :hip} :masses ecolor :color ehealth :health eid :id}]]
-                                                (println "pickup from" id "to" eid (not= id eid))
+        nearby-actor (first (remove nil? (map (fn [[_ {{ehip :hip} :masses ecolor :color ehealth :health eid :id edragged :is-dragged}]]
                                                 (let [dist (math2/length-v2 (math2/sub-v2 (:p ehip) (:p hip)))]
-                                                  (println "dist" dist  (< ehealth 0) (not= id eid) (< dist 200.0))
-                                                  (if (and (< ehealth 0) (not= id eid) (< dist 150.0)) eid nil))) actors)))
+                                                  (if (and (< ehealth 0) (not= id eid) (not edragged) (< dist 150.0)) eid nil))) actors)))
+
+        dragged-actor (if nearby-actor (assoc (nearby-actor actors) :is-dragged true))
         new-actor (cond-> actor
                     nearby-gun
                     (assoc :dragged-gun nearby-gun)
                     nearby-actor
                     (assoc :dragged-body nearby-actor))]
-    (assoc-in oldstate [:world :actors id] new-actor)))
+    (cond-> oldstate
+        true (assoc-in [:world :actors id] new-actor)
+        nearby-actor (assoc-in [:world :actors nearby-actor] dragged-actor))))
 
 
 (defn execute-commands

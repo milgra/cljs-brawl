@@ -1,6 +1,7 @@
 (ns ^:figwheel-hooks brawl.core
   (:require
    [cljs.core.async :refer [<! chan put! take! poll!]]
+   [cljs-webgl.context :as context]
    [goog.dom :as dom]
    [goog.events :as events]
    [gui.math4 :as math4]
@@ -23,10 +24,15 @@
 (defn resize-context!
   "vresize canvas on window resize"
   []
-  (dom/setProperties
-   (dom/getElement "main")
-   (clj->js {:width (.-innerWidth js/window)
-             :height (.-innerHeight js/window)})))
+  (let [canvas (dom/getElement "main")
+        context (context/get-context canvas)
+        rect (.getBoundingClientRect canvas)
+        width (.-width rect)
+        height (.-height rect)
+        ratio (or (.-devicePixelRatio js/window) 1.0)]
+    (dom/setProperties canvas
+                       (clj->js {:width (* width ratio)
+                                 :height (* height ratio)}))))
 
 
 (defn load-font!
