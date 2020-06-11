@@ -116,7 +116,7 @@
       (let [dragged ((:dragged-body sender) actors)
             masses (:masses dragged)
             newmasses (reduce (fn [res [id mass]] ; reset mass directions for next rag
-                                      (assoc res id (assoc mass :d [(+ (* 6.0 (:facing sender)) (:speed sender)) -5])))
+                                      (assoc res id (assoc mass :d [(+ (* 6.0 (:facing sender)) (* (:speed sender) 0.5)) -5])))
                                     masses
                                     masses)
             newdragged (assoc dragged :masses newmasses :injure-when-dropped true)
@@ -291,6 +291,12 @@
         (defaults/save-defaults!))))
 
 
+(defn load-same-level [{:keys [level sounds] :as state}]
+  (load-level! state level)
+  (-> state
+      (assoc-in [:world :loaded] false)))
+
+
 (defn pickup-object [{{:keys [actors guns dragged-gun dragged-body]} :world :as oldstate} {:keys [id text]}]
   (let [actor (id actors)
         {{hip :hip} :masses color :color :as actor} actor
@@ -327,7 +333,7 @@
          (= text "attack")
          (execute-attack oldstate command time)
 
-         (= text "new game")
+         (= text "new-game")
          (load-first-level oldstate)
 
          (= text "next-level")
@@ -340,6 +346,10 @@
                (update :commands-world conj {:text "load-level"})))
 
          (= text "load-level") (load-next-level oldstate)
+
+         (= text "restart-level") (load-same-level oldstate)
+
+         (= text "show-wasted") (brawlui/load-ui oldstate layouts/wasted)
 
          :else oldstate)))
    (assoc state :commands-world [])

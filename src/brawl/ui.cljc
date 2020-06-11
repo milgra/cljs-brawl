@@ -173,7 +173,9 @@
                  (-> oldstate
                      (load-ui layouts/hud)))
                (and (= text "new game") (= type "up"))
-               (update oldstate :commands-world conj {:text "new game"})
+               (update oldstate :commands-world conj {:text "new-game"})
+               (and (= text "restart level") (= type "up"))
+               (update oldstate :commands-world conj {:text "restart-level"})
                (and (= text "options") (= type "up")) ; shows options view
                (let [newstate (load-ui oldstate layouts/options)]
                  (-> newstate ;  set slider values

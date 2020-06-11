@@ -71,7 +71,7 @@
                  (phys2/aguard2 masses :hip :knee_r :foot_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
                  (phys2/aguard2 masses :neck :elbow_r :hand_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
                  (phys2/aguard2 masses :neck :elbow_l :hand_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)]]
-    (println "init actor" id "level" level)
+
     {:id id
      :color color
      :level level
@@ -200,6 +200,7 @@
                 true (assoc :next "rag")
                 true (update :health - hitpower) 
                 true (update :speed + (* (/ hvx (Math/abs hvx)) 5.0))
+                (and (= (:id actor) :hero ) (< (- health hitpower) 0 )) (update :commands conj {:text "show-wasted"})
                 ;; true (assoc :masses (reduce (fn [oldmasses [id mass]] (assoc oldmasses id (assoc mass :d [0 0]))) {} masses))
                 headisp (assoc-in [:masses :head :d] (math2/add-v2 (:d head) hitbg))
                 headisp (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) hitsm))

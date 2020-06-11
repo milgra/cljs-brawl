@@ -394,7 +394,7 @@
       :center-x "Edge 50 %"}]}]})
 
 
-(def failure
+(def wasted
   {:id "Failure"
    :class ""
    :texture {:type "Color" :color 0xFF0000AA}
@@ -402,24 +402,7 @@
    :height "100 %" 
    :subviews
    
-   [{:id "Reason"
-     :class ""
-     :texture {:type "Color" :color 0xFFFFFF55}
-     :width "100 %" 
-     :height "50 px" 
-     :top "Edge 50 px" 
-     :center-x "Edge 50 %"
-     :subviews
-     
-     [{:id "Text"
-       :class ""
-       :texture {:type "Label" :text "Health Problems" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
-       :width "400 px" 
-       :height "50 px" 
-       :center-y "Edge 50 %" 
-       :center-x "Edge 50 %"}]}
-    
-    {:id "Message"
+   [{:id "Message"
      :class ""
      :texture {:type "Color" :color 0xFF000055}
      :width "100 %" 
@@ -450,7 +433,7 @@
        :class "Button"
        :command "restart level"
        :texture {:type "Color" :color 0x00000000}
-       :label {:type "Label" :text "Continue" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
+       :label {:type "Label" :text "Restart Level" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
        :width "200 px" 
        :height "50 px" 
        :center-y "Edge 50 %" 
