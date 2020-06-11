@@ -244,7 +244,7 @@
      :subviews [{:id "By"
                  :class "Button"
                  :texture {:type "Color" :color 0x00000000}
-                 :label {:type "Label" :text "By Milan Toth" :size 15 :color 0xFFFFFFFF}
+                 :label {:type "Label" :text "By Milan Toth v1.0" :size 15 :color 0xFFFFFFFF}
                  :width "150 px" 
                  :height "40 px" 
                  :right "Edge 4 px" 
@@ -432,6 +432,52 @@
      [{:id "Button"
        :class "Button"
        :command "restart level"
+       :texture {:type "Color" :color 0x00000000}
+       :label {:type "Label" :text "Restart Level" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
+       :width "200 px" 
+       :height "50 px" 
+       :center-y "Edge 50 %" 
+       :center-x "Edge 50 %"}]}]})
+
+
+(def finished
+  {:id "Finished"
+   :class ""
+   :texture {:type "Color" :color 0xFF0000AA}
+   :width "100 %" 
+   :height "100 %" 
+   :subviews
+   
+   [{:id "Message"
+     :class ""
+     :texture {:type "Color" :color 0xFF000055}
+     :width "100 %" 
+     :height "90 px" 
+     :center-y "Edge 50 %" 
+     :center-x "Edge 50 %"
+     :subviews
+     
+     [{:id "MsgText"
+       :class ""
+       :texture {:type "Label" :text "Congratulations!!!" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
+       :width "400 px" 
+       :height "90 px" 
+       :center-y "Edge 50 %" 
+       :center-x "Edge 50 %"}]
+     }
+
+    {:id "Restart"
+     :class ""
+     :texture {:type "Color" :color 0x00FF00AA}
+     :width "100 %" 
+     :height "50 px" 
+     :bottom "Edge 50 px" 
+     :center-x "Edge 50 %"
+     :subviews
+
+     [{:id "Button"
+       :class "Button"
+       :command "new game"
        :texture {:type "Color" :color 0x00000000}
        :label {:type "Label" :text "Restart Level" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
        :width "200 px" 

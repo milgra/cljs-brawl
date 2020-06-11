@@ -339,7 +339,7 @@
          (= text "next-level")
          (if (= level 6)
            ;; show congrats screen
-           (brawlui/load-ui oldstate layouts/info)
+           (brawlui/load-ui oldstate layouts/finished)
            ;; load next level
            (-> oldstate
                (brawlui/load-ui layouts/info)
