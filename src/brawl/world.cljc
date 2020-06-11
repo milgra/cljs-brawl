@@ -312,6 +312,8 @@
         new-actor (cond-> actor
                     nearby-gun
                     (assoc :dragged-gun nearby-gun)
+                    nearby-gun
+                    (assoc :bullets 6)
                     nearby-actor
                     (assoc :dragged-body nearby-actor))]
     (cond-> oldstate

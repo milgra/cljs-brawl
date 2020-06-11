@@ -82,7 +82,7 @@
      :power 100.0
      :health (+ 100.0 (* level 50.0))
      :facing 1.0
-     :bullets 6
+     :bullets 0
      :update-fn jump/update-jump
      :commands []
      :idle-angle 0

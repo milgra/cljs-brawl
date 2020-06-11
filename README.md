@@ -29,5 +29,6 @@ Download/checkout the repo and start it up with :
 
 ## Todo
 
-* bugfix
+* refactor
+* improve buddy ai when attacking
 * update ui renderer and mpd

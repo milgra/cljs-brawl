@@ -106,7 +106,7 @@
     {:id "StartGame"
      :class "Button"
      :texture {:type "Color" :color 0xDD0000FF}
-     :label {:type "Label" :text "Startgame" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
+     :label {:type "Label" :text "Start Game" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
      :command "start-game" 
      :width "200 px" 
      :height "50 px"
