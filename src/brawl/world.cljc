@@ -295,8 +295,8 @@
   (let [actor (id actors)
         {{hip :hip} :masses color :color :as actor} actor
         ;; look for gun
-        nearby-gun (first (remove nil? (map (fn [[_ {:keys [eid p d]}]]
-                                        (if-not (< (math2/length-v2 (math2/sub-v2 p (:p hip))) 80.0) nil eid)) guns)))
+        nearby-gun (first (remove nil? (map (fn [[_ {:keys [id p d]}]]
+                                              (if-not (< (math2/length-v2 (math2/sub-v2 p (:p hip))) 80.0) nil id)) guns)))
 
         nearby-actor (first (remove nil? (map (fn [[_ {{ehip :hip} :masses ecolor :color ehealth :health eid :id edragged :is-dragged}]]
                                                 (let [dist (math2/length-v2 (math2/sub-v2 (:p ehip) (:p hip)))]

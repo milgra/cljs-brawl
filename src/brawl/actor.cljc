@@ -270,7 +270,6 @@
                 finalpoint (if-not (empty? newfeetpoint)
                              (second (first newfeetpoint))
                              (:p ba))]
-            (println "newfeet" finalpoint)
                                         ; reset walk state
             (cond-> state
               (= update-fn update-rag) (assoc-in [:bases :base_l :p] finalpoint)

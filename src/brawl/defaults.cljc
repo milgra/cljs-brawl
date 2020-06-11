@@ -11,7 +11,6 @@
 
 
 (defn load-defaults! [state]
-  (println "load-defaults saved" (.getItem js/localStorage "state-saved?") "state" (.getItem js/localStorage "state"))
   (if (and (local-storage-supported?) (= "true" (.getItem js/localStorage "state-saved?")))
     (let [state-js (cljs.reader/read-string (.getItem js/localStorage "state"))]
       ;; todo validate with specs
@@ -20,7 +19,6 @@
 
 
 (defn save-defaults! [state]
-  (println "save-defaults" (get-in state [:world :actors :hero :metrics :base]))
   (if (local-storage-supported?)
     (let [state-js {:level (:level state)
                     :physics (:physics state)
