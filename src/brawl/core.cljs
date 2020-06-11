@@ -207,6 +207,7 @@
                :world (world/init)
                :ui-drawer (uiwebgl/init)
                :world-drawer (webgl/init)
+               :ui-ratio (min 2.0 (or (.-devicePixelRatio js/window) 1.0))
                :time 0
                :gametime 0
                :level 0

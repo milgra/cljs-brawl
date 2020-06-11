@@ -62,24 +62,24 @@
     :else [view])) ; return the view only
 
 
-(defn get-value [text]
+(defn get-value [text scale]
   "extract measurement, value and element from alignment/dimension value"
   (let [[element value measure] (str/split text #" ")]
     (if (= measure nil)
       (if (= value "px") ; two element value for width and height , "100 px" or "50 %"
-        {:pixel (js/parseInt element)}
+        {:pixel (int (* (js/parseInt element) scale))}
         {:ratio (/ (js/parseInt element) 100)})
       (let [elem (if (= element "Edge") nil (keyword element))]
         (if (= measure "px") ; three element value for alignments , "Edge 50 %" or "Button 5 px"
-          {:element elem :pixel (js/parseInt value)}
+          {:element elem :pixel (int (* (js/parseInt value) scale))}
           {:element elem :ratio (/ (js/parseInt value) 100.0)})))))
 
 
-(defn gen-from-desc [viewmap viewdesc]
+(defn gen-from-desc [viewmap viewdesc scale]
   "generate view structure from description"
   (let [subviews   (:subviews viewdesc)
         subids     (if subviews (map (fn [desc] (keyword (:id desc))) subviews) []) ; finalsubviews property needs ids only
-        subviewmap (if subviews (reduce (fn [oldmap desc] (gen-from-desc oldmap desc)) viewmap subviews) viewmap) ; generate subviews into viewmap
+        subviewmap (if subviews (reduce (fn [oldmap desc] (gen-from-desc oldmap desc scale)) viewmap subviews) viewmap) ; generate subviews into viewmap
         view (reduce
               (fn [result [k v]]
                 (case k
@@ -87,15 +87,16 @@
                   :class    (assoc result :class v)
                   :command  (assoc result :command v)
                   :color    (assoc result :color v)
-                  :width    (assoc result :width (get-value v))
-                  :height   (assoc result :height (get-value v))
-                  :center-x (assoc result :center-x (get-value v))      
-                  :center-y (assoc result :center-y (get-value v))
-                  :left     (assoc result :left (get-value v))
-                  :right    (assoc result :right (get-value v))
-                  :top      (assoc result :top (get-value v))
-                  :bottom   (assoc result :bottom (get-value v))
+                  :width    (assoc result :width (get-value v scale))
+                  :height   (assoc result :height (get-value v scale))
+                  :center-x (assoc result :center-x (get-value v scale))      
+                  :center-y (assoc result :center-y (get-value v scale))
+                  :left     (assoc result :left (get-value v scale))
+                  :right    (assoc result :right (get-value v scale))
+                  :top      (assoc result :top (get-value v scale))
+                  :bottom   (assoc result :bottom (get-value v scale))
                   :subviews (assoc result :subviews subids)
+                  :label    (assoc result :label (update v :size * scale))
                   (assoc result k v))) {:x 0.0 :y 0.0 :w 150.0 :h 50.0 :subviews []} viewdesc)
     newviews (setup-view view)] ; generate subviews for sliders, buttons, etc
   (reduce #(assoc %1 (:id %2) %2) subviewmap newviews)))

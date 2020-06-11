@@ -22,7 +22,7 @@
 (defn load-ui
   "load new ui stack"
   [state description]
-  (let [views (kinetix/gen-from-desc {} description)
+  (let [views (kinetix/gen-from-desc {} description (/ 1.0 (:ui-ratio state)))
         baseid (keyword (:id description))
         viewids (kinetix/collect-visible-ids views [baseid] "")
         alignedviews (kinetix/align views [baseid] 0 0 (. js/window -innerWidth) (. js/window -innerHeight))]
@@ -197,10 +197,22 @@
                (and (= text "options back") (= type "up")) ; opens menu view
                (load-ui oldstate layouts/menu)
                ;; on-screen control buttons
-               (and (= text "left") (= type "down")) (assoc-in oldstate [:keycodes 37] true)
-               (and (= text "left") (= type "up")) (assoc-in oldstate [:keycodes 37] false)
-               (and (= text "right")(= type "down")) (assoc-in oldstate [:keycodes 39] true)
-               (and (= text "right")(= type "up")) (assoc-in oldstate [:keycodes 39] false)
+               (and (= text "left") (= type "down"))
+               (-> oldstate
+                   (assoc-in [:keycodes 37] true)
+                   (assoc-in [:keycodes 32] true))
+               (and (= text "left") (= type "up"))
+               (-> oldstate
+                   (assoc-in [:keycodes 37] false)
+                   (assoc-in [:keycodes 32] false))
+               (and (= text "right")(= type "down"))
+               (-> oldstate
+                   (assoc-in [:keycodes 39] true)
+                   (assoc-in [:keycodes 32] true))
+               (and (= text "right")(= type "up"))
+               (-> oldstate
+                   (assoc-in [:keycodes 39] false)
+                   (assoc-in [:keycodes 32] false))
                (and (= text "jump")(= type "down")) (assoc-in oldstate [:keycodes 38] true)
                (and (= text "jump")(= type "up")) (assoc-in oldstate [:keycodes 38] false)
                (and (= text "down")(= type "down")) (assoc-in oldstate [:keycodes 40] true)

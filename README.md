@@ -30,5 +30,4 @@ Download/checkout the repo and start it up with :
 ## Todo
 
 * bugfix
-* retina
 * update ui renderer and mpd
