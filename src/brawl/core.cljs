@@ -106,7 +106,7 @@
 (defn draw-ui
   "draw ui elements with ui-drawer"
   [{{:keys [views viewids projection] :as ui} :ui ui-drawer :ui-drawer :as state}]
-  (assoc state :ui-drawer (uiwebgl/draw! ui-drawer projection (map views viewids))))
+  (assoc state :ui-drawer (uiwebgl/draw! ui-drawer projection)))
 
 
 (defn draw-world

@@ -167,8 +167,7 @@
    0.4
    1.0))
 
-
-(defn draw! [{:keys [context
+(defn update! [{:keys [context
                      tempcanvas
                      floatbuffer
                      textures
@@ -178,11 +177,9 @@
                      ui-location-texcoord
                      ui-texmap
                      ui-texture] :as state }
-             projection
              views]
-  "draw views defined by x y width height and texure requirements." 
-  ;(cljs.pprint/pprint views)
-
+  "update content of framebuffer" 
+  
   (let [;; generate textures for new views
         newtexmap (tex-gen-for-ids tempcanvas ui-texmap views)
         ;; generate vertex data from views
@@ -201,8 +198,6 @@
                                     (+ x w) (+ y h) brx bry
                                     x (+ y h) tlx bry))))) resfb views)]
     
-    ;(cljs.pprint/pprint vertexes)>
-    
     ;; upload texture map if changed
     (when (newtexmap :changed)
       (texture/upload-texture
@@ -212,7 +207,7 @@
        1024
        1024))
 
-    ;; upload buffer 
+    ;; upload buffer
     (buffers/upload-buffer
      context
      ui-buffer
@@ -220,38 +215,55 @@
      buffer-object/array-buffer
      buffer-object/dynamic-draw)
 
-    ;; draw vertexes
-    (buffers/draw!
-     context
-     :count (/ (:index newfb) 4)
-     :first 0
-     :shader ui-shader
-     :draw-mode draw-mode/triangles
-     :attributes [{:buffer ui-buffer
-                   :location ui-location-pos
-                   :components-per-vertex 2
-                   :type data-type/float
-                   :offset 0
-                   :stride 16}
-                  {:buffer ui-buffer
-                   :location ui-location-texcoord
-                   :components-per-vertex 2
-                   :type data-type/float
-                   :offset 8
-                   :stride 16}]
-     :uniforms [{:name "projection"
-                 :type :mat4
-                 :values projection}
-                {:name "texture_main"
-                 :type :sampler-2d
-                 :values 0}]
-     :capabilities {capability/blend true}
-     :blend-function [[blend/src-alpha blend/one-minus-src-alpha]]
-     :textures [{:texture ui-texture 
-                :name "texture_main"
-                :texture-unit texture-unit/texture0}])
-
     (-> state
         (assoc :ui-texmap (assoc newtexmap :changed false))
-        (assoc :floatbuffer newfb)
-        )))
+        (assoc :floatbuffer newfb))))
+
+
+(defn draw!
+  "draw views"
+  [{:keys [context
+           tempcanvas
+           floatbuffer
+           textures
+           ui-shader
+           ui-buffer
+           ui-location-pos
+           ui-location-texcoord
+           ui-texmap
+           ui-texture] :as state }
+   projection]
+
+  ;; draw vertexes
+  (buffers/draw!
+   context
+   :count (/ (:index floatbuffer) 4)
+   :first 0
+   :shader ui-shader
+   :draw-mode draw-mode/triangles
+   :attributes [{:buffer ui-buffer
+                 :location ui-location-pos
+                 :components-per-vertex 2
+                 :type data-type/float
+                 :offset 0
+                 :stride 16}
+                {:buffer ui-buffer
+                 :location ui-location-texcoord
+                 :components-per-vertex 2
+                 :type data-type/float
+                 :offset 8
+                 :stride 16}]
+   :uniforms [{:name "projection"
+               :type :mat4
+               :values projection}
+              {:name "texture_main"
+               :type :sampler-2d
+               :values 0}]
+   :capabilities {capability/blend true}
+   :blend-function [[blend/src-alpha blend/one-minus-src-alpha]]
+   :textures [{:texture ui-texture 
+               :name "texture_main"
+               :texture-unit texture-unit/texture0}])
+
+  state)
+
