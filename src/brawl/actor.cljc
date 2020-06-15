@@ -200,6 +200,8 @@
                 true (assoc :next "rag")
                 true (update :health - hitpower) 
                 true (update :speed + (* (/ hvx (Math/abs hvx)) 5.0))
+                ;; TODO REFACTOR
+                (< (- health hitpower) 0) (assoc :dragged-body nil)
                 (and (= (:id actor) :hero ) (< (- health hitpower) 0 )) (update :commands conj {:text "show-wasted"})
                 ;; true (assoc :masses (reduce (fn [oldmasses [id mass]] (assoc oldmasses id (assoc mass :d [0 0]))) {} masses))
                 headisp (assoc-in [:masses :head :d] (math2/add-v2 (:d head) hitbg))
@@ -215,7 +217,7 @@
 (defn update-idle [state] state)
 
 
-(defn update-rag [{:keys [masses dguards hittimeout next health injure-when-dropped commands id] :as state } surfaces time delta]
+(defn update-rag [{:keys [masses dguards hittimeout next health injure-when-dropped is-dragged commands id] :as state } surfaces time delta]
   (if (> health 0)
     (let [newmasses (-> masses
                         (phys2/add-gravity [0.0 0.4])
@@ -233,7 +235,7 @@
                         (phys2/add-gravity [0.0 0.4])
                         ;;(phys2/keep-angles (:aguards state))
                         (phys2/keep-distances (:dguards state))
-                        (phys2/move-masses surfaces 0.4))
+                        (phys2/move-masses (if is-dragged [] surfaces) 0.4))
           finished (or (> time hittimeout) (and (:q (:neck newmasses)) (:q (:hip newmasses))))
           newnext (if finished "idle" next) 
           newcommands (if-not (and injure-when-dropped (= 0 (mod (int (* time 10.0)) 2)))

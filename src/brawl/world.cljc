@@ -119,7 +119,7 @@
                                       (assoc res id (assoc mass :d [(+ (* 6.0 (:facing sender)) (* (:speed sender) 0.5)) -5])))
                                     masses
                                     masses)
-            newdragged (assoc dragged :masses newmasses :injure-when-dropped true)
+            newdragged (assoc dragged :masses newmasses :injure-when-dropped true :is-dragged false)
             newsender (assoc sender :dragged-body nil)]
         (-> state
             (assoc-in [:world :actors id] newsender)

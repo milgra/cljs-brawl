@@ -61,12 +61,12 @@
             (assoc-in [:control :punch] false)
             (assoc-in [:control :kick] false)
             (assoc-in [:control :block] false)
-            (assoc :ai-timeout (+ time 800 (rand-int 200))))))))
+            (assoc :ai-timeout (+ time 200 (rand-int 200))))))))
 
 
 (defn update-follow
   "go after enemy/hero"
-  [{:keys [id color ai-state ai-timeout ai-target dragged-body]
+  [{:keys [id color ai-state ai-timeout ai-target dragged-body vert-direction]
     {{[x y :as pos] :p} :head} :masses
     {:keys [arml legl]} :metrics
     :as state}
@@ -79,8 +79,12 @@
     state
     (let [enemy (ai-target actors)
           health (:health enemy)
-          [px py] (get-in enemy [:masses :hip :p])
+          [px py] (get-in enemy [:masses :head :p])
           reached  (and (< x (+ px arml)) (> x (- px arml)))
+          new-direction (cond
+                           (> py (+ y 20.0)) -1
+                           (< py (- y 20.0)) 1
+                           :else vert-direction)
           dead (<= health 0)
           pick (rand-int 3)]
       (cond
@@ -99,7 +103,7 @@
                           (assoc :ai-timeout (+ time 100)))
                       ;; attack enemy
                       (cond-> newstate
-                        true (assoc :ai-timeout (+ time 200))
+                        true (assoc :ai-timeout (+ time 100))
                         true (assoc :ai-state :attack)
                         true (assoc-in [:control :down] (if (= (rand-int 2) 0) true false))
                         true (assoc-in [:control :down] false)
@@ -109,6 +113,7 @@
         ;; follow target
         :else (cond-> state
                 true (assoc :ai-timeout (+ time 100))
+                true (assoc :vert-direction new-direction) 
                 (<= x (- px arml)) (assoc-in [:control :right] true)
                 (<= x (- px arml)) (assoc-in [:control :left] false)
                 (>= x (+ px arml)) (assoc-in [:control :left] true)
@@ -130,7 +135,7 @@
   (let [enemy (ai-target actors)]
     (if-not (> time ai-timeout)
       state
-      (let [bodies (collect-bodies id actors pos) ;; get nearby enemies
+      (let [bodies (collect-bodies id actors pos) ;; get nearby dead bodies
             target (if-not (empty? bodies)
                      (second (first bodies)))
             newstate (-> state
@@ -142,10 +147,10 @@
            (-> newstate
               (assoc :ai-state :follow)
               (assoc :ai-target target)
-              (assoc :ai-timeout (+ time 300)))
+              (assoc :ai-timeout (+ time 200)))
           (-> newstate
               (assoc :ai-state :follow)
-              (assoc :ai-timeout (+ time 300 (rand-int 20) (* level -30)))))))))
+              (assoc :ai-timeout (+ time 200 (rand-int 20) (* level -30)))))))))
 
 
 ;; after every action ai should reconsider finding new enemy, finding dead body, following, etc
