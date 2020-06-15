@@ -69,12 +69,12 @@
                      (phys2/add-gravity [0.0 (* 0.5 delta)])
                      (phys2/move-masses surfaces (* 0.5 delta)))
         ground (and (:q (:base_l newbases) (:base_r newbases))) ;; check quisence of bases
-        next (cond
-               ground "walk"
-               ;(< speed -15) "idle"
+        next-mode (cond
+               ground :walk
+               ;(< speed -15) :idle
                :else nil)
         result (cond-> state
-                 next (assoc :next next)
+                 next (assoc :next-mode next-mode)
                  true (assoc :bases newbases)
                  true (move-hip-jump)
                  true (move-feet-jump surfaces)

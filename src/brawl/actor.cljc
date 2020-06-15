@@ -89,10 +89,10 @@
      :dguards dguards
      :aguards aguards
      ;; internal state
-     :next nil ;; next updte state
+     :curr-mode :jump
+     :next-mode nil
      :health (+ 100.0 (* level 50.0))
      :bullets 0
-     :update-fn jump/update-jump ;; initial update function
      :commands [] ;; command collector
      :control (default-control)
      :pickup-sent false
@@ -149,7 +149,7 @@
 
 
 (defn check-death [{:keys [health] :as actor}]
-  (if (<= health 0) (assoc actor :next "rag") actor))
+  (if (<= health 0) (assoc actor :next-mode :rag) actor))
 
 
 (defn calc-isps [{:keys [head neck hip knee_l knee_r foot_l foot_r]} base target]
@@ -169,13 +169,13 @@
 
 (defn hitpoint
   "get hitpoint"
-  [{:keys [id color update-fn]
+  [{:keys [id color curr-mode]
     {:keys [hip] :as masses} :masses}
    {:keys [base target radius] :as enemy}]
   
   (let [[dx dy] (math2/sub-v2 base (:p hip))
         nearby? (and (< dx radius) (< dy radius))
-        not-rag? (not= update-fn update-rag)
+        not-rag? (not= curr-mode :rag)
         diff-actor? (not= id (:id enemy))
         diff-color? (not= color (:color enemy))]
 
@@ -186,7 +186,7 @@
 
 (defn hit
   "hit actor"
-  [{:keys [id health color metrics facing update-fn]
+  [{:keys [id health color metrics facing curr-mode]
     {:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r] :as masses} :masses
     {:keys [block] :as control} :control col :color :as actor}
    {:keys [base target power radius facing] :as command}
@@ -195,7 +195,7 @@
   (let [[dx dy] (math2/sub-v2 base (:p hip))
         alive? (> health 0)
         nearby? (and (< dx radius) (< dy radius))
-        not-rag? (not= update-fn update-rag)
+        not-rag? (not= curr-mode :rag)
         diff-actor? (not= id (:id command))
         diff-color? (not= color (:color command))
         diff-facing? (not= facing (:facing command))]
@@ -233,11 +233,11 @@
 
               (cond-> actor
                 true (assoc :hittimeout (cond
-                                          (= update-fn jump/update-jump) (+ time 2000)
+                                          (= curr-mode :jump) (+ time 2000)
                                           (and headisp (> hitpower 39)) (+ time 1000)
                                           (< health hitpower) (+ time 2000)
                                           :else (+ time 200)))
-                true (assoc :next "rag")
+                true (assoc :next-mode :rag)
                 true (update :health - hitpower) 
                 true (update :speed + (* (/ hvx (Math/abs hvx)) 5.0))
                 ;; TODO REFACTOR
@@ -257,16 +257,16 @@
 (defn update-idle [state] state)
 
 
-(defn update-rag [{:keys [masses dguards hittimeout next health injure-when-dropped is-dragged commands id] :as state } surfaces time delta]
+(defn update-rag [{:keys [masses dguards hittimeout next-mode health injure-when-dropped is-dragged commands id] :as state } surfaces time delta]
   (if (> health 0)
     (let [newmasses (-> masses
                         (phys2/add-gravity [0.0 0.4])
                         ;;(phys2/keep-angles (:aguards state))
                         (phys2/keep-distances (:dguards state))
                         (phys2/move-masses surfaces 0.4))
-          newnext (if (> time hittimeout) "walk" next) 
+          newnext (if (> time hittimeout) :walk next-mode) 
           result (-> state
-                     (assoc :next newnext)
+                     (assoc :next-mode newnext)
                      (assoc :masses newmasses))]
       (if (= result nil) println "UPDATERAG ERROR!!!")
       result)
@@ -277,7 +277,7 @@
                         (phys2/keep-distances (:dguards state))
                         (phys2/move-masses (if is-dragged [] surfaces) 0.4))
           finished (or (> time hittimeout) (and (:q (:neck newmasses)) (:q (:hip newmasses))))
-          newnext (if finished "idle" next) 
+          newnext (if finished :idle next-mode) 
           newcommands (if-not (and injure-when-dropped (= 0 (mod (int (* time 10.0)) 2)))
                         commands
                         (into commands [{:id id
@@ -289,7 +289,7 @@
                                          :power 50}]))
           result (-> state
                      (assoc :commands newcommands)
-                     (assoc :next newnext)
+                     (assoc :next-mode newnext)
                      (assoc :masses newmasses))]
 
       (if (= result nil) println "UPDATERAG ERROR!!!")
@@ -298,13 +298,13 @@
 
 (defn update-mode
   "if next mode is set, switch to that mode"
-  [{:keys [masses next speed update-fn] {hip :hip fl :foot_l fr :foot_r :as masses} :masses  {ba :base_l bb :base_r} :bases :as state} surfaces]
+  [{:keys [masses next-mode speed curr-mode] {hip :hip fl :foot_l fr :foot_r :as masses} :masses  {ba :base_l bb :base_r} :bases :as state} surfaces]
   (let [result
         (cond
+          
+          (= next-mode nil) state
 
-          (= next nil) state
-
-          (= next "walk")
+          (= next-mode :walk)
           (let [newmasses (reduce (fn [res [id mass]] ; reset mass directions for next rag
                                     (assoc res id (assoc mass :d [0 0])))
                                   masses
@@ -315,50 +315,58 @@
                              (:p ba))]
                                         ; reset walk state
             (cond-> state
-              (= update-fn update-rag) (assoc-in [:bases :base_l :p] finalpoint)
-              (= update-fn update-rag) (assoc-in [:bases :base_r :p] finalpoint)
-              (= update-fn update-rag) (assoc :squat-size (* 1.0 (get-in state [:metrics :legl]))) ; squat when reaching ground
-              (= update-fn jump/update-jump) (assoc :squat-size (* 0.5 (get-in state [:metrics :legl]))) ; squat when reaching ground
+              (= curr-mode :rag) (assoc-in [:bases :base_l :p] finalpoint)
+              (= curr-mode :rag) (assoc-in [:bases :base_r :p] finalpoint)
+              (= curr-mode :rag) (assoc :squat-size (* 1.0 (get-in state [:metrics :legl]))) ; squat when reaching ground
+              (= curr-mode :jump) (assoc :squat-size (* 0.5 (get-in state [:metrics :legl]))) ; squat when reaching ground
               true (assoc :jump-state 0) ; reset jump state
-              true (assoc :next nil)
+              true (assoc :next-mode nil)
               true (assoc :base-target nil) ; reset stepping
-              true (assoc :update-fn walk/update-walk)
+              true (assoc :curr-mode :walk)
               true (assoc :masses newmasses)))
 
-          (= next "jump")
+          (= next-mode :jump)
           (let [[hx hy] (:p hip)
                 [lx ly] (:p ba)
                 [rx ry] (:p bb)]
             ;; reset jump state
             (cond-> state
-              (= update-fn walk/update-walk) (assoc-in [:bases :base_l :p] [(- hx 10.0) (- (min ly ry) 10.0)])
-              (= update-fn walk/update-walk) (assoc-in [:bases :base_r :p] [(+ hx 10.0) (- (min ly ry) 10.0)])
-              (= update-fn walk/update-walk) (assoc-in [:bases :base_l :d] [(/ speed 2) -10])
-              (= update-fn walk/update-walk) (assoc-in [:bases :base_r :d] [(/ speed 2) -10])         
-              true (assoc :next nil)
-              true (assoc :update-fn jump/update-jump)))
+              (= curr-mode :walk) (assoc-in [:bases :base_l :p] [(- hx 10.0) (- (min ly ry) 10.0)])
+              (= curr-mode :walk) (assoc-in [:bases :base_r :p] [(+ hx 10.0) (- (min ly ry) 10.0)])
+              (= curr-mode :walk) (assoc-in [:bases :base_l :d] [(/ speed 2) -10])
+              (= curr-mode :walk) (assoc-in [:bases :base_r :d] [(/ speed 2) -10])         
+              true (assoc :next-mode nil)
+              true (assoc :curr-mode :jump)))
 
-          (= next "rag")
+          (= next-mode :rag)
           ;; reset jump state
           (-> state
-              (assoc :next nil)
-              (assoc :update-fn update-rag))
+              (assoc :next-mode nil)
+              (assoc :curr-mode :rag))
           
-          (= next "idle")
+          (= next-mode :idle)
           ;; reset jump state
           (-> state
               (assoc :is-dragged false)
               (assoc :injure-when-dropped false)
-              (assoc :next nil)
-              (assoc :update-fn update-idle))
+              (assoc :next-mode nil)
+              (assoc :curr-mode :idle))
 
           :else
           (do
-            (println "bad mode" next)
-            state)
-          )]
+            (println "bad mode" next-mode)
+            state))]
     (if (= result nil) println "UPDATEMODE ERROR!!!")
     result))
+
+
+(defn update-fn [{mode :curr-mode :as state} surfaces time delta]
+  (case mode
+    :rag (update-rag state surfaces time delta)
+    :idle (update-idle state)
+    :walk (walk/update-walk state surfaces time delta)
+    :jump (jump/update-jump state surfaces time delta)
+    state))
 
 
 (defn update-controls [{:keys [punch-hand action-sent pickup-sent vert-direction] self-control :control :as state} {:keys [left right up down punch kick shoot block run] :as control}]
@@ -398,7 +406,7 @@
     (< angle MPI2) (update :idle-angle + (* 0.05 delta))))
 
 
-(defn update-actor [{update-fn :update-fn :as state} control surfaces actors guns time delta]
+(defn update-actor [state control surfaces actors guns time delta]
   "update actor state"
   ;;(if (= (:id state) :enemy) (println "BEFORE UPDATE" (:version state) (get-in state [:masses :knee_l :d] )))
   (let [result (-> state

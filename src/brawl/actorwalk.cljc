@@ -96,7 +96,7 @@
 
 (defn move-hip-walk
   "move hip points, handle jumping"
-  [ {:keys [next jump-state idle-angle facing speed base-order squat-size]
+  [ {:keys [next-mode jump-state idle-angle facing speed base-order squat-size]
      {:keys [down up left right run kick]} :control
      {{[hx hy] :p} :hip } :masses
      {{[lx ly] :p} :base_l {[rx ry] :p} :base_r} :bases
@@ -126,10 +126,10 @@
                 (and up (= jump-state 0) (> squat-size (* legl 0.4))) 1
                 (and up (= jump-state 1) (< squat-size 1.0)) 2
                 :else jump-state)
-        newnext (if (= newstate 2) "jump" next)]
+        newnext (if (= newstate 2) :jump next-mode)]
     (-> state
         (assoc-in [:masses :hip :p] [fx fy])
-        (assoc :next newnext)
+        (assoc :next-mode newnext)
         (assoc :squat-size squat-size)
         (assoc :jump-state newstate))))
 
@@ -226,7 +226,7 @@
       (if (and (= nil newpassivesurf) (empty? collided))
         ;; we have no surface under feet, fall
         (-> state
-            (assoc :next "rag")
+            (assoc :next-mode :rag)
             (assoc :hittimeout time)
             (assoc :health -1))
         ;; normal step
