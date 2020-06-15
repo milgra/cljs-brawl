@@ -13,19 +13,21 @@
 (declare update-rag)
 
 
-(defn update-dragged [{update-fn :update-fn :as dragged}
+(defn update-dragged [dragged
                       {{:keys [head hip neck]} :masses :as dragger}
                       time]
-  (cond-> dragged
-    (not= update-fn update-rag) (assoc :update-fn update-rag)
-    true (assoc :hittimeout (+ time 5000))
-    true (assoc-in [:masses :hip :d] [0 0])
-    true (assoc-in [:masses :hip :p] (math2/add-v2 (:p head) [-20 0] ))
-    true (assoc-in [:masses :neck :d] [0 0])
-    true (assoc-in [:masses :neck :p] (math2/add-v2 [-20 0] (math2/add-v2 (:p head)(math2/rotate-90-ccw (math2/sub-v2 (:p neck) (:p hip))))))))
+  (-> dragged
+    (assoc :hittimeout (+ time 5000))
+    (assoc-in [:masses :hip :d] [0 0])
+    (assoc-in [:masses :hip :p] (math2/add-v2 (:p head) [-20 0] ))
+    (assoc-in [:masses :neck :d] [0 0])
+    (assoc-in [:masses :neck :p] (math2/add-v2 [-20 0] (math2/add-v2 (:p head)(math2/rotate-90-ccw (math2/sub-v2 (:p neck) (:p hip))))))))
 
 
-(defn update-gun [{s :s :as gun} {{hand_l :hand_l elbow_l :elbow_l} :masses :keys [bullets facing commands action-sent] {:keys [shoot] } :control :as actor}]
+(defn update-gun [{s :s :as gun}
+                  {{hand_l :hand_l elbow_l :elbow_l} :masses
+                   :keys [bullets facing commands action-sent]
+                   {:keys [shoot]} :control :as actor}]
   (assoc gun
          :p (:p hand_l)
          :f (- facing)
@@ -41,9 +43,12 @@
     [r g b a]))
   
 
-(defn init [x y id color basemetrics level]
+(defn init
+  "create new actor data"
+  [x y id color basemetrics level]
   (let [bases {:base_l   (phys2/mass2 (+ x 20.0) y 2.0 1.0 0.0 0.0)
-               :base_r   (phys2/mass2 (- x 20.0) y 2.0 1.0 0.0 0.0)}    
+               :base_r   (phys2/mass2 (- x 20.0) y 2.0 1.0 0.0 0.0)}
+        
         masses {:head    (phys2/mass2 x y 4.0 1.0 0.5 0.6)
                 :neck    (phys2/mass2 x y 4.0 1.0 0.5 0.6)
                 :hip     (phys2/mass2 x y 4.0 1.0 0.5 0.6)
@@ -55,7 +60,9 @@
                 :knee_r  (phys2/mass2 x y 4.0 1.0 0.5 0.6)
                 :foot_l  (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.5 0.6)
                 :foot_r  (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.5 0.6)}
+        
         metrics (metrics/generate-metrics basemetrics)
+
         dguards [(phys2/dguard2 masses :head :neck (:headl metrics) 0.0)
                  (phys2/dguard2 masses :neck :hip (:bodyl metrics) 0.0)
                  (phys2/dguard2 masses :neck :elbow_l (* 0.5 (:arml metrics)) 0.0)
@@ -66,6 +73,7 @@
                  (phys2/dguard2 masses :hip :knee_r (* 0.5 (:legl metrics)) 0.0)
                  (phys2/dguard2 masses :knee_l :foot_l (* 0.5 (:legl metrics)) 0.0)
                  (phys2/dguard2 masses :knee_r :foot_r (* 0.5 (:legl metrics)) 0.0)]
+
         aguards [(phys2/aguard2 masses :head :neck :hip 0 Math/PI 0.5)
                  (phys2/aguard2 masses :hip :knee_l :foot_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
                  (phys2/aguard2 masses :hip :knee_r :foot_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
@@ -84,6 +92,7 @@
      :facing 1.0
      :bullets 0
      :update-fn jump/update-jump
+     
      :commands []
      :idle-angle 0
      :dragged-gun nil

@@ -321,7 +321,7 @@
                                                 (let [dist (math2/length-v2 (math2/sub-v2 (:p ehip) (:p hip)))]
                                                   (if (and (< ehealth 0) (not= id eid) (not edragged) (< dist 150.0)) eid nil))) actors)))
 
-        dragged-actor (if nearby-actor (assoc (nearby-actor actors) :is-dragged true))
+        dragged-actor (if nearby-actor (assoc (nearby-actor actors) :is-dragged true :update-fn actor/update-rag))
         new-actor (cond-> actor
                     nearby-gun
                     (assoc :dragged-gun nearby-gun)
