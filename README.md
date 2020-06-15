@@ -31,6 +31,5 @@ Download/checkout the repo and start it up with :
 
 * refactor
 * randomize fix
-* check if all enemy is dead
 * improve buddy ai when attacking
 * continuous punch/kick/block

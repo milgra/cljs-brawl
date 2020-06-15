@@ -23,6 +23,8 @@
 (defn init []
   {:inited false
    :loaded false
+   :warntime 0
+   :warned nil ;; player reached the end without killing all enemy
    :guns {}
    :infos []
    :actors {}
@@ -128,8 +130,8 @@
 
 (defn calc-view-rect
   "calculates the visible rectangle of the world"
-  [{{:keys [actors] :as world} :world :as state}]  
-  (let [actor (:hero actors)
+  [{{:keys [actors warned warntime] :as world} :world :as state} time]  
+  (let [actor (if (or (> time warntime) (= nil warned)) (:hero actors) (warned actors))
         [fax fay] (:p (get-in actor [:bases :base_l]))
         [fbx fby] (:p (get-in actor [:bases :base_r]))
         [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2) -50.0)  ]
@@ -143,16 +145,25 @@
         (assoc-in [:world :projection] new-proj))))
 
 
-(defn check-ended [{:keys [commands-world] {:keys [actors finished endpos] :as world} :world :as state}]
+(defn check-ended [{:keys [commands-world] {:keys [actors finished warned warntime endpos] :as world} :world :as state} time]
   (let [[ex ey] endpos
         [bx by] (get-in actors [:hero :bases :base_l :p])
         dx (- bx ex)
         dy (- by ey)
-        ended? (if (and (< (Math/abs dx) 50.0) (< (Math/abs dy) 50)) true false)
-        new-commands (if (and (not finished) ended?) (conj commands-world {:text "next-level"}) commands-world)]
-    (-> state
-        (assoc :commands-world new-commands)
-        (assoc-in [:world :finished] ended?))))
+        ended? (if (and (< (Math/abs dx) 50.0) (< (Math/abs dy) 50)) true false)]
+    (if-not ended?
+      (assoc-in state [:world :warned] nil)
+      (let [all-dead (filter (fn [{:keys [health color]}] (and (> health 0) (not= color 0xFF0000FF))) (vals actors))
+            new-commands (if (and (not finished) ended?) (conj commands-world {:text "next-level"}) commands-world)]
+        (if (empty? all-dead)
+          (-> state
+              (assoc :commands-world new-commands)
+              (assoc-in [:world :finished] ended?))
+          (if-not warned
+            (-> state
+                (assoc-in [:world :warntime] (+ time 1000))
+                (assoc-in [:world :warned] (:id (first all-dead))))
+            state))))))
 
 
 (defn update-particles [{{:keys [particles view-rect]} :world :as state}]
@@ -221,8 +232,8 @@
         (extract-actor-commands)
         (update-guns)
         (update-dragged time)
-        (check-ended)
-        (calc-view-rect)
+        (check-ended time)
+        (calc-view-rect time)
         (update-particles))))
 
 
@@ -232,7 +243,7 @@
     (assoc-in state [:world :particles] seeds)))
  
 
-(defn reset-world [{:keys [level world world-drawer metrics] :as state} msg]
+(defn reset-world [{:keys [level world world-drawer metrics] :as state} msg time]
   (if (and msg (= (:id msg) "level"))
     (let [svglevel (:shapes msg)
           points (map :path (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) svglevel ))
@@ -245,6 +256,8 @@
                         :infos []
                         :inited true
                         :loaded true
+                        :warned nil
+                        :warntime 0
                         :finished false
                         :particles []
                         :surfaces surfaces
@@ -254,7 +267,7 @@
         true (assoc :world-drawer newdrawer)
         true (assoc :world newworld)
         true (assoc :commands-world [])
-        true (calc-view-rect)
+        true (calc-view-rect time)
         true (init-seeds)
         (= level 0) (brawlui/load-ui layouts/generator)
         (= level 0) (brawlui/update-gen-sliders)

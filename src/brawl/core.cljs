@@ -179,7 +179,7 @@
                           (update-controls message)
                           ;; world
                           (world/execute-commands time)
-                          (world/reset-world message)
+                          (world/reset-world message time)
                           (world/update-world message time 1.0)
                           ;; ui
                           (brawlui/execute-commands message)
