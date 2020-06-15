@@ -131,12 +131,18 @@
 
 (defn hitpoint
   "get hitpoint"
-  [{{:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r]} :masses health :health col :color update-fn :update-fn :as actor} {:keys [id base color target radius]}]
-  (let [[dx dy] (math2/sub-v2 base (:p hip))]
-    (if (and (not= id (:id actor)) (< dx radius) (< dy radius) (not= update-fn update-rag) (not= color col))
+  [{:keys [id health color update-fn]
+    {:keys [head neck hip knee_l knee_r foot_l foot_r]} :masses :as actor}
+   {:keys [base target radius] :as enemy}]
+  
+  (let [[dx dy] (math2/sub-v2 base (:p hip))
+        nearby? (and (< dx radius) (< dy radius))
+        not-rag? (not= update-fn update-rag)
+        diff-actor? (not= id (:id enemy))
+        diff-color? (not= color (:color enemy))]
+
+    (if (and diff-actor? diff-color? nearby? not-rag?)
       (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
-            hitsm (math2/resize-v2 hitv (if (< health 20) 10 2))
-            hitbg (math2/resize-v2 hitv (if (< health 20) 20 4))
             
             headv (math2/sub-v2 (:p neck) (:p head))
             bodyv (math2/sub-v2 (:p hip) (:p neck))
@@ -153,14 +159,20 @@
 
 (defn hit
   "hit actor"
-  [{:keys [health metrics update-fn]
+  [{:keys [id health color metrics update-fn]
     {:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r] :as masses} :masses
     {:keys [block] :as control} :control col :color :as actor}
-   {:keys [id color base target power radius facing] :as command}
+   {:keys [base target power radius facing] :as command}
    time]
 
-  (let [[dx dy] (math2/sub-v2 base (:p hip))]
-    (if-not (and (not= id (:id actor)) (< dx radius) (< dy radius) (not= update-fn update-rag) (not= color col) (> health 0))
+  (let [[dx dy] (math2/sub-v2 base (:p hip))
+        alive? (> health 0)
+        nearby? (and (< dx radius) (< dy radius))
+        not-rag? (not= update-fn update-rag)
+        diff-actor? (not= id (:id command))
+        diff-color? (not= color (:color command))]
+
+    (if-not (and diff-actor? diff-color? nearby? not-rag? alive?)
       actor
       (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
             hitsm (math2/resize-v2 hitv (if (< health 20) 10 2))
