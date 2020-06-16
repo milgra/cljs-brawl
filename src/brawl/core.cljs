@@ -130,14 +130,14 @@
       (let [buffer-points (cond-> buffer-triangle
                               true (floatbuffer/empty!)
                               true ((partial reduce (fn [oldbuf particle] (particle/get-point particle oldbuf))) particles)
-                              physics ((partial reduce (fn [oldbuf [id actor]] (actorskin/getpoints actor oldbuf view-rect))) actors))]
+                              physics ((partial reduce (fn [oldbuf [id actor]] (actorskin/get-points actor oldbuf view-rect))) actors))]
         
         ;; draw points
         (webgl/drawpoints! world-drawer projection buffer-points)
         
         (let [buffer-line (cond-> buffer-points
                               true (floatbuffer/empty!)
-                              physics ((partial reduce (fn [oldbuf [id actor]] (actorskin/getlines actor oldbuf view-rect))) actors)
+                              physics ((partial reduce (fn [oldbuf [id actor]] (actorskin/get-lines actor oldbuf view-rect))) actors)
                               physics (floatbuffer/append! surfacelines))]
           ;; draw lines
           (if physics (webgl/drawlines! world-drawer projection buffer-line))
