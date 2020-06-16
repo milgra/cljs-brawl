@@ -98,7 +98,7 @@
   "hittest actors and modify if hit happened"
   [{{:keys [actors particles]} :world sounds :sounds :as state} {id :id :as command} time]
   (let [sender (id actors)]
-    (if-not (:dragged-body sender)
+    (if-not (:dragged-body (:drag sender))
       ;; normal kick/puncj
       (let [main-dir (math2/resize-v2 (math2/sub-v2 (:target command) (:base command)) 4.0)
             contacts (remove nil? (map (fn [[id actor]]
@@ -117,13 +117,16 @@
             (assoc-in [:world :particles] (concat particles new-particles))
             (assoc-in [:world :actors] new-actors)))
       ;; throw dragged body
-      (let [dragged ((:dragged-body sender) actors)
+      (let [dragged ((:dragged-body (:drag sender)) actors)
             masses (:masses dragged)
             newmasses (reduce (fn [res [id mass]] ; reset mass directions for next rag
                                       (assoc res id (assoc mass :d [(+ (* 6.0 (:facing sender)) (* (:speed sender) 0.5)) -5])))
                                     masses
                                     masses)
-            newdragged (assoc dragged :masses newmasses :injure-when-dropped true :is-dragged false)
+            newdragged (-> dragged
+                           (assoc :masses newmasses)
+                           (assoc-in [:drag :injure-when-dropped] true)
+                           (assoc-in [:drag :is-dragged] false))
             newsender (assoc sender :dragged-body nil)]
         (-> state
             (assoc-in [:world :actors id] newsender)
@@ -174,7 +177,7 @@
 
 
 (defn update-guns [{{:keys [guns actors] :as world} :world :as state}]
-  (let [new-guns (reduce (fn [result [id {:keys [dragged-gun] :as actor}]]
+  (let [new-guns (reduce (fn [result [id {{:keys [dragged-gun]} :drag :as actor}]]
                            (if-not dragged-gun
                              result
                              (assoc result dragged-gun (actor/update-gun (dragged-gun guns) actor)))) guns actors)]
@@ -182,7 +185,7 @@
 
 
 (defn update-dragged [{{:keys [guns actors] :as world} :world :as state} time]
-  (let [new-actors (reduce (fn [result [id {:keys [dragged-body] :as actor}]]
+  (let [new-actors (reduce (fn [result [id {{:keys [dragged-body]} :drag :as actor}]]
                            (if-not dragged-body
                              result
                              (assoc result dragged-body (actor/update-dragged (dragged-body result) actor time)))) actors actors)]
@@ -312,25 +315,28 @@
       (assoc-in [:world :loaded] false)))
 
 
-(defn pickup-object [{{:keys [actors guns dragged-gun dragged-body]} :world :as oldstate} {:keys [id text]}]
+(defn pickup-object [{{:keys [actors guns]} :world {:keys [dragged-gun dragged-body]} :drag :as oldstate} {:keys [id text]}]
   (let [actor (id actors)
         {{hip :hip} :masses color :color :as actor} actor
         ;; look for gun
         nearby-gun (first (remove nil? (map (fn [[_ {:keys [id p d]}]]
                                               (if-not (< (math2/length-v2 (math2/sub-v2 p (:p hip))) 80.0) nil id)) guns)))
 
-        nearby-actor (first (remove nil? (map (fn [[_ {{ehip :hip} :masses ecolor :color ehealth :health eid :id edragged :is-dragged}]]
+        nearby-actor (first (remove nil? (map (fn [[_ {{ehip :hip} :masses ecolor :color ehealth :health eid :id {edragged :is-dragged} :drag}]]
                                                 (let [dist (math2/length-v2 (math2/sub-v2 (:p ehip) (:p hip)))]
                                                   (if (and (< ehealth 0) (not= id eid) (not edragged) (< dist 150.0)) eid nil))) actors)))
 
-        dragged-actor (if nearby-actor (assoc (nearby-actor actors) :is-dragged true :update-fn actor/update-rag))
+        dragged-actor (if nearby-actor
+                        (-> (nearby-actor actors)
+                            (assoc-in [:drag :is-dragged] true)
+                            (assoc :next-mode :rag)))
         new-actor (cond-> actor
                     nearby-gun
-                    (assoc :dragged-gun nearby-gun)
+                    (assoc-in [:drag :dragged-gun] nearby-gun)
                     nearby-gun
                     (assoc :bullets 6)
                     nearby-actor
-                    (assoc :dragged-body nearby-actor))]
+                    (assoc-in [:drag :dragged-body] nearby-actor))]
     (cond-> oldstate
         true (assoc-in [:world :actors id] new-actor)
         nearby-actor (assoc-in [:world :actors nearby-actor] dragged-actor))))

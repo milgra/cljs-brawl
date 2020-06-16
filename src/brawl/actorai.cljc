@@ -39,6 +39,7 @@
 (defn update-idle
   "look for enemy, if there's no enemy and if our color is red look for hero to follow"
   [{:keys [color ai-timeout id]
+    {ai-timeout :timeout} :ai
     {{pos :p} :head} :masses :as state}
    actors
    time]
@@ -52,21 +53,22 @@
         ;; change to follow state
         (-> state
             (assoc :pickup-sent false)
-            (assoc :ai-target target)
-            (assoc :ai-timeout (+ time 100 (rand-int 100)))
-            (assoc :ai-state :follow))
+            (assoc-in [:ai :target] target)
+            (assoc-in [:ai :timeout] (+ time 100 (rand-int 100)))
+            (assoc-in [:ai :state] :follow))
         ;; if no target re-check everything after 1 sec
         (-> state
             (assoc-in [:control :down] false)
             (assoc-in [:control :punch] false)
             (assoc-in [:control :kick] false)
             (assoc-in [:control :block] false)
-            (assoc :ai-timeout (+ time 200 (rand-int 200))))))))
+            (assoc-in [:ai :timeout] (+ time 200 (rand-int 200))))))))
 
 
 (defn update-follow
   "go after enemy/hero"
-  [{:keys [id color ai-state ai-timeout ai-target dragged-body vert-direction]
+  [{:keys [id color dragged-body vert-direction]
+    {ai-state :state ai-timeout :timeout ai-target :target} :ai
     {{[x y :as pos] :p} :head} :masses
     {:keys [arml legl]} :metrics
     :as state}
@@ -92,19 +94,19 @@
         reached (let [newstate (-> state
                                    (assoc-in [:control :left] false)
                                    (assoc-in [:control :right] false)
-                                   (assoc :ai-timeout (+ time 200)))]
+                                   (assoc-in [:ai :timeout] (+ time 200)))]
                   (if (and (= color 0xFF0000FF) (= ai-target :hero))
-                    (assoc newstate :ai-state :idle)
+                    (assoc-in newstate [:ai :state] :idle)
                     (if (and dead (not= ai-target :hero))
                       ;; pick up body, in next idle state we will find our enemy
                       (-> newstate
-                          (assoc :ai-state :idle)
+                          (assoc-in [:ai :state] :idle)
                           (assoc-in [:control :down] true)
-                          (assoc :ai-timeout (+ time 100)))
+                          (assoc-in [:ai :timeout] (+ time 100)))
                       ;; attack enemy
                       (cond-> newstate
-                        true (assoc :ai-timeout (+ time 100))
-                        true (assoc :ai-state :attack)
+                        true (assoc-in [:ai :timeout] (+ time 100))
+                        true (assoc-in [:ai :state] :attack)
                         true (assoc-in [:control :down] (if (= (rand-int 2) 0) true false))
                         true (assoc-in [:control :down] false)
                         (= pick 0) (assoc-in [:control :punch] true)
@@ -112,7 +114,7 @@
                         (= pick 2) (assoc-in [:control :block] true)))))
         ;; follow target
         :else (cond-> state
-                true (assoc :ai-timeout (+ time 100))
+                true (assoc [:ai :timeout] (+ time 100))
                 true (assoc :vert-direction new-direction) 
                 (<= x (- px arml)) (assoc-in [:control :right] true)
                 (<= x (- px arml)) (assoc-in [:control :left] false)
@@ -123,7 +125,8 @@
 
 (defn update-attack
   "keep last move until timeout"
-  [{:keys [id color level ai-state ai-timeout ai-target]
+  [{:keys [id color level]
+    {ai-state :state ai-timeout :timeout ai-target :target} :ai
     {{[x y :as pos] :p} :head} :masses
     {:keys [arml legl]} :metrics
     :as state}
@@ -145,17 +148,19 @@
                          (assoc-in [:control :block] false))]
         (if (and target (= 1 (rand-int 2)))
            (-> newstate
-              (assoc :ai-state :follow)
-              (assoc :ai-target target)
-              (assoc :ai-timeout (+ time 200)))
+              (assoc-in [:ai :state] :follow)
+              (assoc-in [:ai :target] target)
+              (assoc-in [:ai :timeout] (+ time 200)))
           (-> newstate
-              (assoc :ai-state :follow)
-              (assoc :ai-timeout (+ time 200 (rand-int 20) (* level -30)))))))))
+              (assoc-in [:ai :state] :follow)
+              (assoc-in [:ai :timeout] (+ time 200 (rand-int 20) (* level -30)))))))))
 
 
 ;; after every action ai should reconsider finding new enemy, finding dead body, following, etc
 (defn update-ai
-  [{:keys [id color ai-state ai-timeout ai-target] {{[x y :as pos] :p} :head} :masses
+  [{:keys [id color]
+    {ai-state :state ai-timeout :timeout ai-target :target} :ai
+    {{[x y :as pos] :p} :head} :masses
     {:keys [arml legl]} :metrics
     :as state} control surfaces actors time delta]
   (if control

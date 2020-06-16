@@ -86,40 +86,40 @@
      :curr-mode :jump
      :next-mode nil
      :health (+ 100.0 (* level 50.0))
-     :bullets 0
-     :commands [] ;; command collector
      :control (default-control)
+     :commands [] ;; command collector
+     ;; step related
+     :step {:order {:active :base_l :passive :base_r}
+            :target nil
+            :surfaces {:active nil :passive nil}
+            :length 0
+            :zone []}
+     ;; skin related
+     :skin {:color (math/int-to-rgba color)
+            :randoms (vec (repeatedly 40 #(+ -1.5 (rand 3))))}
+     ;; ai related
+     :ai {:state :idle
+          :target nil
+          :timeout 0}
+     ;; drag related
+     :drag {:dragged-gun nil
+            :dragged-body nil
+            :is-dragged false
+            :injure-when-dropped false}
+
+     :attack {:bullets 0}
+     
      :pickup-sent false
      :action-sent false
-     :is-dragged false
-     :injure-when-dropped false
-     ;; ai state
-     :ai-state :idle
-     :ai-target nil
-     :ai-timeout 0
-     ;; movement
      :speed -2.0
      :facing 1.0
      :idle-angle 0
      :vert-direction 1
      :squat-size 0
-
-     :step {:order {:active :base_l :passive :base_r}
-            :target nil
-            :surfaces {:active nil :passive nil}
-            :length 0}
-     
      :punch-hand :hand_l
      :punch-y 0
      :kick-y 0
-     :jump-state 0
-     ;; dragged objects
-     :dragged-gun nil
-     :dragged-body nil
-     ;; skin drawing related
-     :colorf (math/int-to-rgba color)
-     :randoms (vec (repeatedly 40 #(+ -1.5 (rand 3))))
-     :step-zone [x y]}))
+     :jump-state 0}))
 
 
 (defn check-death
@@ -245,7 +245,8 @@
   "update points of gun based on dragged"
   [{s :s :as gun}
    {{hand_l :hand_l elbow_l :elbow_l} :masses
-    :keys [bullets facing commands action-sent]
+    :keys [facing commands action-sent]
+    {bullets :bullets} :attack
     {:keys [shoot]} :control :as actor}]
   (assoc gun
          :p (:p hand_l)
@@ -258,8 +259,8 @@
   "change mode to idle"
   [state surfaces]
   (-> state
-      (assoc :is-dragged false)
-      (assoc :injure-when-dropped false)
+      (assoc-in [:drag :is-dragged] false)
+      (assoc-in [:drag :injure-when-dropped] false)
       (assoc :next-mode nil)
       (assoc :curr-mode :idle)))
 

@@ -36,6 +36,7 @@
                   c d 1 1 1 1 u v 1 1 1 1 ;; neck -> elbow_r
                   u v 1 1 1 1 x y 1 1 1 1 ;; elbow_r -> hand_r
                   )))
+    ;; step-zone?
     floatbuffer))
 
 (defn gen-tube-triangles [buf points sizes [x y z w]]
@@ -122,10 +123,9 @@
    {{:keys [head neck elbow_l elbow_r hand_l hand_r knee_l knee_r foot_l foot_r] {[x y] :p :as hip} :hip} :masses
     {:keys [headw neckw armw hipw legw cola colb colc cold]} :metrics
     {{af :active pf :passive} :order {as :active ps :passive} :surfaces} :step
+    {color :color randoms :randoms} :skin
     facing :facing
-    randoms :randoms
-    health :health
-    color :colorf}
+    health :health}
    variation
    [l r b t]]
   (if (and (< l x) (> r x) (< t y) (> b y)) 

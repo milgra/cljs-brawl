@@ -44,7 +44,8 @@
 
 (defn move-hand-walk
   "move head point"
-  [{:keys [id facing color punch-hand action-sent commands speed bullets punch-y]
+  [{:keys [id facing color punch-hand action-sent commands speed punch-y]
+    {bullets :bullets} :attack
     {{[hx hy] :p} :hip {[nx ny :as neck] :p} :neck } :masses
     {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
     {arml :arml} :metrics angle :idle-angle
@@ -87,7 +88,7 @@
     (-> state
         (assoc :commands newcommands)
         (assoc :action-sent (if (and (or punch shoot) (not action-sent)) true action-sent))
-        (assoc :bullets (if (and shoot (not action-sent)) (dec bullets) bullets))
+        (assoc-in [:attack :bullets] (if (and shoot (not action-sent)) (dec bullets) bullets))
         (assoc-in [:masses :hand_l :p] hand_l)
         (assoc-in [:masses :hand_r :p] hand_r)
         (assoc-in [:masses :elbow_l :p] elbow_l)
@@ -232,17 +233,15 @@
             (assoc :health -1))
         ;; normal step
         (-> state
-            (assoc :step-zone {:A (:A step-zone)
-                               :B (math2/add-v2 (:A step-zone)(:B step-zone))
-                               :C (math2/add-v2 (:A step-zone)(:C step-zone))})
+            (assoc-in [:step :zone] {:A (:A step-zone)
+                                     :B (math2/add-v2 (:A step-zone)(:B step-zone))
+                                     :C (math2/add-v2 (:A step-zone)(:C step-zone))})
             (assoc-in [:step :length] (math2/length-v2 (math2/sub-v2 base-target (:p (bases (:active base-order))))))
-            (assoc :dostep! false)
             (assoc-in [:step :order] base-order)
             (assoc-in [:step :target] base-target)
             (assoc-in [:step :surfaces] {:active newactivesurf :passive (or newpassivesurf newactivesurf)})))
       ;; too steep slope, stop stepping
       (-> state
-          (assoc :dostep! false)
           (assoc :speed 0.0)))))
 
     
