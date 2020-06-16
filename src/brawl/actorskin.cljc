@@ -121,8 +121,7 @@
   [floatbuffer
    {{:keys [head neck elbow_l elbow_r hand_l hand_r knee_l knee_r foot_l foot_r] {[x y] :p :as hip} :hip} :masses
     {:keys [headw neckw armw hipw legw cola colb colc cold]} :metrics
-    {af :active pf :passive} :base-order
-    {as :active ps :passive} :base-surfaces
+    {{af :active pf :passive} :order {as :active ps :passive} :surfaces} :base
     facing :facing
     randoms :randoms
     health :health

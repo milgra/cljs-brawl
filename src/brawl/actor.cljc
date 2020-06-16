@@ -103,9 +103,9 @@
      :idle-angle 0
      :vert-direction 1
      :squat-size 0
-     :base-order {:active :base_l :passive :base_r}
-     :base-target nil
-     :base-surfaces {:active nil :passive nil}
+
+     :base {:order {:active :base_l :passive :base_r} :target nil :surfaces {:active nil :passive nil}}
+     
      :punch-hand :hand_l
      :punch-y 0
      :kick-y 0
@@ -302,7 +302,7 @@
         state-new (-> state
                       (assoc :jump-state 0) ; reset jump state
                       (assoc :next-mode nil)
-                      (assoc :base-target nil) ; reset stepping
+                      (assoc-in [:base :target] nil) ; reset stepping
                       (assoc :curr-mode :walk)
                       (assoc :masses masses-new))]
     (cond-> state-new
