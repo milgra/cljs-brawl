@@ -35,7 +35,7 @@
   "move active base towards target point"
   [{:keys [id color speed step-length facing action-sent commands]
     {{[hx hy] :p} :hip :as masses } :masses
-    {base-order :order base-target :target} :base
+    {base-order :order base-target :target} :step
     {base_l :base_l base_r :base_r} :bases
     {legl :legl runs :runs walks :walks} :metrics
     {kick :kick} :control

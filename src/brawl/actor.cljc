@@ -104,13 +104,15 @@
      :vert-direction 1
      :squat-size 0
 
-     :base {:order {:active :base_l :passive :base_r} :target nil :surfaces {:active nil :passive nil}}
+     :step {:order {:active :base_l :passive :base_r}
+            :target nil
+            :surfaces {:active nil :passive nil}
+            :length 0}
      
      :punch-hand :hand_l
      :punch-y 0
      :kick-y 0
      :jump-state 0
-     :step-length 0
      ;; dragged objects
      :dragged-gun nil
      :dragged-body nil

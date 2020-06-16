@@ -97,7 +97,7 @@
 (defn move-hip-walk
   "move hip points, handle jumping"
   [ {:keys [next-mode jump-state idle-angle facing speed squat-size]
-     {base-order :order} :base
+     {base-order :order} :step
      {:keys [down up left right run kick]} :control
      {{[hx hy] :p} :hip } :masses
      {{[lx ly] :p} :base_l {[rx ry] :p} :base_r} :bases
@@ -136,7 +136,7 @@
 
 
 (defn move-knee-walk
- [{:keys [masses speed step-length facing] {legl :legl} :metrics {base-order :order base-target :target} :base :as state}]
+ [{:keys [masses speed facing] {legl :legl} :metrics {base-order :order base-target :target} :step :as state}]
   (let [knee_l (triangle_with_bases (get-in masses [:foot_l :p]) (get-in masses [:hip :p]) (/ legl 1.95) facing)
         knee_r (triangle_with_bases (get-in masses [:foot_r :p]) (get-in masses [:hip :p]) (/ legl 1.95) facing)]
     (-> state
@@ -146,7 +146,7 @@
 
 (defn move-feet-walk-still 
   "do kick if needed"
-  [{:keys [id color bases masses speed step-length facing action-sent commands kick-y] {base-order :order base-target :target} :base {legl :legl runs :runs walks :walks} :metrics {kick :kick} :control :as state}
+  [{:keys [id color bases masses speed facing action-sent commands kick-y] {base-order :order base-target :target} :step {legl :legl runs :runs walks :walks} :metrics {kick :kick} :control :as state}
    surfaces]
   (let [active-base (:active base-order)
         passive-base (:passive base-order)
@@ -173,7 +173,7 @@
         (assoc :action-sent (if (and kick (not action-sent)) true action-sent))
         (assoc-in [:masses :foot_l :p] foot_l) 
         (assoc-in [:masses :foot_r :p] foot_r)
-        (assoc-in [:base :target] nil))))
+        (assoc-in [:step :target] nil))))
 
 
 (defn get-step-zone
@@ -201,7 +201,7 @@
 
 (defn step-feet-walk
   "puts a triangle from the passive base on the surfaces, collision ponit is the new base target for the active base"
-  [{ :keys [bases masses speed vert-direction] {base-surfaces :surfaces} :base :as state}
+  [{ :keys [bases masses speed vert-direction] {base-surfaces :surfaces} :step :as state}
    surfaces
    time]
   ; speed must not be 0
@@ -235,11 +235,11 @@
             (assoc :step-zone {:A (:A step-zone)
                                :B (math2/add-v2 (:A step-zone)(:B step-zone))
                                :C (math2/add-v2 (:A step-zone)(:C step-zone))})
-            (assoc :step-length (math2/length-v2 (math2/sub-v2 base-target (:p (bases (:active base-order))))))
+            (assoc-in [:step :length] (math2/length-v2 (math2/sub-v2 base-target (:p (bases (:active base-order))))))
             (assoc :dostep! false)
-            (assoc-in [:base :order] base-order)
-            (assoc-in [:base :target] base-target)
-            (assoc-in [:base :surfaces] {:active newactivesurf :passive (or newpassivesurf newactivesurf)})))
+            (assoc-in [:step :order] base-order)
+            (assoc-in [:step :target] base-target)
+            (assoc-in [:step :surfaces] {:active newactivesurf :passive (or newpassivesurf newactivesurf)})))
       ;; too steep slope, stop stepping
       (-> state
           (assoc :dostep! false)
@@ -248,8 +248,8 @@
     
 (defn move-feet-walk
   "move active base towards target point"
-  [{:keys [bases masses speed step-length facing kick-pressed] {legl :legl runs :runs walks :walks} :metrics
-    {base-order :order base-target :target} :base
+  [{:keys [bases masses speed facing kick-pressed] {legl :legl runs :runs walks :walks} :metrics
+    {step-length :length base-order :order base-target :target} :step
     {kick :kick} :control :as state}
    surfaces
    time
