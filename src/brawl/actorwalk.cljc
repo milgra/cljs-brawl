@@ -17,50 +17,54 @@
 
 (defn send-commands
   "send commands if needed"
-  [{:keys [id commands pickup-sent]
-    {:keys [gun body]} :drag
-    {pickup-sent :pickup-sent} :attack 
-    {:keys [down]} :control :as state}]
-  (if (and down (or (= nil gun) (= nil body)) (not pickup-sent))
-    (-> state
-        (update :commands into [{:text "pickup" :id id}])
-        (assoc-in [:attack :pickup-sent] true))
-  state))
+  [actor]
+  (let [{:keys [id commands pickup-sent]} actor
+        {:keys [gun body]} (:drag actor)
+        {:keys [pickup-sent]} (:attack actor) 
+        {:keys [down]} (:control actor)]
+    (if (and down (or (= nil gun) (= nil body)) (not pickup-sent))
+      (-> actor
+          (update :commands into [{:text "pickup" :id id}])
+          (assoc-in [:attack :pickup-sent] true))
+      actor)))
 
 
 (defn move-head-walk
   "move head point"
-  [{:keys [facing speed] {{[hx hy] :p} :hip} :masses
-    {squat-size :squat-size} :walk
-    {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
-    {legl :legl bodyl :bodyl headl :headl} :metrics
-    {:keys [down up left right punch]} :control :as state}]
-  (let [nx (* facing (+ (* (Math/abs speed) 1.0) (/ (Math/abs (- bx ax )) 15.0 ))) ; head move forward and backwards when stepping
+  [actor]
+  (let [{:keys [facing speed]} actor
+        {:keys [punch]} (:control actor)
+        {:keys [squat-size]} (:walk actor)
+        {:keys [bodyl headl]} (:metrics actor)
+        {{[hx hy] :p} :hip} (:masses actor)
+        {{[ax ay] :p} :base_l {[bx by] :p} :base_r} (:bases actor)
+        nx (* facing (+ (* (Math/abs speed) 1.0) (/ (Math/abs (- bx ax )) 15.0 ))) ; head move forward and backwards when stepping
         nnx (* facing squat-size 0.5) ; head move even forward when squatting
         ny (* squat-size 0.25) ; head should move lower when squatting
         pnx (if punch (* facing 10.0) 0.0)
         neck [(+ hx nx nnx pnx) (- (+ hy ny) bodyl)]
         head [(+ hx nx nnx pnx) (- (+ hy ny) (+ bodyl headl))]]
-    (-> state
+    (-> actor
         (assoc-in [:masses :neck :p] neck)
         (assoc-in [:masses :head :p] head))))
 
 
 (defn move-hand-walk
   "move head point"
-  [{:keys [id facing color commands speed]
-    {bullets :bullets punch-hand :punch-hand punch-y :punch-y action-sent :action-sent} :attack
-    {{[hx hy] :p} :hip {[nx ny :as neck] :p} :neck } :masses
-    {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
-    {arml :arml} :metrics
-    {angle :idle-angle} :walk
-    {:keys [down up left right punch shoot block]} :control
-    :as state}
-   surfaces]
-  (let [nlx (+ (* facing (+ (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
+  [actor surfaces]
+  (let [{:keys [id facing color commands speed]} actor
+        {:keys [bullets punch-hand punch-y action-sent]} (:attack actor)
+        {{[hx hy] :p} :hip {[nx ny :as neck] :p} :neck } (:masses actor)
+        {{[ax ay] :p} :base_l {[bx by] :p} :base_r} (:bases actor)
+        {arml :arml} (:metrics actor)
+        {angle :idle-angle} (:walk actor)
+        {:keys [left right punch shoot block]} (:control actor)
+
+        nlx (+ (* facing (+ (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
         nrx (- (* facing (- (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
         nly (+ (* arml 0.1 ) (* (Math/cos angle ) 5.0))
         nry (- (* arml 0.14 )(* (Math/cos angle ) 5.0))
+        
         hand_l (cond
                  block [(+ nx (* facing arml 0.3)) (- ny (* arml 0.4))]
                  (or shoot (and punch (= punch-hand :hand_l) (not left) (not right))) [(+ nx (* facing arml 0.99)) (+ ny punch-y)]
@@ -69,8 +73,10 @@
                  block [(+ nx (* facing arml 0.3)) (- ny (* arml 0.4))]
                  (and punch (= punch-hand :hand_r) (not left) (not right)) [(+ nx (* facing arml 0.99)) (+ ny punch-y)]
                  :else [(+ nx nrx) (+ ny nry)])
+
         elbow_l (triangle_with_bases neck hand_l (* arml 0.5) facing)
         elbow_r (triangle_with_bases neck hand_r (* arml 0.5) facing)
+
         newcommands (cond-> commands
                       (and punch (not action-sent) (not left) (not right))
                       (into [{:id id
@@ -90,7 +96,7 @@
                               :facing facing
                               :color color
                               :power 110}]))]
-    (-> state
+    (-> actor
         (assoc :commands newcommands)
         (assoc-in [:attack :action-sent] (if (and (or punch shoot) (not action-sent)) true action-sent))
         (assoc-in [:attack :bullets] (if (and shoot (not action-sent)) (dec bullets) bullets))
