@@ -237,7 +237,7 @@
         ;; we have no surface under feet, fall
         (-> state
             (assoc :next-mode :rag)
-            (assoc :hittimeout time)
+            (assoc-in [:attack :hittimeout] time)
             (assoc :health -1))
         ;; normal step
         (-> state

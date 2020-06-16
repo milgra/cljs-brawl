@@ -64,6 +64,19 @@
    :run false })
 
 
+(defn default-walk
+  []
+  {:order {:active :base_l :passive :base_r}
+   :target nil
+   :surfaces {:active nil :passive nil}
+   :length 0
+   :zone []
+   :vert-direction 1
+   :squat-size 0
+   :jump-state 0
+   :idle-angle 0})
+
+
 (defn init
   "create new actor dataset"
   [x y id color basemetrics level]
@@ -91,15 +104,7 @@
      :control (default-control)
      :commands [] ;; command collector
      ;; walk related
-     :walk {:order {:active :base_l :passive :base_r}
-            :target nil
-            :surfaces {:active nil :passive nil}
-            :length 0
-            :zone []
-            :vert-direction 1
-            :squat-size 0
-            :jump-state 0
-            :idle-angle 0}
+     :walk (default-walk)
      ;; skin related
      :skin {:color (math/int-to-rgba color)
             :randoms (vec (repeatedly 40 #(+ -1.5 (rand 3))))}
@@ -118,7 +123,8 @@
               :punch-y 0
               :kick-y 0
               :action-sent false
-              :pickup-sent false}}))
+              :pickup-sent false
+              :hittimeout 0}}))
 
 
 (defn check-death
@@ -126,9 +132,9 @@
   [{:keys [id health] :as actor} time]
   (if (<= health 0)
     (cond-> actor
+      true (assoc-in [:drag :dragged-body] nil)
       true (assoc :next-mode :rag)
-      true (assoc :dragged-body nil)
-      true (assoc :hittimeout (+ time 2000))
+      true (assoc-in [:attack :hittimeout] (+ time 2000))
       (= id :hero ) (update :commands conj {:text "show-wasted"}))
     actor))
 
@@ -169,8 +175,10 @@
    base
    target]
   (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
+
         hitsm (math2/resize-v2 hitv 10)
         hitbg (math2/resize-v2 hitv 20)        
+
         neck-part (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p neck))))
         hip-part  (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p hip))))
         neck-ratio (if bodyisp (/ hip-part (:bodyl metrics)))
@@ -185,6 +193,7 @@
 
       footlisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
       footlisp (assoc-in [:masses :knee_l :d] (math2/add-v2 (:d knee_l) hitsm))
+
       footrisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
       footrisp (assoc-in [:masses :knee_r :d] (math2/add-v2 (:d knee_r) hitsm)))))
 
@@ -213,13 +222,13 @@
       (if (and block diff-facing?)
         ;; move actor slightly back when blocking and facing the sender
         (-> actor
-            (assoc :hittimeout (+ time 1000))
+            (assoc-in [:attack :hittimeout] (+ time 1000))
             (update :health - (/ power 2.0)) 
             (update :speed + (* facing (/ power 2.0)))
             (check-death time))
         ;; hit actor
         (-> actor
-            (assoc :hittimeout timeout )
+            (assoc-in [:attack :hittimeout] timeout )
             (assoc :next-mode :rag)
             (update :health - hitpower) 
             (update :speed + (* facing (/ power 2.0)))
@@ -233,7 +242,7 @@
    {{:keys [head hip neck]} :masses :as dragger}
    time]
   (-> dragged
-      (assoc :hittimeout (+ time 5000))
+      (assoc-in [:attack :hittimeout] (+ time 5000))
       (assoc-in [:masses :hip :d] [0 0])
       (assoc-in [:masses :hip :p] (math2/add-v2 (:p head) [-20 0] ))
       (assoc-in [:masses :neck :d] [0 0])
@@ -244,7 +253,7 @@
   "update points of gun based on dragged"
   [{s :s :as gun}
    {{hand_l :hand_l elbow_l :elbow_l} :masses
-    :keys [facing commands action-sent]
+    :keys [facing commands]
     {bullets :bullets} :attack
     {:keys [shoot]} :control :as actor}]
   (assoc gun
@@ -278,16 +287,16 @@
     {hip :hip :as masses} :masses
     {bl :base_l br :base_r} :bases :as state}
    surfaces]
-    (let [[hx hy] (:p hip)
-          [lx ly] (:p bl)
-          [rx ry] (:p br)]
-      (cond-> state
-        (= curr-mode :walk) (assoc-in [:bases :base_l :p] [(- hx 10.0) (- (min ly ry) 10.0)])
-        (= curr-mode :walk) (assoc-in [:bases :base_r :p] [(+ hx 10.0) (- (min ly ry) 10.0)])
-        (= curr-mode :walk) (assoc-in [:bases :base_l :d] [(/ speed 2) -10])
-        (= curr-mode :walk) (assoc-in [:bases :base_r :d] [(/ speed 2) -10])         
-        true (assoc :next-mode nil)
-        true (assoc :curr-mode :jump))))
+  (let [[hx hy] (:p hip)
+        [lx ly] (:p bl)
+        [rx ry] (:p br)]
+    (cond-> state
+      (= curr-mode :walk) (assoc-in [:bases :base_l :p] [(- hx 10.0) (- (min ly ry) 10.0)])
+      (= curr-mode :walk) (assoc-in [:bases :base_r :p] [(+ hx 10.0) (- (min ly ry) 10.0)])
+      (= curr-mode :walk) (assoc-in [:bases :base_l :d] [(/ speed 2) -10])
+      (= curr-mode :walk) (assoc-in [:bases :base_r :d] [(/ speed 2) -10])         
+      true (assoc :next-mode nil)
+      true (assoc :curr-mode :jump))))
 
 
 (defn change-mode-walk
@@ -316,8 +325,7 @@
 
 (defn change-mode
   "if next mode is set, switch to that mode"
-  [{:keys [masses next-mode speed curr-mode] {hip :hip fl :foot_l fr :foot_r :as masses} :masses
-    {ba :base_l bb :base_r} :bases :as state}
+  [{:keys [next-mode] :as state}
    surfaces]
   (cond
     (= next-mode nil) state
@@ -330,7 +338,10 @@
 
 (defn update-rag
   "update ragdoll state"
-  [{:keys [masses dguards hittimeout next-mode health injure-when-dropped is-dragged commands id] :as state }
+  [{:keys [masses dguards next-mode health commands id]
+    {:keys [injure-when-dropped is-dragged]} :drag
+    {hittimeout :hittimeout} :attack
+    :as state }
    surfaces
    time
    delta]
@@ -361,7 +372,10 @@
 
 (defn update-mode
   "update actor based on actual mode"
-  [{mode :curr-mode :as state} surfaces time delta]
+  [{mode :curr-mode :as state}
+   surfaces
+   time
+   delta]
   (case mode
     :rag (update-rag state surfaces time delta)
     :walk (walk/update-walk state surfaces time delta)
@@ -373,8 +387,7 @@
   "update controls if controlled by player"
   [{self-control :control
     {vert-direction :vert-direction} :walk
-    {punch-hand :punch-hand kick-y :kick-y punch-y :punch-y action-sent :action-sent pickup-sent :pickup-sent} :attack
-    :as state}
+    {:keys [punch-hand kick-y punch-y action-sent pickup-sent]} :attack :as state}
    {:keys [left right up down punch kick shoot block run] :as control}]
   (if-not control
     state
@@ -407,7 +420,8 @@
 
 (defn update-angle
   "update breathing angle of actor"
-  [{{angle :idle-angle} :walk health :health :as state} delta]
+  [{{angle :idle-angle} :walk health :health :as state}
+   delta]
   (cond-> state
     (and (< health 100.0) (> health 0.0)) (update :health + (* 0.05 delta)) 
     (> angle math/MPI2) (assoc-in [:walk :idle-angle] (- angle math/MPI2))
