@@ -6,7 +6,8 @@
 
 (defn move-head-jump
   "move head point"
-  [{:keys [facing squat-size kick-pressed] {{[hx hy] :p} :hip} :masses
+  [{:keys [facing kick-pressed] {{[hx hy] :p} :hip} :masses
+    {squat-size :squat-size} :step
     {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
     {legl :legl bodyl :bodyl headl :headl} :metrics
     {:keys [down up left right kick]} :control :as state}]
@@ -23,7 +24,7 @@
 
 (defn move-hip-jump
   "move hip points, handle jumping"
-  [{:keys [next jump-state] {{[hx hy] :p} :hip} :masses
+  [{:keys [next] {{[hx hy] :p} :hip} :masses
     {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
     { legl :legl } :metrics :as state}]
   (let [x (+ ax (/ (- bx ax) 2))

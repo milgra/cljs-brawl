@@ -27,7 +27,8 @@
 
 (defn move-head-walk
   "move head point"
-  [{:keys [facing squat-size punch-pressed speed] {{[hx hy] :p} :hip} :masses
+  [{:keys [facing speed] {{[hx hy] :p} :hip} :masses
+    {squat-size :squat-size} :step
     {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
     {legl :legl bodyl :bodyl headl :headl} :metrics
     {:keys [down up left right punch]} :control :as state}]
@@ -44,8 +45,8 @@
 
 (defn move-hand-walk
   "move head point"
-  [{:keys [id facing color punch-hand action-sent commands speed punch-y]
-    {bullets :bullets} :attack
+  [{:keys [id facing color action-sent commands speed]
+    {bullets :bullets punch-hand :punch-hand punch-y :punch-y} :attack
     {{[hx hy] :p} :hip {[nx ny :as neck] :p} :neck } :masses
     {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
     {arml :arml} :metrics angle :idle-angle
@@ -97,8 +98,8 @@
 
 (defn move-hip-walk
   "move hip points, handle jumping"
-  [ {:keys [next-mode jump-state idle-angle facing speed squat-size]
-     {base-order :order} :step
+  [ {:keys [next-mode idle-angle facing speed]
+     {base-order :order squat-size :squat-size jump-state :jump-state} :step
      {:keys [down up left right run kick]} :control
      {{[hx hy] :p} :hip } :masses
      {{[lx ly] :p} :base_l {[rx ry] :p} :base_r} :bases
@@ -132,8 +133,8 @@
     (-> state
         (assoc-in [:masses :hip :p] [fx fy])
         (assoc :next-mode newnext)
-        (assoc :squat-size squat-size)
-        (assoc :jump-state newstate))))
+        (assoc-in [:step :squat-size] squat-size)
+        (assoc-in [:step :jump-state] newstate))))
 
 
 (defn move-knee-walk
@@ -147,7 +148,11 @@
 
 (defn move-feet-walk-still 
   "do kick if needed"
-  [{:keys [id color bases masses speed facing action-sent commands kick-y] {base-order :order base-target :target} :step {legl :legl runs :runs walks :walks} :metrics {kick :kick} :control :as state}
+  [{:keys [id color bases masses speed facing action-sent commands]
+    {base-order :order base-target :target} :step
+    {legl :legl runs :runs walks :walks} :metrics
+    {kick-y :kick-y} :attack
+    {kick :kick} :control :as state}
    surfaces]
   (let [active-base (:active base-order)
         passive-base (:passive base-order)
@@ -202,7 +207,7 @@
 
 (defn step-feet-walk
   "puts a triangle from the passive base on the surfaces, collision ponit is the new base target for the active base"
-  [{ :keys [bases masses speed vert-direction] {base-surfaces :surfaces} :step :as state}
+  [{ :keys [bases masses speed] {base-surfaces :surfaces vert-direction :vert-direction} :step :as state}
    surfaces
    time]
   ; speed must not be 0

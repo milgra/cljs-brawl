@@ -85,6 +85,8 @@
      ;; internal state
      :curr-mode :jump
      :next-mode nil
+     :speed -2.0
+     :facing 1.0
      :health (+ 100.0 (* level 50.0))
      :control (default-control)
      :commands [] ;; command collector
@@ -93,7 +95,10 @@
             :target nil
             :surfaces {:active nil :passive nil}
             :length 0
-            :zone []}
+            :zone []
+            :vert-direction 1
+            :squat-size 0
+            :jump-state 0}
      ;; skin related
      :skin {:color (math/int-to-rgba color)
             :randoms (vec (repeatedly 40 #(+ -1.5 (rand 3))))}
@@ -106,20 +111,15 @@
             :dragged-body nil
             :is-dragged false
             :injure-when-dropped false}
-
-     :attack {:bullets 0}
+     ;; attack related
+     :attack {:bullets 0
+              :punch-hand :hand_l
+              :punch-y 0
+              :kick-y 0}
      
      :pickup-sent false
      :action-sent false
-     :speed -2.0
-     :facing 1.0
-     :idle-angle 0
-     :vert-direction 1
-     :squat-size 0
-     :punch-hand :hand_l
-     :punch-y 0
-     :kick-y 0
-     :jump-state 0}))
+     :idle-angle 0}))
 
 
 (defn check-death
@@ -303,7 +303,7 @@
                      (second (first feet-new))
                      (:p bl))
         state-new (-> state
-                      (assoc :jump-state 0) ; reset jump state
+                      (assoc-in [:step :jump-state] 0) ; reset jump state
                       (assoc :next-mode nil)
                       (assoc-in [:base :target] nil) ; reset stepping
                       (assoc :curr-mode :walk)
@@ -311,8 +311,8 @@
     (cond-> state-new
       (= curr-mode :rag) (assoc-in [:bases :base_l :p] feet-final)
       (= curr-mode :rag) (assoc-in [:bases :base_r :p] feet-final)
-      (= curr-mode :rag) (assoc :squat-size (* 1.0 (get-in state [:metrics :legl]))) ; squat when reaching ground
-      (= curr-mode :jump) (assoc :squat-size (* 0.5 (get-in state [:metrics :legl])))))) ; squat when reaching ground
+      (= curr-mode :rag) (assoc-in [:step :squat-size] (* 1.0 (get-in state [:metrics :legl]))) ; squat when reaching ground
+      (= curr-mode :jump) (assoc-in [:step :squat-size] (* 0.5 (get-in state [:metrics :legl])))))) ; squat when reaching ground
 
 
 (defn change-mode
@@ -372,26 +372,29 @@
 
 (defn update-controls
   "update controls if controlled by player"
-  [{:keys [punch-hand action-sent pickup-sent vert-direction] self-control :control :as state}
+  [{:keys [action-sent pickup-sent] self-control :control
+    {vert-direction :vert-direction} :step
+    {punch-hand :punch-hand kick-y :kick-y punch-y :punch-y} :attack
+    :as state}
    {:keys [left right up down punch kick shoot block run] :as control}]
   (if-not control
     state
     (let [p-hand (if (and (not (:punch self-control)) punch) ;; change only when punch state changes
                    (if (= punch-hand :hand_l) :hand_r :hand_l)
                  punch-hand) ;; else leave it as it was
-          punch-y (if (and (not (:punch self-control)) punch) (rand 15) (:punch-y state)) ;; punch height
-          kick-y (if (and (not (:kick self-control)) kick) (rand 30) (:kick-y state))] ;; kick height
+          punch-y (if (and (not (:punch self-control)) punch) (rand 15) punch-y) ;; punch height
+          kick-y (if (and (not (:kick self-control)) kick) (rand 30) kick-y)] ;; kick height
       (-> state
           
           (assoc :action-sent (if (and (not punch) (not kick) (not shoot)) false action-sent)) ;; set action sent to false if no action is happening
           (assoc :pickup-sent (if (not down) false pickup-sent)) ;; set it to false if no pickup is happening
-          (assoc :punch-hand p-hand)
-          (assoc :vert-direction (cond ;; change vertical direction in case of up/down
-                                   down -1
-                                   up 1
-                                   :else vert-direction))
-          (assoc :punch-y punch-y)
-          (assoc :kick-y kick-y)
+          (assoc-in [:attack :punch-hand] p-hand)
+          (assoc-in [:step :vert-direction] (cond ;; change vertical direction in case of up/down
+                                              down -1
+                                              up 1
+                                              :else vert-direction))
+          (assoc-in [:attack :punch-y] punch-y)
+          (assoc-in [:attack :kick-y] kick-y)
           (assoc-in [:control :punch] punch)
           (assoc-in [:control :kick] kick)
           (assoc-in [:control :shoot] shoot)
