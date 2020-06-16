@@ -1,7 +1,10 @@
 (ns brawl.metrics)
 
-(defn basemetrics-normalize [ {:keys [hitpower hitrate stamina speed height color_a color_b] :as base} mkey]
-  (let [half (- 1.25 (* height 0.5)) 
+(defn basemetrics-normalize
+  "normalize base values"
+  [base mkey]
+  (let [{:keys [hitpower hitrate stamina speed height color_a color_b]} base
+        half (- 1.25 (* height 0.5)) 
         hp (if (or (= mkey :hitrate) (= mkey :height)) (- half hitrate) hitpower) 
         hr (if (or (= mkey :hitpower) (= mkey :height)) (- half hitpower) hitrate)
         st (if (or (= mkey :speed) (= mkey :height)) (- half speed) stamina)
@@ -13,7 +16,9 @@
     (assoc base :hitpower nhp :hitrate nhr :stamina nst :speed nsp)))
 
 
-(defn basemetrics-default []
+(defn basemetrics-default
+  "default base metrics"
+  []
   (basemetrics-normalize
    {:height 0.5
     :hitpower 0.5
@@ -24,7 +29,9 @@
     :color_b [0.0 0.0 1.0 1.0]} :height))
 
 
-(defn basemetrics-random []
+(defn basemetrics-random
+  "rabdin base metrics"
+  []
   (basemetrics-normalize
    {:height (/ (rand 10) 10)
     :hitpower (/ (rand 10) 10)
@@ -35,8 +42,11 @@
     :color_b [1.0 (rand) (rand) 1.0]} :height))
 
 
-(defn generate-metrics [{:keys [hitpower hitrate stamina speed height color_a color_b] :as base}]
-  (let [hp (cond (> hitpower 1.0) 1.0 (< hitpower 0.0) 0.0 :else hitpower)
+(defn generate-metrics
+  "generate metrics based on base metrics"
+  [base]
+  (let [{:keys [hitpower hitrate stamina speed height color_a color_b]} base
+        hp (cond (> hitpower 1.0) 1.0 (< hitpower 0.0) 0.0 :else hitpower)
         hr (cond (> hitrate 1.0) 1.0 (< hitrate 0.0) 0.0 :else hitrate)
         st (cond (> stamina 1.0) 1.0 (< stamina 0.0) 0.0 :else stamina)
         sp (cond (> speed 1.0) 1.0 (< speed 0.0) 0.0 :else speed)
@@ -76,13 +86,12 @@
 
         drb (if (> rb 0.2) (- rb 0.2) rb)
         dgb (if (> gb 0.2) (- gb 0.2) gb)
-        dbb (if (> bb 0.2) (- bb 0.2) bb)
-        ; TODO bodyw needed?
-        result {:headl headl :bodyl bodyl :arml arml :legl legl ; lengths
-                :headw headw :neckw neckw :armw armw :bodyw headw :hipw hipw :legw legw ; widths
-                :walks walks :runs runs   :punchs punchs :kicks kicks ; speed
-                :maxp maxp :hitp hitp  :kickp kickp :maxh maxh ; power and health
-                :cola color_a :colb [dra dga dba 1.0] :colc color_b :cold [drb dgb dbb 1.0]
-                :base base}] ; colors
-    result))
+        dbb (if (> bb 0.2) (- bb 0.2) bb)]
+
+    {:headl headl :bodyl bodyl :arml arml :legl legl ; lengths
+     :headw headw :neckw neckw :armw armw :bodyw headw :hipw hipw :legw legw ; widths
+     :walks walks :runs runs   :punchs punchs :kicks kicks ; speed
+     :maxp maxp :hitp hitp  :kickp kickp :maxh maxh ; power and health
+     :cola color_a :colb [dra dga dba 1.0] :colc color_b :cold [drb dgb dbb 1.0]
+     :base base})) ; colors
 
