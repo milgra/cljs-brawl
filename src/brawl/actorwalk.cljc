@@ -18,15 +18,57 @@
 (defn send-commands
   "send commands if needed"
   [actor]
-  (let [{:keys [id commands pickup-sent]} actor
+  (let [{:keys [id commands color facing]} actor
         {:keys [gun body]} (:drag actor)
-        {:keys [pickup-sent]} (:attack actor) 
-        {:keys [down]} (:control actor)]
-    (if (and down (or (= nil gun) (= nil body)) (not pickup-sent))
+        {:keys [order]} (:walk actor)
+        {:keys [neck hip hand_l hand_r foot_l foot_r]} (:masses actor)
+        {:keys [bullets punch-hand pickup-sent action-sent]} (:attack actor) 
+        {:keys [left right down punch shoot kick]} (:control actor)]
+    (cond
+      ;; pick up gun or body
+      (and down (or (= nil gun) (= nil body)) (not pickup-sent))
       (-> actor
           (update :commands into [{:text "pickup" :id id}])
           (assoc-in [:attack :pickup-sent] true))
-      actor)))
+      ;; send punch
+      (and punch (not action-sent) (not left) (not right))
+      (-> actor
+          (update :commands into [{:id id
+                                   :text "attack"
+                                   :base (:p neck)
+                                   :target (if (= punch-hand :hand_l) (:p hand_l) (:p hand_r))
+                                   :radius 100.0
+                                   :facing facing
+                                   :color color
+                                   :power 20}])
+          (assoc-in [:attack :action-sent] true))
+      ;; send shoot
+      (and shoot (not action-sent) (> bullets 0))
+      (-> actor
+          (update :commands into [{:id id
+                                   :text "attack"
+                                   :base (:p neck)
+                                   :target (math2/add-v2 (:p neck) [(* facing 500.0) 0.0])
+                                   :radius 500.0
+                                   :facing facing
+                                   :color color
+                                   :power 110}])
+          (assoc-in [:attack :action-sent] true)
+          (assoc-in [:attack :bullets] (dec bullets)))
+      ;; send kick
+      (and kick (not action-sent))
+      (-> actor
+          (update :commands into [{:id id
+                                   :text "attack"
+                                   :base (:p hip)
+                                   :target (if (= :base_l (:active order)) (:p foot_l) (:p foot_r))
+                                   :facing facing
+                                   :radius 100.0
+                                   :color color
+                                   :power 40}])
+          (assoc-in [:attack :action-sent] true))
+      ;; return untouched
+      :else actor)))
 
 
 (defn move-head-walk
@@ -52,8 +94,8 @@
 (defn move-hand-walk
   "move head point"
   [actor surfaces]
-  (let [{:keys [id facing color commands speed]} actor
-        {:keys [bullets punch-hand punch-y action-sent]} (:attack actor)
+  (let [{:keys [facing]} actor
+        {:keys [punch-hand punch-y]} (:attack actor)
         {{[hx hy] :p} :hip {[nx ny :as neck] :p} :neck } (:masses actor)
         {{[ax ay] :p} :base_l {[bx by] :p} :base_r} (:bases actor)
         {arml :arml} (:metrics actor)
@@ -75,31 +117,9 @@
                  :else [(+ nx nrx) (+ ny nry)])
 
         elbow_l (triangle_with_bases neck hand_l (* arml 0.5) facing)
-        elbow_r (triangle_with_bases neck hand_r (* arml 0.5) facing)
+        elbow_r (triangle_with_bases neck hand_r (* arml 0.5) facing)]
 
-        newcommands (cond-> commands
-                      (and punch (not action-sent) (not left) (not right))
-                      (into [{:id id
-                              :text "attack"
-                              :base neck
-                              :target (if (= punch-hand :hand_l) hand_l hand_r)
-                              :radius 100.0
-                              :facing facing
-                              :color color
-                              :power 20}])
-                      (and shoot (not action-sent) (> bullets 0))
-                      (into [{:id id
-                              :text "attack"
-                              :base neck
-                              :target (math2/add-v2 neck [(* facing 500.0) 0.0])
-                              :radius 500.0
-                              :facing facing
-                              :color color
-                              :power 110}]))]
     (-> actor
-        (assoc :commands newcommands)
-        (assoc-in [:attack :action-sent] (if (and (or punch shoot) (not action-sent)) true action-sent))
-        (assoc-in [:attack :bullets] (if (and shoot (not action-sent)) (dec bullets) bullets))
         (assoc-in [:masses :hand_l :p] hand_l)
         (assoc-in [:masses :hand_r :p] hand_r)
         (assoc-in [:masses :elbow_l :p] elbow_l)
@@ -174,19 +194,8 @@
                  pas) ; final position
         foot_r (if (= :base_r (:active base-order))
                  (if kick kick-point act)
-                 pas)
-        newcommands (if-not (and kick (not action-sent))
-                      commands
-                      (into commands [{:id id :text "attack"
-                                       :base (:p (:hip masses))
-                                       :target kick-point
-                                       :facing facing
-                                       :radius 100.0
-                                       :color color
-                                       :power 40}]))]
+                 pas)]
     (-> state
-        (assoc :commands newcommands)
-        (assoc-in [:attack :action-sent] (if (and kick (not action-sent)) true action-sent))
         (assoc-in [:masses :foot_l :p] foot_l) 
         (assoc-in [:masses :foot_r :p] foot_r)
         (assoc-in [:walk :target] nil))))
