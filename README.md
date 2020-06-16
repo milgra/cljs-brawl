@@ -33,7 +33,7 @@ Download/checkout the repo and start it up with :
 * randomize fix
 * improve buddy ai when attacking
 * continuous punch/kick/block
-
+* killed by XY from names
 
 how does a real-time game with complex algorithms ( phyisics simulation, ui/font rendering, ai) look like
 is cljs fast enough for this?

@@ -10,7 +10,8 @@
       (catch :default _ false))))
 
 
-(defn load-defaults! [state]
+(defn load-defaults!
+  [state]
   (if (and (local-storage-supported?) (= "true" (.getItem js/localStorage "state-saved?")))
     (let [state-js (cljs.reader/read-string (.getItem js/localStorage "state"))]
       ;; todo validate with specs
@@ -18,7 +19,8 @@
     state))
 
 
-(defn save-defaults! [state]
+(defn save-defaults!
+  [state]
   (if (local-storage-supported?)
     (let [state-js {:level (:level state)
                     :physics (:physics state)
