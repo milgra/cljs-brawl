@@ -14,7 +14,7 @@
             normal (math2/resize-v2 [(* dir (- y)) (* dir x)] needed)]
         (math2/add-v2 (math2/add-v2 a ab2) normal)))))
 
-
+;; TODO too long
 (defn send-commands
   "send commands if needed"
   [actor]
@@ -96,11 +96,11 @@
   [actor surfaces]
   (let [{:keys [facing]} actor
         {:keys [punch-hand punch-y]} (:attack actor)
+        {:keys [left right punch shoot block]} (:control actor)
         {{[hx hy] :p} :hip {[nx ny :as neck] :p} :neck } (:masses actor)
         {{[ax ay] :p} :base_l {[bx by] :p} :base_r} (:bases actor)
         {arml :arml} (:metrics actor)
         {angle :idle-angle} (:walk actor)
-        {:keys [left right punch shoot block]} (:control actor)
 
         nlx (+ (* facing (+ (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
         nrx (- (* facing (- (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
@@ -128,74 +128,75 @@
 
 (defn move-hip-walk
   "move hip points, handle jumping"
-  [ {:keys [next-mode facing speed]
-     {base-order :order squat-size :squat-size jump-state :jump-state idle-angle :idle-angle} :walk
-     {:keys [down up left right run kick]} :control
-     {{[hx hy] :p} :hip } :masses
-     {{[lx ly] :p} :base_l {[rx ry] :p} :base_r} :bases
-     {legl :legl } :metrics :as state}]
-  (let [cx (if (or (< speed -0.5) (> speed 0.5) (not kick)) (+ lx (/ (- rx lx) 2)) ; x center of bases when walking
-               (if (= :base_l (:active base-order)) rx lx)) ; passive foot when kic
-                 
+  [actor]
+  (let [{:keys [next-mode facing speed]} actor
+        {:keys [order squat-size jump-state idle-angle]} (:walk actor)
+        {:keys [up down run kick]} (:control actor)
+        {{[hx hy] :p} :hip } (:masses actor)
+        {{[lx ly] :p} :base_l {[rx ry] :p} :base_r} (:bases actor)
+        {legl :legl } (:metrics actor)
+        cx (if (or (< speed -0.5) (> speed 0.5) (not kick)) (+ lx (/ (- rx lx) 2)) ; x center of bases when walking
+               (if (= :base_l (:active order)) rx lx)) ; passive foot when kic
         cy (+ ly (/ (- ry ly) 2)) ; y center of bases
         sty (- cy (+ (* legl 0.85) ; standing y pos, starting position is 0.85 leglength
                      (/ (Math/abs (- rx lx)) 20.0) ; if legs are closer hip is higher
                      (* (Math/sin idle-angle) 2.0) ; breathing movement
                      (if (< (Math/abs speed) 3.0) (- (* (- 3.0 (Math/abs speed)) 2.0) (/ (Math/abs (- rx lx)) 5.0)) 0))) ; if stangind stand up more with straight back
-
         squat-size (cond
                      (or down (and up (= jump-state 0)))
                      (+ squat-size (/ (- (* legl 0.5) squat-size) 3)) ; move to standing pos 
                      (or (not down) (and up (= jump-state 1)))
                      (+ squat-size (/ (- squat-size) 3))) ; move to squatting pos
-
         fx (cond ; final x
              run (+ cx (* facing 10.0)) ; head is in front of body when running
              :else (+ cx (* facing 2.0))) ; when waling
-
-        fy (+ sty squat-size) ; final y
-
+        fy (+ sty squat-size) ; final 
         newstate (cond
                 (and up (= jump-state 0) (> squat-size (* legl 0.4))) 1
                 (and up (= jump-state 1) (< squat-size 1.0)) 2
                 :else jump-state)
         newnext (if (= newstate 2) :jump next-mode)]
-    (-> state
-        (assoc-in [:masses :hip :p] [fx fy])
+    (-> actor
         (assoc :next-mode newnext)
+        (assoc-in [:masses :hip :p] [fx fy])
         (assoc-in [:walk :squat-size] squat-size)
         (assoc-in [:walk :jump-state] newstate))))
 
 
 (defn move-knee-walk
- [{:keys [masses speed facing] {legl :legl} :metrics {base-order :order base-target :target} :walk :as state}]
-  (let [knee_l (triangle_with_bases (get-in masses [:foot_l :p]) (get-in masses [:hip :p]) (/ legl 1.95) facing)
+  [actor]
+  (let [{:keys [masses speed facing]} actor
+        {legl :legl} (:metrics actor)
+        {base-order :order base-target :target} (:walk actor)
+        knee_l (triangle_with_bases (get-in masses [:foot_l :p]) (get-in masses [:hip :p]) (/ legl 1.95) facing)
         knee_r (triangle_with_bases (get-in masses [:foot_r :p]) (get-in masses [:hip :p]) (/ legl 1.95) facing)]
-    (-> state
+    (-> actor
         (assoc-in [:masses :knee_l :p] knee_l) 
         (assoc-in [:masses :knee_r :p] knee_r))))
 
 
 (defn move-feet-walk-still 
   "do kick if needed"
-  [{:keys [id color bases masses speed facing commands]
-    {base-order :order base-target :target} :walk
-    {legl :legl runs :runs walks :walks} :metrics
-    {kick-y :kick-y action-sent :action-sent} :attack
-    {kick :kick} :control :as state}
-   surfaces]
-  (let [active-base (:active base-order)
-        passive-base (:passive base-order)
+  [actor surfaces]
+  (let [{:keys [bases facing]} actor
+        {:keys [order]} (:walk actor)
+        {legl :legl runs :runs walks :walks} (:metrics actor)
+        {:keys [kick-y action-sent]} (:attack actor)
+        {kick :kick} (:control actor)
+
+        active-base (:active order)
+        passive-base (:passive order)
+        
         [apx apy :as act] (:p (active-base bases)) ; active position
         [ppx ppy :as pas] (:p (passive-base bases)) ; passive position
         kick-point [(+ ppx (* legl facing 1.2)) (+ (- ppy (* legl 1.5)) kick-y)]
-        foot_l (if (= :base_l (:active base-order))
+        foot_l (if (= :base_l active-base)
                  (if kick kick-point act)
                  pas) ; final position
-        foot_r (if (= :base_r (:active base-order))
+        foot_r (if (= :base_r active-base)
                  (if kick kick-point act)
                  pas)]
-    (-> state
+    (-> actor
         (assoc-in [:masses :foot_l :p] foot_l) 
         (assoc-in [:masses :foot_r :p] foot_r)
         (assoc-in [:walk :target] nil))))
@@ -223,14 +224,15 @@
       {:active :base_l :passive :base_r}
       {:active :base_r :passive :base_l})))
 
-
+;; TODO too long
 (defn step-feet-walk
   "puts a triangle from the passive base on the surfaces, collision ponit is the new base target for the active base"
-  [{ :keys [bases masses speed] {base-surfaces :surfaces vert-direction :vert-direction} :walk :as state}
-   surfaces
-   time]
+  [actor surfaces time]
   ; speed must not be 0
-  (let [base-order (get-base-order bases speed)
+  (let [{:keys [bases masses speed]} actor
+        {:keys [vert-direction] base-surfaces :surfaces} (:walk actor)
+
+        base-order (get-base-order bases speed)
         base-point (:p (bases (:passive base-order)))
         step-zone (get-step-zone base-point speed)
         collided-top (sort-by first < (phys2/get-colliding-surfaces-by-distance (:T step-zone) (math2/sub-v2 (:A step-zone) (:T step-zone)) 4.0 surfaces base-point))
@@ -251,12 +253,12 @@
       ;; slope is okay
       (if (and (= nil newpassivesurf) (empty? collided))
         ;; we have no surface under feet, fall
-        (-> state
+        (-> actor
             (assoc :next-mode :rag)
             (assoc-in [:attack :timeout] time)
             (assoc :health -1))
         ;; normal step
-        (-> state
+        (-> actor
             (assoc-in [:walk :zone] {:A (:A step-zone)
                                      :B (math2/add-v2 (:A step-zone)(:B step-zone))
                                      :C (math2/add-v2 (:A step-zone)(:C step-zone))})
@@ -265,69 +267,69 @@
             (assoc-in [:walk :target] base-target)
             (assoc-in [:walk :surfaces] {:active newactivesurf :passive (or newpassivesurf newactivesurf)})))
       ;; too steep slope, stop stepping
-      (-> state
+      (-> actor
           (assoc :speed 0.0)))))
 
-    
+;; TODO too long
 (defn move-feet-walk
   "move active base towards target point"
-  [{:keys [bases masses speed facing kick-pressed] {legl :legl runs :runs walks :walks} :metrics
-    {step-length :step-size base-order :order base-target :target} :walk
-    {kick :kick} :control :as state}
-   surfaces
-   time
-   delta]
-  (if (> (Math/abs speed) 1.0)
-    (if base-target
-      (let [active-base (:active base-order)
-            passive-base (:passive base-order)
-            actual-pos (:p (bases active-base))
-            actual-vec (math2/sub-v2 base-target actual-pos)
-            actual-size (math2/length-v2 actual-vec)
-            current-size (* (Math/abs speed) delta)
-            current-vec (math2/resize-v2 actual-vec current-size)
-            remaining-size (- actual-size current-size)
-            [cpx cpy :as current-pos] (math2/add-v2 actual-pos current-vec) ; current position
-            [ppx ppy] (:p (bases passive-base)) ; passive position
-            walk-lift-ratio (if (< (/ step-length 2) remaining-size); when walking, highest foot position is center TODO simplify 
-                              (/ (- step-length remaining-size) step-length) 
-                              (/ remaining-size step-length))
-            run-lift-ratio-passive  (if (< remaining-size (/ step-length 3)) ; when running. highest foot position is third for passive
-                                  (/ (- (/  step-length 3.0) remaining-size ) ( / step-length 3.0 ))
-                                  0.0)
-            run-lift-ratio-active (/ remaining-size step-length) ; active foot falling is linear to target point
-            walk-lift-active (Math/abs (* speed 6.0 walk-lift-ratio))
-            walk-lift-passive 0.0
-            run-lift-active (* legl 0.5 run-lift-ratio-active)
-            run-lift-passive (* legl 0.5 run-lift-ratio-passive)
-            speed-ratio (if (> (Math/abs speed) walks) ; walk / run speed ratio in actual state
-                          (let [speed-diff (- runs (Math/abs speed))
-                                walkr (/ speed-diff (- runs walks))]
-                            walkr)
-                          1.0)
-            lift-active (+ (* speed-ratio walk-lift-active) (* (- 1.0 speed-ratio) run-lift-active)) ; merge walk and run states
-            lift-passive (+ (* speed-ratio walk-lift-passive) (* (- 1.0 speed-ratio) run-lift-passive))
-            foot_l (if (= :base_l (:active base-order))
-                     [cpx (- cpy lift-active)]
-                     [ppx (- ppy lift-passive)]) ; final position
-            foot_r (if (= :base_r (:active base-order))
-                     [cpx (- cpy lift-active)]
-                     [ppx (- ppy lift-passive)])
-            step? (if (< actual-size current-size) true false)] ; do we need step
-        (cond-> state
-          true (assoc-in [:bases active-base :p] current-pos)
-          true (assoc-in [:masses :foot_l :p] foot_l) 
-          true (assoc-in [:masses :foot_r :p] foot_r)
-          step? (step-feet-walk surfaces time))) ; step if base target is close
-      (step-feet-walk state surfaces time)) ; step if no base target
-    (move-feet-walk-still state surfaces))) ; stay still or do kick if no speed
+  [actor surfaces time delta]
+  (let [{:keys [bases masses speed facing kick-pressed]} actor
+        {:keys [step-size order target]} (:walk actor)
+        {:keys [legl runs walks]} (:metrics actor)
+        {:keys [kick]} (:control actor)]
+    (if (> (Math/abs speed) 1.0)
+      (if target
+        (let [active-base (:active order)
+              passive-base (:passive order)
+              actual-pos (:p (bases active-base))
+              actual-vec (math2/sub-v2 target actual-pos)
+              actual-size (math2/length-v2 actual-vec)
+              current-size (* (Math/abs speed) delta)
+              current-vec (math2/resize-v2 actual-vec current-size)
+              remaining-size (- actual-size current-size)
+              [cpx cpy :as current-pos] (math2/add-v2 actual-pos current-vec) ; current position
+              [ppx ppy] (:p (bases passive-base)) ; passive position
+              walk-lift-ratio (if (< (/ step-size 2) remaining-size); when walking, highest foot position is center TODO simplify 
+                                (/ (- step-size remaining-size) step-size) 
+                                (/ remaining-size step-size))
+              run-lift-ratio-passive  (if (< remaining-size (/ step-size 3)) ; when running. highest foot position is third for passive
+                                        (/ (- (/  step-size 3.0) remaining-size ) ( / step-size 3.0 ))
+                                        0.0)
+              run-lift-ratio-active (/ remaining-size step-size) ; active foot falling is linear to target point
+              walk-lift-active (Math/abs (* speed 6.0 walk-lift-ratio))
+              walk-lift-passive 0.0
+              run-lift-active (* legl 0.5 run-lift-ratio-active)
+              run-lift-passive (* legl 0.5 run-lift-ratio-passive)
+              speed-ratio (if (> (Math/abs speed) walks) ; walk / run speed ratio in actual state
+                            (let [speed-diff (- runs (Math/abs speed))
+                                  walkr (/ speed-diff (- runs walks))]
+                              walkr)
+                            1.0)
+              lift-active (+ (* speed-ratio walk-lift-active) (* (- 1.0 speed-ratio) run-lift-active)) ; merge walk and run states
+              lift-passive (+ (* speed-ratio walk-lift-passive) (* (- 1.0 speed-ratio) run-lift-passive))
+              foot_l (if (= :base_l (:active order))
+                       [cpx (- cpy lift-active)]
+                       [ppx (- ppy lift-passive)]) ; final position
+              foot_r (if (= :base_r (:active order))
+                       [cpx (- cpy lift-active)]
+                       [ppx (- ppy lift-passive)])
+              step? (if (< actual-size current-size) true false)] ; do we need step
+          (cond-> actor
+            true (assoc-in [:bases active-base :p] current-pos)
+            true (assoc-in [:masses :foot_l :p] foot_l) 
+            true (assoc-in [:masses :foot_r :p] foot_r)
+            step? (step-feet-walk surfaces time))) ; step if base target is close
+        (step-feet-walk actor surfaces time)) ; step if no base target
+      (move-feet-walk-still actor surfaces)))) ; stay still or do kick if no speed
 
 
 (defn update-speed
   "update speed based on pressed buttons"
-  [{:keys [speed facing metrics]
-    {:keys [left right up down run block]} :control :as state} delta]
-  (let [max (if (or (not run) down) (:walks metrics) (:runs metrics))
+  [actor delta]
+  (let [{:keys [speed facing metrics]} actor
+        {:keys [left right up down run block]} (:control actor)
+        max (if (or (not run) down) (:walks metrics) (:runs metrics))
         nsx (cond
               right (if (> speed max)
                       (+ max 0.1)
@@ -340,7 +342,7 @@
               (and (> nsx 0.0) right (not block)) 1
               (and (< nsx 0.0) left (not block)) -1
               :else facing)]
-    (-> state
+    (-> actor
         (assoc :speed nsx)
         (assoc :facing dir)))) ; TODO replace facing with dir
 
