@@ -65,7 +65,7 @@
 
 
 (defn init
-  "create new actor data"
+  "create new actor dataset"
   [x y id color basemetrics level]
   (let [metrics (metrics/generate-metrics basemetrics)
         bases (default-bases x y)
@@ -227,7 +227,7 @@
 
 
 (defn update-dragged
-  "update body mass points if actor is dragged"
+  "update body mass points of actor based on dragger"
   [dragged
    {{:keys [head hip neck]} :masses :as dragger}
    time]
@@ -240,7 +240,7 @@
 
 
 (defn update-gun
-  "update gun points if gun is dragged"
+  "update points of gun based on dragged"
   [{s :s :as gun}
    {{hand_l :hand_l elbow_l :elbow_l} :masses
     :keys [bullets facing commands action-sent]
@@ -250,28 +250,66 @@
          :f (- facing)
          :d (if shoot [(* facing 100.0) 0.0] (math2/sub-v2 (:p hand_l) (:p elbow_l)))
          :s (if (and shoot (> bullets 0)) (inc s) 0)))
-    
 
-(defn change-mode-walk [{:keys [curr-mode] {hip :hip :as masses} :masses {bl :base_l} :bases :as state} surfaces]
-  (let [newmasses (reduce (fn [res [id mass]] ; reset mass directions for next rag
-                            (assoc res id (assoc mass :d [0 0])))
-                          masses
-                          masses)
-        newfeetpoint (sort-by first (phys2/get-intersecting-surfaces (:p hip) [0 400] surfaces))
-        finalpoint (if-not (empty? newfeetpoint)
-                     (second (first newfeetpoint))
-                     (:p bl))]
-                                        ; reset walk state
-    (cond-> state
-      (= curr-mode :rag) (assoc-in [:bases :base_l :p] finalpoint)
-      (= curr-mode :rag) (assoc-in [:bases :base_r :p] finalpoint)
+
+(defn change-mode-idle
+  "change mode to idle"
+  [state surfaces]
+  (-> state
+      (assoc :is-dragged false)
+      (assoc :injure-when-dropped false)
+      (assoc :next-mode nil)
+      (assoc :curr-mode :idle)))
+
+
+(defn change-mode-rag
+  "change mode to rag"
+  [state surfaces]
+  (-> state
+      (assoc :next-mode nil)
+      (assoc :curr-mode :rag)))
+
+
+(defn change-mode-jump
+  "change mode to jump"
+  [{:keys [curr-mode speed]
+    {hip :hip :as masses} :masses
+    {bl :base_l br :base_r} :bases :as state}
+   surfaces]
+    (let [[hx hy] (:p hip)
+          [lx ly] (:p bl)
+          [rx ry] (:p br)]
+      (cond-> state
+        (= curr-mode :walk) (assoc-in [:bases :base_l :p] [(- hx 10.0) (- (min ly ry) 10.0)])
+        (= curr-mode :walk) (assoc-in [:bases :base_r :p] [(+ hx 10.0) (- (min ly ry) 10.0)])
+        (= curr-mode :walk) (assoc-in [:bases :base_l :d] [(/ speed 2) -10])
+        (= curr-mode :walk) (assoc-in [:bases :base_r :d] [(/ speed 2) -10])         
+        true (assoc :next-mode nil)
+        true (assoc :curr-mode :jump))))
+
+
+(defn change-mode-walk
+  "change mode to walk"
+  [{:keys [curr-mode]
+    {hip :hip :as masses} :masses
+    {bl :base_l} :bases :as state}
+   surfaces]
+  (let [masses-new (reduce (fn [res [id mass]] (assoc res id (assoc mass :d [0 0]))) masses masses) ; reset mass directions for next rag
+        feet-new (sort-by first (phys2/get-intersecting-surfaces (:p hip) [0 400] surfaces))
+        feet-final (if-not (empty? feet-new)
+                     (second (first feet-new))
+                     (:p bl))
+        state-new (-> state
+                      (assoc :jump-state 0) ; reset jump state
+                      (assoc :next-mode nil)
+                      (assoc :base-target nil) ; reset stepping
+                      (assoc :curr-mode :walk)
+                      (assoc :masses masses-new))]
+    (cond-> state-new
+      (= curr-mode :rag) (assoc-in [:bases :base_l :p] feet-final)
+      (= curr-mode :rag) (assoc-in [:bases :base_r :p] feet-final)
       (= curr-mode :rag) (assoc :squat-size (* 1.0 (get-in state [:metrics :legl]))) ; squat when reaching ground
-      (= curr-mode :jump) (assoc :squat-size (* 0.5 (get-in state [:metrics :legl]))) ; squat when reaching ground
-      true (assoc :jump-state 0) ; reset jump state
-      true (assoc :next-mode nil)
-      true (assoc :base-target nil) ; reset stepping
-      true (assoc :curr-mode :walk)
-      true (assoc :masses newmasses))))
+      (= curr-mode :jump) (assoc :squat-size (* 0.5 (get-in state [:metrics :legl])))))) ; squat when reaching ground
 
 
 (defn change-mode
@@ -279,46 +317,13 @@
   [{:keys [masses next-mode speed curr-mode] {hip :hip fl :foot_l fr :foot_r :as masses} :masses
     {ba :base_l bb :base_r} :bases :as state}
    surfaces]
-  (let [result
-        (cond
-          
-          (= next-mode nil) state
-
-          (= next-mode :walk) (change-mode-walk state surfaces)
-
-          (= next-mode :jump)
-          (let [[hx hy] (:p hip)
-                [lx ly] (:p ba)
-                [rx ry] (:p bb)]
-            ;; reset jump state
-            (cond-> state
-              (= curr-mode :walk) (assoc-in [:bases :base_l :p] [(- hx 10.0) (- (min ly ry) 10.0)])
-              (= curr-mode :walk) (assoc-in [:bases :base_r :p] [(+ hx 10.0) (- (min ly ry) 10.0)])
-              (= curr-mode :walk) (assoc-in [:bases :base_l :d] [(/ speed 2) -10])
-              (= curr-mode :walk) (assoc-in [:bases :base_r :d] [(/ speed 2) -10])         
-              true (assoc :next-mode nil)
-              true (assoc :curr-mode :jump)))
-
-          (= next-mode :rag)
-          ;; reset jump state
-          (-> state
-              (assoc :next-mode nil)
-              (assoc :curr-mode :rag))
-          
-          (= next-mode :idle)
-          ;; reset jump state
-          (-> state
-              (assoc :is-dragged false)
-              (assoc :injure-when-dropped false)
-              (assoc :next-mode nil)
-              (assoc :curr-mode :idle))
-
-          :else
-          (do
-            (println "bad mode" next-mode)
-            state))]
-    (if (= result nil) println "UPDATEMODE ERROR!!!")
-    result))
+  (cond
+    (= next-mode nil) state
+    (= next-mode :walk) (change-mode-walk state surfaces)
+    (= next-mode :jump) (change-mode-jump state surfaces)
+    (= next-mode :rag) (change-mode-rag state surfaces)    
+    (= next-mode :idle) (change-mode-idle state surfaces)
+    :else state))
 
 
 (defn update-rag
@@ -352,31 +357,33 @@
         (assoc :masses masses-new))))
 
 
-(defn update-idle [state] state)
-
-
-(defn update-mode [{mode :curr-mode :as state} surfaces time delta]
+(defn update-mode
+  "update actor based on actual mode"
+  [{mode :curr-mode :as state} surfaces time delta]
   (case mode
     :rag (update-rag state surfaces time delta)
-    :idle (update-idle state)
     :walk (walk/update-walk state surfaces time delta)
     :jump (jump/update-jump state surfaces time delta)
     state))
 
 
-(defn update-controls [{:keys [punch-hand action-sent pickup-sent vert-direction] self-control :control :as state} {:keys [left right up down punch kick shoot block run] :as control}]
+(defn update-controls
+  "update controls if controlled by player"
+  [{:keys [punch-hand action-sent pickup-sent vert-direction] self-control :control :as state}
+   {:keys [left right up down punch kick shoot block run] :as control}]
   (if-not control
     state
-    (let [p-hand (if (and (not (:punch self-control)) punch)
+    (let [p-hand (if (and (not (:punch self-control)) punch) ;; change only when punch state changes
                    (if (= punch-hand :hand_l) :hand_r :hand_l)
-                   punch-hand)
-          punch-y (if (and (not (:punch self-control)) punch) (rand 15) (:punch-y state))
-          kick-y (if (and (not (:kick self-control)) kick) (rand 30) (:kick-y state))]
+                 punch-hand) ;; else leave it as it was
+          punch-y (if (and (not (:punch self-control)) punch) (rand 15) (:punch-y state)) ;; punch height
+          kick-y (if (and (not (:kick self-control)) kick) (rand 30) (:kick-y state))] ;; kick height
       (-> state
-          (assoc :action-sent (if (and (not punch) (not kick) (not shoot)) false action-sent))
-          (assoc :pickup-sent (if (not down) false pickup-sent))
+          
+          (assoc :action-sent (if (and (not punch) (not kick) (not shoot)) false action-sent)) ;; set action sent to false if no action is happening
+          (assoc :pickup-sent (if (not down) false pickup-sent)) ;; set it to false if no pickup is happening
           (assoc :punch-hand p-hand)
-          (assoc :vert-direction (cond
+          (assoc :vert-direction (cond ;; change vertical direction in case of up/down
                                    down -1
                                    up 1
                                    :else vert-direction))
@@ -394,6 +401,7 @@
 
 
 (defn update-angle
+  "update breathing angle of actor"
   [{angle :idle-angle health :health :as state} delta]
   (cond-> state
     (and (< health 100.0) (> health 0.0)) (update :health + (* 0.05 delta)) 
@@ -401,14 +409,12 @@
     (< angle math/MPI2) (update :idle-angle + (* 0.05 delta))))
 
 
-(defn update-actor [state control surfaces actors guns time delta]
+(defn update-actor
   "update actor state"
-  ;;(if (= (:id state) :enemy) (println "BEFORE UPDATE" (:version state) (get-in state [:masses :knee_l :d] )))
-  (let [result (-> state
-                   (update-angle delta)
-                   (update-controls control) ;; manual controls for hero
-                   (ai/update-ai control surfaces actors time delta) ;; ai controls for others
-                   (update-mode surfaces time delta)
-                   (change-mode surfaces))]
-    ;;(if (= (:id state) :enemy) (println "AFTER UPDATE" (:version result) (get-in result [:masses :knee_l :d] )))
-    result))
+  [state control surfaces actors guns time delta]
+  (-> state
+      (ai/update-ai control surfaces actors time delta) ;; ai controls for others
+      (update-controls control) ;; manual controls for hero
+      (update-angle delta)
+      (update-mode surfaces time delta)
+      (change-mode surfaces)))
