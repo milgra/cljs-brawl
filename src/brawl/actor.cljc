@@ -32,15 +32,15 @@
 (defn default-distance-guards
   [masses metrics]
    [(phys2/dguard2 masses :head :neck (:headl metrics) 0.0)
-   (phys2/dguard2 masses :neck :hip (:bodyl metrics) 0.0)
-   (phys2/dguard2 masses :neck :elbow_l (* 0.5 (:arml metrics)) 0.0)
-   (phys2/dguard2 masses :neck :elbow_r (* 0.5 (:arml metrics)) 0.0)
-   (phys2/dguard2 masses :elbow_l :hand_l (* 0.5 (:arml metrics)) 0.0)
-   (phys2/dguard2 masses :elbow_r :hand_r (* 0.5 (:arml metrics)) 0.0)
-   (phys2/dguard2 masses :hip :knee_l (* 0.5 (:legl metrics)) 0.0)
-   (phys2/dguard2 masses :hip :knee_r (* 0.5 (:legl metrics)) 0.0)
-   (phys2/dguard2 masses :knee_l :foot_l (* 0.5 (:legl metrics)) 0.0)
-   (phys2/dguard2 masses :knee_r :foot_r (* 0.5 (:legl metrics)) 0.0)])
+    (phys2/dguard2 masses :neck :hip (:bodyl metrics) 0.0)
+    (phys2/dguard2 masses :neck :elbow_l (* 0.5 (:arml metrics)) 0.0)
+    (phys2/dguard2 masses :neck :elbow_r (* 0.5 (:arml metrics)) 0.0)
+    (phys2/dguard2 masses :elbow_l :hand_l (* 0.5 (:arml metrics)) 0.0)
+    (phys2/dguard2 masses :elbow_r :hand_r (* 0.5 (:arml metrics)) 0.0)
+    (phys2/dguard2 masses :hip :knee_l (* 0.5 (:legl metrics)) 0.0)
+    (phys2/dguard2 masses :hip :knee_r (* 0.5 (:legl metrics)) 0.0)
+    (phys2/dguard2 masses :knee_l :foot_l (* 0.5 (:legl metrics)) 0.0)
+    (phys2/dguard2 masses :knee_r :foot_r (* 0.5 (:legl metrics)) 0.0)])
 
 
 (defn default-angle-guards
@@ -115,7 +115,7 @@
     {;; fix properties
      :id id
      :color color
-     :level level ;; used for health level/hitpower calculation
+     :level level
      :metrics metrics
      ;; physics
      :bases bases
@@ -129,7 +129,7 @@
      :facing 1.0
      :health (+ 100.0 (* level 50.0))
      :control default-control
-     :commands [] ;; command collector
+     :commands []
      ;; substates
      :ai default-ai
      :walk default-walk
