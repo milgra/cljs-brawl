@@ -148,111 +148,109 @@
          :s (if (and shoot (> bullets 0)) (inc s) 0)))
 
 
-(defn check-death [{:keys [health] :as actor}]
-  (if (<= health 0) (assoc actor :next-mode :rag) actor))
+(defn check-death [{:keys [id health] :as actor} time]
+  (if (<= health 0)
+    (cond-> actor
+      true (assoc :next-mode :rag)
+      true (assoc :dragged-body nil)
+      true (assoc :hittimeout (+ time 2000))
+      (= id :hero ) (update :commands conj {:text "show-wasted"}))
+    actor))
 
 
-(defn calc-isps [{:keys [head neck hip knee_l knee_r foot_l foot_r]} base target]
-  (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
-        
-        headv (math2/sub-v2 (:p neck) (:p head))
-        bodyv (math2/sub-v2 (:p hip) (:p neck))
-        footlv (math2/sub-v2 (:p knee_l) (:p hip))
-        footrv (math2/sub-v2 (:p knee_r) (:p hip))
-        
-        headisp (math2/intersect-v2-v2 base hitv (:p head) headv)
-        bodyisp (math2/intersect-v2-v2 base hitv (:p neck) bodyv)
-        footlisp (math2/intersect-v2-v2 base hitv (:p hip) footlv)
-        footrisp (math2/intersect-v2-v2 base hitv (:p hip) footrv)]
-    [headisp bodyisp footlisp footrisp]))
-
-
-(defn hitpoint
-  "get hitpoint"
-  [{:keys [id color curr-mode]
-    {:keys [hip] :as masses} :masses}
-   {:keys [base target radius] :as enemy}]
+(defn hitpoints
+  "returns hitpoints of actor bones and attack vector"
+  [{:keys [id color health curr-mode]
+    {:keys [head neck hip knee_l knee_r] :as masses} :masses}
+   {:keys [base target radius] :as command}]
   
   (let [[dx dy] (math2/sub-v2 base (:p hip))
-        nearby? (and (< dx radius) (< dy radius))
+        alive? (> health 0)
+        nearby? (and (< (Math/abs dx) radius) (< (Math/abs dy) radius))
         not-rag? (not= curr-mode :rag)
-        diff-actor? (not= id (:id enemy))
-        diff-color? (not= color (:color enemy))]
+        diff-color? (not= color (:color command))]
 
-    (if (and diff-actor? diff-color? nearby? not-rag?)
-      (let [isps (calc-isps masses base target)]        
-        (first (remove nil? isps))))))
+    (if-not (and diff-color? nearby? not-rag? alive?)
+      [] ;; no hitpoints, return empty vector
+      (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
+        
+            headv (math2/sub-v2 (:p neck) (:p head))
+            bodyv (math2/sub-v2 (:p hip) (:p neck))
+            footlv (math2/sub-v2 (:p knee_l) (:p hip))
+            footrv (math2/sub-v2 (:p knee_r) (:p hip))
+            
+            headisp (math2/intersect-v2-v2 base hitv (:p head) headv)
+            bodyisp (math2/intersect-v2-v2 base hitv (:p neck) bodyv)
+            footlisp (math2/intersect-v2-v2 base hitv (:p hip) footlv)
+            footrisp (math2/intersect-v2-v2 base hitv (:p hip) footrv)]
+
+        [headisp bodyisp footlisp footrisp]))))
+
+
+(defn hit-masses
+  "push masses towards hit direction"
+  [{:keys [metrics] {:keys [head neck hip knee_l knee_r foot_l foot_r] :as masses} :masses :as actor}
+   [headisp bodyisp footlisp footrisp]
+   base
+   target]
+  (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
+        hitsm (math2/resize-v2 hitv 10)
+        hitbg (math2/resize-v2 hitv 20)        
+        neck-part (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p neck))))
+        hip-part  (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p hip))))
+        neck-ratio (if bodyisp (/ hip-part (:bodyl metrics)))
+        hip-ratio (if bodyisp (/ neck-part (:bodyl metrics)))]
+
+    (cond-> actor
+      headisp (assoc-in [:masses :head :d] (math2/add-v2 (:d head) hitbg))
+      headisp (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) hitsm))
+      
+      bodyisp (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) (math2/scale-v2 hitbg (+ 0.4 neck-ratio))))
+      bodyisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) (math2/scale-v2 hitbg (+ 0.4 hip-ratio))))
+
+      footlisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
+      footlisp (assoc-in [:masses :knee_l :d] (math2/add-v2 (:d knee_l) hitsm))
+      footrisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
+      footrisp (assoc-in [:masses :knee_r :d] (math2/add-v2 (:d knee_r) hitsm)))))
 
 
 (defn hit
   "hit actor"
-  [{:keys [id health color metrics facing curr-mode]
-    {:keys [head neck hip hand_l hand_r elbow_l elbow_r knee_l knee_r foot_l foot_r] :as masses} :masses
-    {:keys [block] :as control} :control col :color :as actor}
-   {:keys [base target power radius facing] :as command}
+  [{:keys [id health facing curr-mode]
+    {:keys [block]} :control :as actor}
+   {:keys [base target power facing] :as command}
    time]
 
-  (let [[dx dy] (math2/sub-v2 base (:p hip))
-        alive? (> health 0)
-        nearby? (and (< dx radius) (< dy radius))
-        not-rag? (not= curr-mode :rag)
-        diff-actor? (not= id (:id command))
-        diff-color? (not= color (:color command))
-        diff-facing? (not= facing (:facing command))]
+  (let [[headisp bodyisp footlisp footrisp :as hitpoints] (hitpoints actor command)
+        diff-facing? (not= facing (:facing command))
+        hitpower (cond
+                   headisp power ;; head kick/punch is full power
+                   bodyisp (* power 0.6)
+                   footlisp (* power 0.4)
+                   footrisp (* power 0.4))
+        timeout (cond
+                  (= curr-mode :jump) (+ time 2000) ;; if hit during jump, stay on the ground a bit
+                  (and headisp (> hitpower 39)) (+ time 1000) ;; if hit on the head hard, stay on the gorund a little
+                  :else (+ time 200))] ;; just stagger a little
 
-    (if-not (and diff-actor? diff-color? nearby? not-rag? alive?)
-      actor
-      (let [[headisp bodyisp footlisp footrisp] (calc-isps masses base target)
-            [hvx hvy :as hitv] (math2/sub-v2 target base)
-            hitsm (math2/resize-v2 hitv 10)
-            hitbg (math2/resize-v2 hitv 20)
-            has-isp (or headisp bodyisp footlisp footrisp)]
+    (if-not (or headisp bodyisp footlisp footrisp)
+      actor ;; no intersection, leave actor untouched
+      (if (and block diff-facing?)
+        ;; move actor slightly back when blocking and facing the sender
+        (-> actor
+            (assoc :hittimeout (+ time 1000))
+            (update :health - (/ power 2.0)) 
+            (update :speed + (* facing (/ power 2.0)))
+            (check-death time))
+        ;; hit actor
+        (-> actor
+            (assoc :hittimeout timeout )
+            (assoc :next-mode :rag)
+            (update :health - hitpower) 
+            (update :speed + (* facing (/ power 2.0)))
+            (hit-masses hitpoints base target)
+            (check-death time))))))
 
-        (if-not has-isp
-          ;; no intersection, leave actor untouched
-          actor
-          ;; intersection, check facing and blocking
-          (if (and block diff-facing?)
-            ;; move actor slightly when blocking and facing the sender
-            (-> actor
-                (assoc :hittimeout (+ time 1000))
-                (update :health - (/ power 2.0)) 
-                (update :speed + (* facing (/ power 2.0)))
-                (check-death))
-            ;; hit actor
-            (let [neck-part (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p neck))))
-                  hip-part  (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p hip))))
-                  neck-ratio (if bodyisp (/ hip-part (:bodyl metrics)))
-                  hip-ratio (if bodyisp (/ neck-part (:bodyl metrics)))
-
-                  hitpower (cond
-                             headisp power
-                             bodyisp (* power 0.6)
-                             footlisp (* power 0.4)
-                             footrisp (* power 0.4))]
-
-              (cond-> actor
-                true (assoc :hittimeout (cond
-                                          (= curr-mode :jump) (+ time 2000)
-                                          (and headisp (> hitpower 39)) (+ time 1000)
-                                          (< health hitpower) (+ time 2000)
-                                          :else (+ time 200)))
-                true (assoc :next-mode :rag)
-                true (update :health - hitpower) 
-                true (update :speed + (* (/ hvx (Math/abs hvx)) 5.0))
-                ;; TODO REFACTOR
-                (< (- health hitpower) 0) (assoc :dragged-body nil)
-                (and (= (:id actor) :hero ) (< (- health hitpower) 0 )) (update :commands conj {:text "show-wasted"})
-                ;; true (assoc :masses (reduce (fn [oldmasses [id mass]] (assoc oldmasses id (assoc mass :d [0 0]))) {} masses))
-                headisp (assoc-in [:masses :head :d] (math2/add-v2 (:d head) hitbg))
-                headisp (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) hitsm))
-                bodyisp (assoc-in [:masses :neck :d] (math2/add-v2 (:d neck) (math2/scale-v2 hitbg (+ 0.4 neck-ratio))))
-                bodyisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) (math2/scale-v2 hitbg (+ 0.4 hip-ratio))))
-                footlisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
-                footlisp (assoc-in [:masses :knee_l :d] (math2/add-v2 (:d knee_l) hitsm))
-                footrisp (assoc-in [:masses :hip :d] (math2/add-v2 (:d hip) hitbg))
-                footrisp (assoc-in [:masses :knee_r :d] (math2/add-v2 (:d knee_r) hitsm))))))))))
-  
 
 (defn update-idle [state] state)
 

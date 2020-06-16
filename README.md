@@ -33,3 +33,12 @@ Download/checkout the repo and start it up with :
 * randomize fix
 * improve buddy ai when attacking
 * continuous punch/kick/block
+
+
+how does a real-time game with complex algorithms ( phyisics simulation, ui/font rendering, ai) look like
+is cljs fast enough for this?
+modify mutliple data types from one data type - multiple maps instead of one reduce with complex functions
+where to extract data
+eric chachi virtual machine easy to port
+clojureis like a virtual languageü runs on everything
+chain small steps instead of doing something with a complicated reduce function

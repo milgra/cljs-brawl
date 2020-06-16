@@ -101,7 +101,9 @@
     (if-not (:dragged-body sender)
       ;; normal kick/puncj
       (let [main-dir (math2/resize-v2 (math2/sub-v2 (:target command) (:base command)) 4.0)
-            contacts (remove nil? (map (fn [[id actor]] (actor/hitpoint actor command)) actors))
+            contacts (remove nil? (map (fn [[id actor]]
+
+                                         (first (remove nil? (actor/hitpoints actor command)))) actors))
             new-particles (create-particles contacts main-dir)
             new-actors (hit-actors actors sounds command time)]
         (if (get-in sender [:control :shoot]) (.play (:shot sounds))           
