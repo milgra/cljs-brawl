@@ -52,7 +52,7 @@
       (if target
         ;; change to follow state
         (-> state
-            (assoc :pickup-sent false)
+            (assoc-in [:attack :pickup-sent] false)
             (assoc-in [:ai :target] target)
             (assoc-in [:ai :timeout] (+ time 100 (rand-int 100)))
             (assoc-in [:ai :state] :follow))

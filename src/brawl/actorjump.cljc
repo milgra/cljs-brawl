@@ -7,7 +7,7 @@
 (defn move-head-jump
   "move head point"
   [{:keys [facing kick-pressed] {{[hx hy] :p} :hip} :masses
-    {squat-size :squat-size} :step
+    {squat-size :squat-size} :walk
     {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
     {legl :legl bodyl :bodyl headl :headl} :metrics
     {:keys [down up left right kick]} :control :as state}]
@@ -34,10 +34,10 @@
 
 (defn move-feet-jump
   "move active base towards target point"
-  [{:keys [id color speed step-length facing commands]
+  [{:keys [id color speed facing commands]
     {action-sent :action-sent} :attack
     {{[hx hy] :p} :hip :as masses } :masses
-    {base-order :order base-target :target} :step
+    {base-order :order base-target :target} :walk
     {base_l :base_l base_r :base_r} :bases
     {legl :legl runs :runs walks :walks} :metrics
     {kick :kick} :control

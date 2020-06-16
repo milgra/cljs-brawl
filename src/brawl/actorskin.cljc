@@ -122,7 +122,7 @@
   [floatbuffer
    {{:keys [head neck elbow_l elbow_r hand_l hand_r knee_l knee_r foot_l foot_r] {[x y] :p :as hip} :hip} :masses
     {:keys [headw neckw armw hipw legw cola colb colc cold]} :metrics
-    {{af :active pf :passive} :order {as :active ps :passive} :surfaces} :step
+    {{af :active pf :passive} :order {as :active ps :passive} :surfaces} :walk
     {color :color randoms :randoms} :skin
     facing :facing
     health :health}

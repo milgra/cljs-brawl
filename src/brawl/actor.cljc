@@ -90,8 +90,8 @@
      :health (+ 100.0 (* level 50.0))
      :control (default-control)
      :commands [] ;; command collector
-     ;; step related
-     :step {:order {:active :base_l :passive :base_r}
+     ;; walk related
+     :walk {:order {:active :base_l :passive :base_r}
             :target nil
             :surfaces {:active nil :passive nil}
             :length 0
@@ -117,10 +117,8 @@
               :punch-hand :hand_l
               :punch-y 0
               :kick-y 0
-              :action-sent false}
-     
-     :pickup-sent false
-    }))
+              :action-sent false
+              :pickup-sent false}}))
 
 
 (defn check-death
@@ -304,7 +302,7 @@
                      (second (first feet-new))
                      (:p bl))
         state-new (-> state
-                      (assoc-in [:step :jump-state] 0) ; reset jump state
+                      (assoc-in [:walk :jump-state] 0) ; reset jump state
                       (assoc :next-mode nil)
                       (assoc-in [:base :target] nil) ; reset stepping
                       (assoc :curr-mode :walk)
@@ -312,8 +310,8 @@
     (cond-> state-new
       (= curr-mode :rag) (assoc-in [:bases :base_l :p] feet-final)
       (= curr-mode :rag) (assoc-in [:bases :base_r :p] feet-final)
-      (= curr-mode :rag) (assoc-in [:step :squat-size] (* 1.0 (get-in state [:metrics :legl]))) ; squat when reaching ground
-      (= curr-mode :jump) (assoc-in [:step :squat-size] (* 0.5 (get-in state [:metrics :legl])))))) ; squat when reaching ground
+      (= curr-mode :rag) (assoc-in [:walk :squat-size] (* 1.0 (get-in state [:metrics :legl]))) ; squat when reaching ground
+      (= curr-mode :jump) (assoc-in [:walk :squat-size] (* 0.5 (get-in state [:metrics :legl])))))) ; squat when reaching ground
 
 
 (defn change-mode
@@ -373,9 +371,9 @@
 
 (defn update-controls
   "update controls if controlled by player"
-  [{:keys [pickup-sent] self-control :control
-    {vert-direction :vert-direction} :step
-    {punch-hand :punch-hand kick-y :kick-y punch-y :punch-y action-sent :action-sent} :attack
+  [{self-control :control
+    {vert-direction :vert-direction} :walk
+    {punch-hand :punch-hand kick-y :kick-y punch-y :punch-y action-sent :action-sent pickup-sent :pickup-sent} :attack
     :as state}
    {:keys [left right up down punch kick shoot block run] :as control}]
   (if-not control
@@ -388,9 +386,9 @@
       (-> state
           
           (assoc-in [:attack :action-sent] (if (and (not punch) (not kick) (not shoot)) false action-sent)) ;; set action sent to false if no action is happening
-          (assoc :pickup-sent (if (not down) false pickup-sent)) ;; set it to false if no pickup is happening
+          (assoc-in [:attack :pickup-sent] (if (not down) false pickup-sent)) ;; set it to false if no pickup is happening
           (assoc-in [:attack :punch-hand] p-hand)
-          (assoc-in [:step :vert-direction] (cond ;; change vertical direction in case of up/down
+          (assoc-in [:walk :vert-direction] (cond ;; change vertical direction in case of up/down
                                               down -1
                                               up 1
                                               :else vert-direction))
@@ -409,11 +407,11 @@
 
 (defn update-angle
   "update breathing angle of actor"
-  [{{angle :idle-angle} :step health :health :as state} delta]
+  [{{angle :idle-angle} :walk health :health :as state} delta]
   (cond-> state
     (and (< health 100.0) (> health 0.0)) (update :health + (* 0.05 delta)) 
-    (> angle math/MPI2) (assoc-in [:step :idle-angle] (- angle math/MPI2))
-    (< angle math/MPI2) (update-in [:step :idle-angle] + (* 0.05 delta))))
+    (> angle math/MPI2) (assoc-in [:walk :idle-angle] (- angle math/MPI2))
+    (< angle math/MPI2) (update-in [:walk :idle-angle] + (* 0.05 delta))))
 
 
 (defn update-actor
