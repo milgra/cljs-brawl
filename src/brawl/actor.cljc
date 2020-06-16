@@ -98,7 +98,8 @@
             :zone []
             :vert-direction 1
             :squat-size 0
-            :jump-state 0}
+            :jump-state 0
+            :idle-angle 0}
      ;; skin related
      :skin {:color (math/int-to-rgba color)
             :randoms (vec (repeatedly 40 #(+ -1.5 (rand 3))))}
@@ -115,11 +116,11 @@
      :attack {:bullets 0
               :punch-hand :hand_l
               :punch-y 0
-              :kick-y 0}
+              :kick-y 0
+              :action-sent false}
      
      :pickup-sent false
-     :action-sent false
-     :idle-angle 0}))
+    }))
 
 
 (defn check-death
@@ -372,9 +373,9 @@
 
 (defn update-controls
   "update controls if controlled by player"
-  [{:keys [action-sent pickup-sent] self-control :control
+  [{:keys [pickup-sent] self-control :control
     {vert-direction :vert-direction} :step
-    {punch-hand :punch-hand kick-y :kick-y punch-y :punch-y} :attack
+    {punch-hand :punch-hand kick-y :kick-y punch-y :punch-y action-sent :action-sent} :attack
     :as state}
    {:keys [left right up down punch kick shoot block run] :as control}]
   (if-not control
@@ -386,7 +387,7 @@
           kick-y (if (and (not (:kick self-control)) kick) (rand 30) kick-y)] ;; kick height
       (-> state
           
-          (assoc :action-sent (if (and (not punch) (not kick) (not shoot)) false action-sent)) ;; set action sent to false if no action is happening
+          (assoc-in [:attack :action-sent] (if (and (not punch) (not kick) (not shoot)) false action-sent)) ;; set action sent to false if no action is happening
           (assoc :pickup-sent (if (not down) false pickup-sent)) ;; set it to false if no pickup is happening
           (assoc-in [:attack :punch-hand] p-hand)
           (assoc-in [:step :vert-direction] (cond ;; change vertical direction in case of up/down
@@ -408,11 +409,11 @@
 
 (defn update-angle
   "update breathing angle of actor"
-  [{angle :idle-angle health :health :as state} delta]
+  [{{angle :idle-angle} :step health :health :as state} delta]
   (cond-> state
     (and (< health 100.0) (> health 0.0)) (update :health + (* 0.05 delta)) 
-    (> angle math/MPI2) (assoc :idle-angle (- angle math/MPI2))
-    (< angle math/MPI2) (update :idle-angle + (* 0.05 delta))))
+    (> angle math/MPI2) (assoc-in [:step :idle-angle] (- angle math/MPI2))
+    (< angle math/MPI2) (update-in [:step :idle-angle] + (* 0.05 delta))))
 
 
 (defn update-actor

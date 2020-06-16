@@ -45,11 +45,12 @@
 
 (defn move-hand-walk
   "move head point"
-  [{:keys [id facing color action-sent commands speed]
-    {bullets :bullets punch-hand :punch-hand punch-y :punch-y} :attack
+  [{:keys [id facing color commands speed]
+    {bullets :bullets punch-hand :punch-hand punch-y :punch-y action-sent :action-sent} :attack
     {{[hx hy] :p} :hip {[nx ny :as neck] :p} :neck } :masses
     {{[ax ay] :p} :base_l {[bx by] :p} :base_r} :bases
-    {arml :arml} :metrics angle :idle-angle
+    {arml :arml} :metrics
+    {angle :idle-angle} :step
     {:keys [down up left right punch shoot block]} :control
     :as state}
    surfaces]
@@ -88,7 +89,7 @@
                               :power 110}]))]
     (-> state
         (assoc :commands newcommands)
-        (assoc :action-sent (if (and (or punch shoot) (not action-sent)) true action-sent))
+        (assoc-in [:attack :action-sent] (if (and (or punch shoot) (not action-sent)) true action-sent))
         (assoc-in [:attack :bullets] (if (and shoot (not action-sent)) (dec bullets) bullets))
         (assoc-in [:masses :hand_l :p] hand_l)
         (assoc-in [:masses :hand_r :p] hand_r)
@@ -98,8 +99,8 @@
 
 (defn move-hip-walk
   "move hip points, handle jumping"
-  [ {:keys [next-mode idle-angle facing speed]
-     {base-order :order squat-size :squat-size jump-state :jump-state} :step
+  [ {:keys [next-mode facing speed]
+     {base-order :order squat-size :squat-size jump-state :jump-state idle-angle :idle-angle} :step
      {:keys [down up left right run kick]} :control
      {{[hx hy] :p} :hip } :masses
      {{[lx ly] :p} :base_l {[rx ry] :p} :base_r} :bases
@@ -148,10 +149,10 @@
 
 (defn move-feet-walk-still 
   "do kick if needed"
-  [{:keys [id color bases masses speed facing action-sent commands]
+  [{:keys [id color bases masses speed facing commands]
     {base-order :order base-target :target} :step
     {legl :legl runs :runs walks :walks} :metrics
-    {kick-y :kick-y} :attack
+    {kick-y :kick-y action-sent :action-sent} :attack
     {kick :kick} :control :as state}
    surfaces]
   (let [active-base (:active base-order)
@@ -176,7 +177,7 @@
                                        :power 40}]))]
     (-> state
         (assoc :commands newcommands)
-        (assoc :action-sent (if (and kick (not action-sent)) true action-sent))
+        (assoc-in [:attack :action-sent] (if (and kick (not action-sent)) true action-sent))
         (assoc-in [:masses :foot_l :p] foot_l) 
         (assoc-in [:masses :foot_r :p] foot_r)
         (assoc-in [:step :target] nil))))

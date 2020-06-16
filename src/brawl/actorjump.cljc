@@ -34,7 +34,8 @@
 
 (defn move-feet-jump
   "move active base towards target point"
-  [{:keys [id color speed step-length facing action-sent commands]
+  [{:keys [id color speed step-length facing commands]
+    {action-sent :action-sent} :attack
     {{[hx hy] :p} :hip :as masses } :masses
     {base-order :order base-target :target} :step
     {base_l :base_l base_r :base_r} :bases
@@ -56,7 +57,7 @@
                                        :power 50.0}]))]
     (-> state
         (assoc :commands newcommands)
-        (assoc :action-sent (if (and kick (not action-sent)) true action-sent))
+        (assoc-in [:attack :action-sent] (if (and kick (not action-sent)) true action-sent))
         (assoc-in [:masses :foot_l :p] foot_l) 
         (assoc-in [:masses :foot_r :p] foot_r))))
 

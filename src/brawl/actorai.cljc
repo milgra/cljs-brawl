@@ -142,7 +142,7 @@
             target (if-not (empty? bodies)
                      (second (first bodies)))
             newstate (-> state
-                         (assoc :action-sent false)
+                         (assoc-in [:attack :action-sent] false)
                          (assoc-in [:control :punch] false)
                          (assoc-in [:control :kick] false)
                          (assoc-in [:control :block] false))]
