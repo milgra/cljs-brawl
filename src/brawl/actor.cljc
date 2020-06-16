@@ -1,30 +1,21 @@
 (ns brawl.actor
   (:require [mpd.math2 :as math2]
             [mpd.phys2 :as phys2]
+            [brawl.math :as math]
             [brawl.metrics :as metrics]
             [brawl.actorai :as ai]
             [brawl.actorjump :as jump]
-            [brawl.actorwalk :as walk]
-            [clojure.spec.alpha :as spec]))
-
-(def MPI2 (* Math/PI 2))
-(declare update-rag)
+            [brawl.actorwalk :as walk]))
 
 
-(defn int-to-rgba [color]
-  (let [r (/ (float (bit-and (bit-shift-right color 24) 0xFF)) 255.0)
-        g (/ (float (bit-and (bit-shift-right color 16) 0xFF)) 255.0)
-        b (/ (float (bit-and (bit-shift-right color 8) 0xFF)) 255.0)
-        a (/ (float (bit-and color 0xFF)) 255.0)]
-    [r g b a]))
-
-
-(defn default-bases [x y]
+(defn default-bases
+  [x y]
   {:base_l (phys2/mass2 (+ x 20.0) y 2.0 1.0 0.0 0.0)
    :base_r (phys2/mass2 (- x 20.0) y 2.0 1.0 0.0 0.0)})
 
 
-(defn default-masses [x y]
+(defn default-masses
+  [x y]
   {:head    (phys2/mass2 x y 4.0 1.0 0.5 0.6)
    :neck    (phys2/mass2 x y 4.0 1.0 0.5 0.6)
    :hip     (phys2/mass2 x y 4.0 1.0 0.5 0.6)
@@ -38,8 +29,9 @@
    :foot_r  (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.5 0.6)})
 
 
-(defn default-distance-guards [masses metrics]
-  [(phys2/dguard2 masses :head :neck (:headl metrics) 0.0)
+(defn default-distance-guards
+  [masses metrics]
+   [(phys2/dguard2 masses :head :neck (:headl metrics) 0.0)
    (phys2/dguard2 masses :neck :hip (:bodyl metrics) 0.0)
    (phys2/dguard2 masses :neck :elbow_l (* 0.5 (:arml metrics)) 0.0)
    (phys2/dguard2 masses :neck :elbow_r (* 0.5 (:arml metrics)) 0.0)
@@ -51,7 +43,8 @@
    (phys2/dguard2 masses :knee_r :foot_r (* 0.5 (:legl metrics)) 0.0)])
 
 
-(defn default-angle-guards [masses]
+(defn default-angle-guards
+  [masses]
   [(phys2/aguard2 masses :head :neck :hip 0 Math/PI 0.5)
    (phys2/aguard2 masses :hip :knee_l :foot_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
    (phys2/aguard2 masses :hip :knee_r :foot_r (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)
@@ -59,7 +52,8 @@
    (phys2/aguard2 masses :neck :elbow_l :hand_l (/ Math/PI 2) (/ (* 3  Math/PI) 2) 0.1)])
 
 
-(defn default-control []
+(defn default-control
+  []
   {:left false
    :right false
    :up false
@@ -121,34 +115,14 @@
      :dragged-gun nil
      :dragged-body nil
      ;; skin drawing related
-     :colorf (int-to-rgba color)
+     :colorf (math/int-to-rgba color)
      :randoms (vec (repeatedly 40 #(+ -1.5 (rand 3))))
      :step-zone [x y]}))
 
 
-(defn update-dragged [dragged
-                      {{:keys [head hip neck]} :masses :as dragger}
-                      time]
-  (-> dragged
-    (assoc :hittimeout (+ time 5000))
-    (assoc-in [:masses :hip :d] [0 0])
-    (assoc-in [:masses :hip :p] (math2/add-v2 (:p head) [-20 0] ))
-    (assoc-in [:masses :neck :d] [0 0])
-    (assoc-in [:masses :neck :p] (math2/add-v2 [-20 0] (math2/add-v2 (:p head)(math2/rotate-90-ccw (math2/sub-v2 (:p neck) (:p hip))))))))
-
-
-(defn update-gun [{s :s :as gun}
-                  {{hand_l :hand_l elbow_l :elbow_l} :masses
-                   :keys [bullets facing commands action-sent]
-                   {:keys [shoot]} :control :as actor}]
-  (assoc gun
-         :p (:p hand_l)
-         :f (- facing)
-         :d (if shoot [(* facing 100.0) 0.0] (math2/sub-v2 (:p hand_l) (:p elbow_l)))
-         :s (if (and shoot (> bullets 0)) (inc s) 0)))
-
-
-(defn check-death [{:keys [id health] :as actor} time]
+(defn check-death
+  "check health and change state to dead if needed"
+  [{:keys [id health] :as actor} time]
   (if (<= health 0)
     (cond-> actor
       true (assoc :next-mode :rag)
@@ -252,76 +226,65 @@
             (check-death time))))))
 
 
-(defn update-idle [state] state)
+(defn update-dragged
+  "update body mass points if actor is dragged"
+  [dragged
+   {{:keys [head hip neck]} :masses :as dragger}
+   time]
+  (-> dragged
+      (assoc :hittimeout (+ time 5000))
+      (assoc-in [:masses :hip :d] [0 0])
+      (assoc-in [:masses :hip :p] (math2/add-v2 (:p head) [-20 0] ))
+      (assoc-in [:masses :neck :d] [0 0])
+      (assoc-in [:masses :neck :p] (math2/add-v2 [-20 0] (math2/add-v2 (:p head)(math2/rotate-90-ccw (math2/sub-v2 (:p neck) (:p hip))))))))
 
 
-(defn update-rag [{:keys [masses dguards hittimeout next-mode health injure-when-dropped is-dragged commands id] :as state } surfaces time delta]
-  (if (> health 0)
-    (let [newmasses (-> masses
-                        (phys2/add-gravity [0.0 0.4])
-                        ;;(phys2/keep-angles (:aguards state))
-                        (phys2/keep-distances (:dguards state))
-                        (phys2/move-masses surfaces 0.4))
-          newnext (if (> time hittimeout) :walk next-mode) 
-          result (-> state
-                     (assoc :next-mode newnext)
-                     (assoc :masses newmasses))]
-      (if (= result nil) println "UPDATERAG ERROR!!!")
-      result)
+(defn update-gun
+  "update gun points if gun is dragged"
+  [{s :s :as gun}
+   {{hand_l :hand_l elbow_l :elbow_l} :masses
+    :keys [bullets facing commands action-sent]
+    {:keys [shoot]} :control :as actor}]
+  (assoc gun
+         :p (:p hand_l)
+         :f (- facing)
+         :d (if shoot [(* facing 100.0) 0.0] (math2/sub-v2 (:p hand_l) (:p elbow_l)))
+         :s (if (and shoot (> bullets 0)) (inc s) 0)))
     
-    (let [newmasses (-> masses
-                        (phys2/add-gravity [0.0 0.4])
-                        ;;(phys2/keep-angles (:aguards state))
-                        (phys2/keep-distances (:dguards state))
-                        (phys2/move-masses (if is-dragged [] surfaces) 0.4))
-          finished (or (> time hittimeout) (and (:q (:neck newmasses)) (:q (:hip newmasses))))
-          newnext (if finished :idle next-mode) 
-          newcommands (if-not (and injure-when-dropped (= 0 (mod (int (* time 10.0)) 2)))
-                        commands
-                        (into commands [{:id id
-                                         :text "attack"
-                                         :base (get-in masses [:neck :p])
-                                         :target (get-in masses (math2/resize-v2 [:neck :d] 10.0))
-                                         :facing 0
-                                         :radius 50.0
-                                         :power 50}]))
-          result (-> state
-                     (assoc :commands newcommands)
-                     (assoc :next-mode newnext)
-                     (assoc :masses newmasses))]
 
-      (if (= result nil) println "UPDATERAG ERROR!!!")
-      result)))
+(defn change-mode-walk [{:keys [curr-mode] {hip :hip :as masses} :masses {bl :base_l} :bases :as state} surfaces]
+  (let [newmasses (reduce (fn [res [id mass]] ; reset mass directions for next rag
+                            (assoc res id (assoc mass :d [0 0])))
+                          masses
+                          masses)
+        newfeetpoint (sort-by first (phys2/get-intersecting-surfaces (:p hip) [0 400] surfaces))
+        finalpoint (if-not (empty? newfeetpoint)
+                     (second (first newfeetpoint))
+                     (:p bl))]
+                                        ; reset walk state
+    (cond-> state
+      (= curr-mode :rag) (assoc-in [:bases :base_l :p] finalpoint)
+      (= curr-mode :rag) (assoc-in [:bases :base_r :p] finalpoint)
+      (= curr-mode :rag) (assoc :squat-size (* 1.0 (get-in state [:metrics :legl]))) ; squat when reaching ground
+      (= curr-mode :jump) (assoc :squat-size (* 0.5 (get-in state [:metrics :legl]))) ; squat when reaching ground
+      true (assoc :jump-state 0) ; reset jump state
+      true (assoc :next-mode nil)
+      true (assoc :base-target nil) ; reset stepping
+      true (assoc :curr-mode :walk)
+      true (assoc :masses newmasses))))
 
 
-(defn update-mode
+(defn change-mode
   "if next mode is set, switch to that mode"
-  [{:keys [masses next-mode speed curr-mode] {hip :hip fl :foot_l fr :foot_r :as masses} :masses  {ba :base_l bb :base_r} :bases :as state} surfaces]
+  [{:keys [masses next-mode speed curr-mode] {hip :hip fl :foot_l fr :foot_r :as masses} :masses
+    {ba :base_l bb :base_r} :bases :as state}
+   surfaces]
   (let [result
         (cond
           
           (= next-mode nil) state
 
-          (= next-mode :walk)
-          (let [newmasses (reduce (fn [res [id mass]] ; reset mass directions for next rag
-                                    (assoc res id (assoc mass :d [0 0])))
-                                  masses
-                                  masses)
-                newfeetpoint (sort-by first (phys2/get-intersecting-surfaces (:p hip) [0 400] surfaces))
-                finalpoint (if-not (empty? newfeetpoint)
-                             (second (first newfeetpoint))
-                             (:p ba))]
-                                        ; reset walk state
-            (cond-> state
-              (= curr-mode :rag) (assoc-in [:bases :base_l :p] finalpoint)
-              (= curr-mode :rag) (assoc-in [:bases :base_r :p] finalpoint)
-              (= curr-mode :rag) (assoc :squat-size (* 1.0 (get-in state [:metrics :legl]))) ; squat when reaching ground
-              (= curr-mode :jump) (assoc :squat-size (* 0.5 (get-in state [:metrics :legl]))) ; squat when reaching ground
-              true (assoc :jump-state 0) ; reset jump state
-              true (assoc :next-mode nil)
-              true (assoc :base-target nil) ; reset stepping
-              true (assoc :curr-mode :walk)
-              true (assoc :masses newmasses)))
+          (= next-mode :walk) (change-mode-walk state surfaces)
 
           (= next-mode :jump)
           (let [[hx hy] (:p hip)
@@ -358,7 +321,41 @@
     result))
 
 
-(defn update-fn [{mode :curr-mode :as state} surfaces time delta]
+(defn update-rag
+  "update ragdoll state"
+  [{:keys [masses dguards hittimeout next-mode health injure-when-dropped is-dragged commands id] :as state }
+   surfaces
+   time
+   delta]
+  (let [masses-new (-> masses
+                       (phys2/add-gravity [0.0 0.4])
+                       ;;(phys2/keep-angles (:aguards state))
+                       (phys2/keep-distances (:dguards state))
+                       (phys2/move-masses (if is-dragged [] surfaces) 0.4)) ;; if dragged be able to drag down the body at a fork
+        mode-new (cond
+                   (and (>  health 0) (> time hittimeout)) :walk
+                   (and (<= health 0) (> time hittimeout) (:q (:neck masses-new)) (:q (:hip masses-new))) :idle
+                   :else next-mode)
+
+        commands-new (if-not (and injure-when-dropped (= 0 (mod (int (* time 10.0)) 2)))
+                       commands
+                       (into commands [{:id id
+                                        :text "attack"
+                                        :base (get-in masses [:neck :p])
+                                        :target (get-in masses (math2/resize-v2 [:neck :d] 10.0))
+                                        :facing 0
+                                        :radius 50.0
+                                        :power 50}]))]
+    (-> state
+        (assoc :commands commands-new)
+        (assoc :next-mode mode-new)
+        (assoc :masses masses-new))))
+
+
+(defn update-idle [state] state)
+
+
+(defn update-mode [{mode :curr-mode :as state} surfaces time delta]
   (case mode
     :rag (update-rag state surfaces time delta)
     :idle (update-idle state)
@@ -400,8 +397,8 @@
   [{angle :idle-angle health :health :as state} delta]
   (cond-> state
     (and (< health 100.0) (> health 0.0)) (update :health + (* 0.05 delta)) 
-    (> angle MPI2) (assoc :idle-angle (- angle MPI2))
-    (< angle MPI2) (update :idle-angle + (* 0.05 delta))))
+    (> angle math/MPI2) (assoc :idle-angle (- angle math/MPI2))
+    (< angle math/MPI2) (update :idle-angle + (* 0.05 delta))))
 
 
 (defn update-actor [state control surfaces actors guns time delta]
@@ -411,7 +408,7 @@
                    (update-angle delta)
                    (update-controls control) ;; manual controls for hero
                    (ai/update-ai control surfaces actors time delta) ;; ai controls for others
-                   (update-fn surfaces time delta)
-                   (update-mode surfaces))]
+                   (update-mode surfaces time delta)
+                   (change-mode surfaces))]
     ;;(if (= (:id state) :enemy) (println "AFTER UPDATE" (:version result) (get-in result [:masses :knee_l :d] )))
     result))
