@@ -17,10 +17,11 @@
 
 (defn send-commands
   "send commands if needed"
-  [{:keys [id commands dragged-gun dragged-body pickup-sent]
+  [{:keys [id commands pickup-sent]
+    {:keys [gun body]} :drag
     {pickup-sent :pickup-sent} :attack 
     {:keys [down]} :control :as state}]
-  (if (and down (or (= nil dragged-gun) (= nil dragged-body)) (not pickup-sent))
+  (if (and down (or (= nil gun) (= nil body)) (not pickup-sent))
     (-> state
         (update :commands into [{:text "pickup" :id id}])
         (assoc-in [:attack :pickup-sent] true))
@@ -237,14 +238,14 @@
         ;; we have no surface under feet, fall
         (-> state
             (assoc :next-mode :rag)
-            (assoc-in [:attack :hittimeout] time)
+            (assoc-in [:attack :timeout] time)
             (assoc :health -1))
         ;; normal step
         (-> state
             (assoc-in [:walk :zone] {:A (:A step-zone)
                                      :B (math2/add-v2 (:A step-zone)(:B step-zone))
                                      :C (math2/add-v2 (:A step-zone)(:C step-zone))})
-            (assoc-in [:walk :length] (math2/length-v2 (math2/sub-v2 base-target (:p (bases (:active base-order))))))
+            (assoc-in [:walk :step-size] (math2/length-v2 (math2/sub-v2 base-target (:p (bases (:active base-order))))))
             (assoc-in [:walk :order] base-order)
             (assoc-in [:walk :target] base-target)
             (assoc-in [:walk :surfaces] {:active newactivesurf :passive (or newpassivesurf newactivesurf)})))
@@ -256,7 +257,7 @@
 (defn move-feet-walk
   "move active base towards target point"
   [{:keys [bases masses speed facing kick-pressed] {legl :legl runs :runs walks :walks} :metrics
-    {step-length :length base-order :order base-target :target} :walk
+    {step-length :step-size base-order :order base-target :target} :walk
     {kick :kick} :control :as state}
    surfaces
    time

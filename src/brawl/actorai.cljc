@@ -67,7 +67,9 @@
 
 (defn update-follow
   "go after enemy/hero"
-  [{:keys [id color dragged-body vert-direction]
+  [{:keys [id color]
+    {dragged-body :body} :drag
+    {direction :direction} :walk
     {ai-state :state ai-timeout :timeout ai-target :target} :ai
     {{[x y :as pos] :p} :head} :masses
     {:keys [arml legl]} :metrics
@@ -86,7 +88,7 @@
           new-direction (cond
                            (> py (+ y 20.0)) -1
                            (< py (- y 20.0)) 1
-                           :else vert-direction)
+                           :else direction)
           dead (<= health 0)
           pick (rand-int 3)]
       (cond
@@ -115,7 +117,7 @@
         ;; follow target
         :else (cond-> state
                 true (assoc [:ai :timeout] (+ time 100))
-                true (assoc :vert-direction new-direction) 
+                true (assoc :direction new-direction) 
                 (<= x (- px arml)) (assoc-in [:control :right] true)
                 (<= x (- px arml)) (assoc-in [:control :left] false)
                 (>= x (+ px arml)) (assoc-in [:control :left] true)
