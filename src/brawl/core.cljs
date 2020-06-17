@@ -22,7 +22,7 @@
 
 
 (defn resize-context!
-  "vresize canvas on window resize"
+  "resize canvas on window resize"
   []
   (let [canvas (dom/getElement "main")
         context (context/get-context canvas)
@@ -30,9 +30,8 @@
         width (.-width rect)
         height (.-height rect)
         ratio (or (.-devicePixelRatio js/window) 1.0)]
-    (dom/setProperties canvas
-                       (clj->js {:width (* width ratio)
-                                 :height (* height ratio)}))))
+    (dom/setProperties canvas (clj->js {:width (* width ratio)
+                                        :height (* height ratio)}))))
 
 
 (defn load-font!
@@ -51,6 +50,13 @@
   [state]
   (let [key-codes (atom {})
         mouse-down (atom false)]
+
+    (events/listen
+     js/window
+     EventType.RESIZE
+     (fn [event]
+       (put! (:msgch state) {:id "resize"})
+       (resize-context!)))
     
     (events/listen
      js/document
@@ -88,70 +94,70 @@
      js/document
      EventType.POINTERMOVE
      (fn [event]
-       (if @mouse-down (put! (:msgch state) {:id "mouse" :type "down" :point [(.-clientX event) (.-clientY event)]}))))
-
-    (events/listen
-     js/document
-     EventType.TOUCHSTART
-     (fn [event] nil))
-
-    (events/listen
-     js/window
-     EventType.RESIZE
-     (fn [event]
-       (put! (:msgch state) {:id "resize"})
-       (resize-context!)))))
+       (if @mouse-down (put! (:msgch state) {:id "mouse" :type "down" :point [(.-clientX event) (.-clientY event)]}))))))
 
 
 (defn draw-ui
   "draw ui elements with ui-drawer"
-  [{{:keys [views viewids projection] :as ui} :ui ui-drawer :ui-drawer :as state}]
-  (assoc state :ui-drawer (uiwebgl/draw! ui-drawer projection)))
+  [state]
+  (let [{:keys [projection]} (:ui state)
+        {:keys [ui-drawer]} state]
+    (assoc state :ui-drawer (uiwebgl/draw! ui-drawer projection))))
+
+
+(defn collect-triangles
+  [buffer actors guns variation view-rect]
+  (-> buffer
+      (floatbuffer/empty!)
+      ((partial reduce (fn [oldbuf [id actor]]
+                         (if (not= id :hero) (actorskin/get-skin-triangles oldbuf actor variation view-rect) oldbuf))) actors)
+      (actorskin/get-skin-triangles (:hero actors) variation view-rect)
+      ((partial reduce (fn [oldbuf [id gun]] (gun/get-skin-triangles gun oldbuf view-rect))) guns)))
+
+
+(defn collect-points
+  [buffer actors particles view-rect physics]
+  (cond-> buffer
+    true (floatbuffer/empty!)
+    true ((partial reduce (fn [oldbuf particle] (particle/get-point particle oldbuf))) particles)
+    physics ((partial reduce (fn [oldbuf [id actor]] (actorskin/get-points actor oldbuf view-rect))) actors)))
+
+
+(defn collect-lines
+  [buffer actors surfacelines view-rect physics]
+  (cond-> buffer
+    true (floatbuffer/empty!)
+    physics ((partial reduce (fn [oldbuf [id actor]] (actorskin/get-lines actor oldbuf view-rect))) actors)
+    physics (floatbuffer/append! surfacelines)))
 
 
 (defn draw-world
   "draws background, actors, masses with projection"
-  [{:keys [world-drawer buffer physics]
-    {:keys [actors guns particles surfacelines view-rect projection] :as world} :world :as state} frame]
-  (if-not (:inited world)
-    state
-    (let [variation (Math/floor (mod (/ frame 10.0) 3.0 ))
-          buffer-triangle (-> buffer
-                              (floatbuffer/empty!)
-                              ((partial reduce (fn [oldbuf [id actor]]
-                                                 (if (not= id :hero) (actorskin/get-skin-triangles oldbuf actor variation view-rect) oldbuf))) actors)
-                              (actorskin/get-skin-triangles (:hero actors) variation view-rect)
-                              ((partial reduce (fn [oldbuf [id gun]] (gun/get-skin-triangles gun oldbuf view-rect))) guns))]
-      ;; draw triangles
-      (webgl/clear! world-drawer)
-      (webgl/drawshapes! world-drawer projection variation)
-      (webgl/drawtriangles! world-drawer projection buffer-triangle)
-      
-      (let [buffer-points (cond-> buffer-triangle
-                              true (floatbuffer/empty!)
-                              true ((partial reduce (fn [oldbuf particle] (particle/get-point particle oldbuf))) particles)
-                              physics ((partial reduce (fn [oldbuf [id actor]] (actorskin/get-points actor oldbuf view-rect))) actors))]
-        
-        ;; draw points
-        (webgl/drawpoints! world-drawer projection buffer-points)
-        
-        (let [buffer-line (cond-> buffer-points
-                              true (floatbuffer/empty!)
-                              physics ((partial reduce (fn [oldbuf [id actor]] (actorskin/get-lines actor oldbuf view-rect))) actors)
-                              physics (floatbuffer/append! surfacelines))]
-          ;; draw lines
-          (if physics (webgl/drawlines! world-drawer projection buffer-line))
-
-          (-> state
-              (assoc :world-drawer world-drawer)
-              (assoc-in [:world :view-rect] view-rect)
-              (assoc :buffer buffer-line)))))))
+  [state frame]
+  (let [{:keys [world-drawer buffer physics]} state
+        {:keys [actors guns particles surfacelines view-rect projection] :as world} (:world state)]
+    (if-not (:inited world)
+      state
+      (let [variation (Math/floor (mod (/ frame 10.0) 3.0 ))
+            triangles (collect-triangles buffer actors guns variation view-rect)]
+        (webgl/clear! world-drawer)
+        (webgl/drawshapes! world-drawer projection variation)
+        (webgl/drawtriangles! world-drawer projection triangles)
+        (let [points (collect-points triangles actors particles view-rect physics)]
+          (webgl/drawpoints! world-drawer projection points)
+          (let [buffer-line (collect-lines points actors surfacelines view-rect physics)]
+            (if physics (webgl/drawlines! world-drawer projection buffer-line))
+            (-> state
+                (assoc :world-drawer world-drawer)
+                (assoc-in [:world :view-rect] view-rect)
+                (assoc :buffer buffer-line))))))))
 
 
 (defn update-controls
   "set up control state based on keycodes"
-  [{:keys [keycodes controls] :as state } msg]
-  (let [new-codes (if-not (and msg (= (:id msg) "key"))
+  [state msg]  
+  (let [{:keys [keycodes controls]} state
+        new-codes (if-not (and msg (= (:id msg) "key"))
                     keycodes
                     (assoc keycodes (:code msg) (:value msg)))
         new-controls {:left (new-codes 37)
@@ -168,7 +174,9 @@
         (assoc :controls new-controls))))
 
 
-(defn simulate [state time]
+(defn simulate
+  "simulation step"
+  [state time]
   (loop [old-time (min (:gametime state) 1660) ;; shouldn't go over 10 steps
          old-state state]
     (if (< old-time 16.6)
@@ -235,11 +243,9 @@
 
     (animate
      final
-     (fn [{gametime :gametime :as prestate}
-          frame
-          time
-          delta]
-       (let [usedstate (assoc prestate :gametime (+ delta gametime))]
+     (fn [prestate frame time delta]
+       (let [{gametime :gametime} prestate
+             usedstate (assoc prestate :gametime (+ delta gametime))]
          (if-not (= (mod frame 1) 0 ) ;; frame skipping for development
            usedstate
            (-> usedstate
