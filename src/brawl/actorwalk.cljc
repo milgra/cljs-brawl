@@ -14,7 +14,72 @@
             normal (math2/resize-v2 [(* dir (- y)) (* dir x)] needed)]
         (math2/add-v2 (math2/add-v2 a ab2) normal)))))
 
-;; TODO too long
+
+(defn send-punch-attack
+  [actor]
+  (let [{:keys [id color facing]} actor
+        {:keys [neck hand_l hand_r]} (:masses actor)
+        {:keys [punch-hand]} (:attack actor) 
+        base (:p neck)
+        target (if (= punch-hand :hand_l) (:p hand_l) (:p hand_r))]
+    (-> actor
+        (update :commands into [{:id id
+                                 :text "attack"
+                                 :base base
+                                 :target target
+                                 :radius 100.0
+                                 :facing facing
+                                 :color color
+                                 :power 20}])
+        (assoc-in [:attack :action-sent] true))))
+
+
+(defn send-kick-attack
+  [actor]
+  (let [{:keys [id color facing]} actor
+        {:keys [order]} (:walk actor)
+        {:keys [hip foot_l foot_r]} (:masses actor)
+        base (:p hip)
+        target (if (= :base_l (:active order)) (:p foot_l) (:p foot_r))]
+    (-> actor
+        (update :commands into [{:id id
+                                 :text "attack"
+                                 :base base
+                                 :target target
+                                 :facing facing
+                                 :radius 100.0
+                                 :color color
+                                 :power 40}])
+        (assoc-in [:attack :action-sent] true))))
+
+
+(defn send-shoot-attack
+  [actor]
+  (let [{:keys [id color facing]} actor
+        {:keys [neck]} (:masses actor)
+        {:keys [bullets]} (:attack actor)
+        base (:p neck)
+        target (math2/add-v2 (:p neck) [(* facing 500.0) 0.0])]
+    (-> actor
+        (update :commands into [{:id id
+                                 :text "attack"
+                                 :base base
+                                 :target target
+                                 :radius 500.0
+                                 :facing facing
+                                 :color color
+                                 :power 110}])
+        (assoc-in [:attack :action-sent] true)
+        (assoc-in [:attack :bullets] (dec bullets)))))
+
+
+(defn send-pickup [actor]
+  (let [{:keys [id]} actor]
+    (-> actor
+        (update :commands into [{:text "pickup" :id id}])
+        (assoc-in [:attack :pickup-sent] true))))
+
+
 (defn send-commands
   "send commands if needed"
   [actor]
@@ -27,46 +92,16 @@
     (cond
       ;; pick up gun or body
       (and down (or (= nil gun) (= nil body)) (not pickup-sent))
-      (-> actor
-          (update :commands into [{:text "pickup" :id id}])
-          (assoc-in [:attack :pickup-sent] true))
+      (send-pickup actor)
       ;; send punch
       (and punch (not action-sent) (not left) (not right))
-      (-> actor
-          (update :commands into [{:id id
-                                   :text "attack"
-                                   :base (:p neck)
-                                   :target (if (= punch-hand :hand_l) (:p hand_l) (:p hand_r))
-                                   :radius 100.0
-                                   :facing facing
-                                   :color color
-                                   :power 20}])
-          (assoc-in [:attack :action-sent] true))
-      ;; send shoot
-      (and shoot (not action-sent) (> bullets 0))
-      (-> actor
-          (update :commands into [{:id id
-                                   :text "attack"
-                                   :base (:p neck)
-                                   :target (math2/add-v2 (:p neck) [(* facing 500.0) 0.0])
-                                   :radius 500.0
-                                   :facing facing
-                                   :color color
-                                   :power 110}])
-          (assoc-in [:attack :action-sent] true)
-          (assoc-in [:attack :bullets] (dec bullets)))
+      (send-punch-attack actor)
       ;; send kick
       (and kick (not action-sent))
-      (-> actor
-          (update :commands into [{:id id
-                                   :text "attack"
-                                   :base (:p hip)
-                                   :target (if (= :base_l (:active order)) (:p foot_l) (:p foot_r))
-                                   :facing facing
-                                   :radius 100.0
-                                   :color color
-                                   :power 40}])
-          (assoc-in [:attack :action-sent] true))
+      (send-kick-attack actor)
+      ;; send shoot
+      (and shoot (not action-sent) (> bullets 0))
+      (send-shoot-attack actor)
       ;; return untouched
       :else actor)))
 
@@ -224,7 +259,16 @@
       {:active :base_l :passive :base_r}
       {:active :base_r :passive :base_l})))
 
-;; TODO too long
+
+(defn get-collided [step-zone surfaces base-point vert-direction]
+  (let [collided-top (sort-by first < (phys2/get-colliding-surfaces-by-distance (:T step-zone) (math2/sub-v2 (:A step-zone) (:T step-zone)) 4.0 surfaces base-point))
+        collided-bot (sort-by first < (phys2/get-colliding-surfaces-by-distance (:A step-zone) (math2/sub-v2 (:M step-zone) (:A step-zone)) 4.0 surfaces base-point))]
+    (cond
+      (and (= vert-direction  1) (not (empty? collided-top))) collided-top
+      (and (= vert-direction -1) (not (empty? collided-bot))) collided-bot
+      :else (concat collided-top collided-bot))))
+
+
 (defn step-feet-walk
   "puts a triangle from the passive base on the surfaces, collision ponit is the new base target for the active base"
   [actor surfaces time]
@@ -232,44 +276,33 @@
   (let [{:keys [bases masses speed]} actor
         {:keys [vert-direction] base-surfaces :surfaces} (:walk actor)
 
-        base-order (get-base-order bases speed)
-        base-point (:p (bases (:passive base-order)))
-        step-zone (get-step-zone base-point speed)
-        collided-top (sort-by first < (phys2/get-colliding-surfaces-by-distance (:T step-zone) (math2/sub-v2 (:A step-zone) (:T step-zone)) 4.0 surfaces base-point))
-        collided-bot (sort-by first < (phys2/get-colliding-surfaces-by-distance (:A step-zone) (math2/sub-v2 (:M step-zone) (:A step-zone)) 4.0 surfaces base-point))
-        collided (cond
-                   (and (= vert-direction  1) (not (empty? collided-top))) collided-top
-                   (and (= vert-direction -1) (not (empty? collided-bot))) collided-bot
-                   :else (concat collided-top collided-bot))
-        surf (first collided)
-        base-target (if surf (nth surf 1) (:A step-zone))
-        newpassivesurf (:active base-surfaces)
-        newactivesurf (if surf (nth surf 2) nil)
-        newslope (if (= nil newactivesurf)
-                   0
-                   (math2/rad-to-degree (math2/angle-x-v2 (:b (nth surf 2)))))]
-
-    (if (and (< newslope 50) (> newslope -50))
-      ;; slope is okay
-      (if (and (= nil newpassivesurf) (empty? collided))
-        ;; we have no surface under feet, fall
-        (-> actor
-            (assoc :next-mode :rag)
-            (assoc-in [:attack :timeout] time)
-            (assoc :health -1))
-        ;; normal step
-        (-> actor
-            (assoc-in [:walk :zone] {:A (:A step-zone)
-                                     :B (math2/add-v2 (:A step-zone)(:B step-zone))
-                                     :C (math2/add-v2 (:A step-zone)(:C step-zone))})
-            (assoc-in [:walk :step-size] (math2/length-v2 (math2/sub-v2 base-target (:p (bases (:active base-order))))))
-            (assoc-in [:walk :order] base-order)
-            (assoc-in [:walk :target] base-target)
-            (assoc-in [:walk :surfaces] {:active newactivesurf :passive (or newpassivesurf newactivesurf)})))
-      ;; too steep slope, stop stepping
-      (-> actor
-          (assoc :speed 0.0)))))
-
+        base-order (get-base-order bases speed) ;; get foot order
+        base-point (:p (bases (:passive base-order))) ;; get passive foot position
+        step-zone (get-step-zone base-point speed) ;; generate step zone
+        collided (get-collided step-zone surfaces base-point vert-direction)] ;; get collided surfaces
+    (if (empty? collided)
+      ;; no surface, jump
+      (assoc actor :next-mode :jump)
+      ;; else use first result
+      (let [surfaceres (first collided) ;; get first surface
+            base-target (nth surfaceres 1) ;; get isp of first surface
+            step-size (math2/length-v2 (math2/sub-v2 base-target (:p (bases (:active base-order))))) ;; calculate step size
+            newpassivesurf (:active base-surfaces)
+            newactivesurf (nth surfaceres 2)
+            newslope (math2/rad-to-degree (math2/angle-x-v2 (:b (nth surfaceres 2))))]
+        (if-not (and (< newslope 50) (> newslope -50))
+          ;; too steep slope, stop stepping
+          (assoc actor :speed 0.0)
+          ;; slope is okay, normal step
+          (-> actor
+              (assoc-in [:walk :zone] {:A (:A step-zone)
+                                       :B (math2/add-v2 (:A step-zone)(:B step-zone))
+                                       :C (math2/add-v2 (:A step-zone)(:C step-zone))})
+              (assoc-in [:walk :step-size] step-size)
+              (assoc-in [:walk :order] base-order)
+              (assoc-in [:walk :target] base-target)
+              (assoc-in [:walk :surfaces] {:active newactivesurf :passive (or newpassivesurf newactivesurf)})))))))
+    
 ;; TODO too long
 (defn move-feet-walk
   "move active base towards target point"

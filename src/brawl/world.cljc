@@ -29,6 +29,7 @@
    :infos []
    :actors {}
    :endpos [0 0]
+   :viewpos [0 0]
    :surfaces []
    :particles []
    :surfacelines []
@@ -135,17 +136,20 @@
 
 (defn calc-view-rect
   "calculates the visible rectangle of the world"
-  [{{:keys [actors warned warntime] :as world} :world :as state} time]  
+  [{{:keys [actors warned warntime viewpos] :as world} :world :as state} time]  
   (let [actor (if (or (> time warntime) (= nil warned)) (:hero actors) (warned actors))
+        [vx vy] viewpos
         [fax fay] (:p (get-in actor [:bases :base_l]))
         [fbx fby] (:p (get-in actor [:bases :base_r]))
-        [tx ty] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2) -50.0)  ]
+        [hx hy] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2))]
+        [tx ty] [ (+ vx (/ (- hx vx ) 6)) (+ vy (/ (- hy vy) 6) -10)]
         r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
-        h 300.0
+        h 330.0
         w (* h r)
         [l r b t :as new-rect] [(- tx w) (+ tx w) (+ ty h) (- ty h)]
         new-proj (math4/proj_ortho (+ l 50) (- r 50) (- b 50) (+ t 50) -1.0 1.0)]
     (-> state
+        (assoc-in [:world :viewpos] [tx ty])
         (assoc-in [:world :view-rect] new-rect)
         (assoc-in [:world :projection] new-proj))))
 
@@ -246,7 +250,13 @@
   (let [[l r b t] (:view-rect world)
         seeds (map #(particle/init (+ l (rand (- r l))) t [1.0 1.0 1.0 0.5] [(+ 0.1 (rand 0.6)) (+ 0.05 (rand 0.3))] :seed) (range 0 20))]
     (assoc-in state [:world :particles] seeds)))
- 
+
+
+(defn init-viewpos [state]
+  (let [hero (get-in state [:world :actors :hero])
+        hip (get-in hero [:masses :hip :p])]
+    (assoc-in state [:world :viewpos] hip)))
+
 
 (defn reset-world [{:keys [level world world-drawer metrics] :as state} msg time]
   (if (and msg (= (:id msg) "level"))
@@ -272,6 +282,7 @@
         true (assoc :world-drawer newdrawer)
         true (assoc :world newworld)
         true (assoc :commands-world [])
+        true (init-viewpos)
         true (calc-view-rect time)
         true (init-seeds)
         (= level 0) (brawlui/load-ui layouts/generator)
