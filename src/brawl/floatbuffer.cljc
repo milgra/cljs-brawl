@@ -1,14 +1,18 @@
 (ns brawl.floatbuffer)
 
 
-(defn create! [ ]
+(defn create!
+  []
   {:data (js/Float32Array. 512)
    :index 0
    :length 512 })
 
 
-(defn append! [ {:keys [data index length] :as buffer} numbers ]
-  (let [news (count numbers)
+(defn append!
+  "append js array to buffer"
+  [buffer numbers]
+  (let [{:keys [data index length]} buffer
+        news (count numbers)
         newb (if (< (+ index news) length)
                buffer
                (let [newarray (js/Float32Array. (* length 2))]
@@ -20,7 +24,9 @@
     (update newb :index + news)))
 
 
-(defn empty! [ buffer ]
+(defn empty!
+  "empty buffer"
+  [buffer]
   (assoc buffer :index 0))
 
 ;(let [test (create!)

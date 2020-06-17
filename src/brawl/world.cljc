@@ -176,7 +176,7 @@
 
 
 (defn update-particles [{{:keys [particles view-rect]} :world :as state}]
-  (let [new-particles (map (fn [particle] (particle/upd particle view-rect)) particles)]
+  (let [new-particles (map (fn [particle] (particle/update-particle particle view-rect)) particles)]
     (assoc-in state [:world :particles] new-particles)))
 
 
@@ -299,7 +299,7 @@
           response (<! (http/get (str "levels/level" level ".svg")
                                  {:with-credentials? false}))
           xmlstr (xml->clj (:body response) {:strict false})
-          shapes (svg/psvg xmlstr "")]
+          shapes (svg/parse-svg xmlstr "")]
       (put! channel {:id "level" :shapes shapes}))))
 
 

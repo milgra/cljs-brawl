@@ -3,7 +3,7 @@
             [clojure.string :as s]))
 
 
-(defn ppth
+(defn parse-path
   "parse path, convert string pairs starting with M L to coord array"
   [path]
   (reduce
@@ -19,21 +19,20 @@
    (s/split path #" ")))
 
 
-(defn pshp
+(defn parse-shape
   "parse shape, extract color and path from xml node"
   [attrs id]
   (if (contains? attrs :fill)
-  {:type "shape"
-   :id (or (attrs :id) id)
-   :color (js/parseInt (subs (attrs :fill) 1) 16)
-   :path (ppth (attrs :d))}
-  {:type "shape"
-   :id (or (attrs :id) id)
-   :path (ppth (attrs :d))}
-  ))
+    {:type "shape"
+     :id (or (attrs :id) id)
+     :color (js/parseInt (subs (attrs :fill) 1) 16)
+     :path (parse-path (attrs :d))}
+    {:type "shape"
+     :id (or (attrs :id) id)
+     :path (parse-path (attrs :d))}))
 
 
-(defn psvg
+(defn parse-svg
   "parse svg recursively"
   [element id]
   (if (not= nil element)
@@ -41,12 +40,12 @@
       (map? element) (let [{:keys [tag attributes content]} element]
                        (cond
                          (= tag :g)
-                         (psvg content (attributes :id))
+                         (parse-svg content (attributes :id))
                          (= tag :path)
-                         (concat [(pshp attributes id)] (psvg content id))
+                         (concat [(parse-shape attributes id)] (parse-svg content id))
                          :else
-                         (psvg content id)))
-      (vector? element) (reduce #(concat %1 (psvg %2 id)) [] element))))
+                         (parse-svg content id)))
+      (vector? element) (reduce #(concat %1 (parse-svg %2 id)) [] element))))
 
 
 ;; (psvg (xml->clj

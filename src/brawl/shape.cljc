@@ -16,17 +16,19 @@
 ;;      (/ sum 2.0 ))))
 
 
-(defn triangulate_area [points]
+(defn triangulate_area
   "calculates area of polygon"
-  (/ (reduce
-   (fn [ sum [[ax ay] [bx by]] ]
-     (+ sum (- (* ax by) (* bx ay))))
-   0.0
-   (partition 2 1 (concat [(last points)] points))) 2.0))
+  [points]
+  (let [area_quad (reduce
+                   (fn [sum [[ax ay] [bx by]]] (+ sum (- (* ax by) (* bx ay))))
+                   0.0
+                   (partition 2 1 (concat [(last points)] points)))]
+    (/ area_quad 2.0)))
 
 
-(defn triangulate_inside_triangle [ Ax Ay Bx By Cx Cy Px Py ]
+(defn triangulate_inside_triangle
   "checks if point is inside triangle"
+  [ Ax Ay Bx By Cx Cy Px Py ]
   (let [ax (- Cx Bx)
         ay (- Cy By)
         bx (- Ax Cx)
@@ -45,8 +47,9 @@
      (and (> aCrossbp 0.0) (> bCrosscp 0.0) (> cCrossap 0.0))))
 
 
-(defn triangulate_snips? [ points indexes va vb vc ]
+(defn triangulate_snips?
   "checks if vertexes can be snipped out"
+  [ points indexes va vb vc ]
   ( let [[Ax Ay] (nth points (nth indexes va) )
          [Bx By] (nth points (nth indexes vb) )
          [Cx Cy] (nth points (nth indexes vc) )
@@ -67,8 +70,9 @@
      false)))
 
 
-(defn triangulate_c [points]
+(defn triangulate_c
   "creates ccw triangles that makes up the polygon"
+  [points]
   (let [length (count points)]
     (when (> length 3)
       (loop [;; actual indexes, we want a counter-clockwise polygon
