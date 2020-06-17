@@ -29,6 +29,8 @@ Download/checkout the repo and start it up with :
 
 ## Todo
 
+* world cljc sounds move to commands/etc
+* kotojeles nevek
 * refactor
 * randomize fix
 * improve buddy ai when attacking

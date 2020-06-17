@@ -16,17 +16,17 @@
 ;;      (/ sum 2.0 ))))
 
 
-(defn triangulate_area
+(defn triangulate-area
   "calculates area of polygon"
   [points]
-  (let [area_quad (reduce
+  (let [area-quad (reduce
                    (fn [sum [[ax ay] [bx by]]] (+ sum (- (* ax by) (* bx ay))))
                    0.0
                    (partition 2 1 (concat [(last points)] points)))]
-    (/ area_quad 2.0)))
+    (/ area-quad 2.0)))
 
 
-(defn triangulate_inside_triangle
+(defn triangulate-inside-triangle
   "checks if point is inside triangle"
   [ Ax Ay Bx By Cx Cy Px Py ]
   (let [ax (- Cx Bx)
@@ -47,7 +47,7 @@
      (and (> aCrossbp 0.0) (> bCrosscp 0.0) (> cCrossap 0.0))))
 
 
-(defn triangulate_snips?
+(defn triangulate-snips?
   "checks if vertexes can be snipped out"
   [ points indexes va vb vc ]
   ( let [[Ax Ay] (nth points (nth indexes va) )
@@ -60,7 +60,7 @@
          (do
            (let [[Px Py] (nth points (nth indexes actual))]
              (if (and (not= actual va) (not= actual vb) (not= actual vc))
-              (if ( triangulate_inside_triangle Ax Ay Bx By Cx Cy Px Py)
+              (if ( triangulate-inside-triangle Ax Ay Bx By Cx Cy Px Py)
                 false
                 (recur (inc actual)))
               (recur (inc actual)))))
@@ -70,13 +70,13 @@
      false)))
 
 
-(defn triangulate_c
+(defn triangulate-c
   "creates ccw triangles that makes up the polygon"
   [points]
   (let [length (count points)]
     (when (> length 3)
       (loop [;; actual indexes, we want a counter-clockwise polygon
-             indexes (if (> (triangulate_area points) 0.0)
+             indexes (if (> (triangulate-area points) 0.0)
                        (vec (range 0 length))
                        (vec (reverse (range 0 length))) )
              ;; error detection counter
@@ -93,7 +93,7 @@
                 vc ( if (<= remaining (inc vb)) 0 (inc vb))]
             ;; if we are looping polygon is irregular
             (if (> ecounter -1 )
-              (if (triangulate_snips? points indexes va vb vc)
+              (if (triangulate-snips? points indexes va vb vc)
                 ;; if snip is possible
                 (let [pa (nth indexes va)
                       pb (nth indexes vb)
@@ -116,5 +116,5 @@
           result)))))
 
 
-;;(triangulate_area[ '( 0.0 0.0 ) '( -5.0 5.0 ) '( 0.0 10.0 ) '( 10.0 10.0 ) '( 10.0 0.0 ) '( 5.0 -5.0 ) ] )
-;;(triangulate_c [[563.576 90.063] [566.246 83.125] [565.647 73.128] [559.187 61.8] [568.488 71.264] [570.83 82.929] [567.94 88.843] [563.57 90.063]])
+;;(triangulate-area[ '( 0.0 0.0 ) '( -5.0 5.0 ) '( 0.0 10.0 ) '( 10.0 10.0 ) '( 10.0 0.0 ) '( 5.0 -5.0 ) ] )
+;;(triangulate-c [[563.576 90.063] [566.246 83.125] [565.647 73.128] [559.187 61.8] [568.488 71.264] [570.83 82.929] [567.94 88.843] [563.57 90.063]])

@@ -141,12 +141,12 @@
       (let [variation (Math/floor (mod (/ frame 10.0) 3.0 ))
             triangles (collect-triangles buffer actors guns variation view-rect)]
         (webgl/clear! world-drawer)
-        (webgl/drawshapes! world-drawer projection variation)
-        (webgl/drawtriangles! world-drawer projection triangles)
+        (webgl/draw-shapes! world-drawer projection variation)
+        (webgl/draw-triangles! world-drawer projection triangles)
         (let [points (collect-points triangles actors particles view-rect physics)]
-          (webgl/drawpoints! world-drawer projection points)
+          (webgl/draw-points! world-drawer projection points)
           (let [buffer-line (collect-lines points actors surfacelines view-rect physics)]
-            (if physics (webgl/drawlines! world-drawer projection buffer-line))
+            (if physics (webgl/draw-lines! world-drawer projection buffer-line))
             (-> state
                 (assoc :world-drawer world-drawer)
                 (assoc-in [:world :view-rect] view-rect)
