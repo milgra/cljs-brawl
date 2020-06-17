@@ -303,7 +303,7 @@
               (assoc-in [:walk :target] base-target)
               (assoc-in [:walk :surfaces] {:active newactivesurf :passive (or newpassivesurf newactivesurf)})))))))
     
-;; TODO too long
+
 (defn move-feet-walk
   "move active base towards target point"
   [actor surfaces time delta]
@@ -311,50 +311,66 @@
         {:keys [step-size order target]} (:walk actor)
         {:keys [legl runs walks]} (:metrics actor)
         {:keys [kick]} (:control actor)]
-    (if (> (Math/abs speed) 1.0)
-      (if target
-        (let [active-base (:active order)
-              passive-base (:passive order)
-              actual-pos (:p (bases active-base))
+    (if-not (> (Math/abs speed) 1.0)
+      ;; stay still or do kick if no speed
+      (move-feet-walk-still actor surfaces)
+      ;; move feet if speed
+      (if-not target
+        ;; step if no base target
+        (step-feet-walk actor surfaces time)
+        ;; move feet 
+        (let [actual-pos (:p ((:active order) bases))
               actual-vec (math2/sub-v2 target actual-pos)
               actual-size (math2/length-v2 actual-vec)
+              
               current-size (* (Math/abs speed) delta)
               current-vec (math2/resize-v2 actual-vec current-size)
+              current-pos (math2/add-v2 actual-pos current-vec) ; current position
+              
               remaining-size (- actual-size current-size)
-              [cpx cpy :as current-pos] (math2/add-v2 actual-pos current-vec) ; current position
-              [ppx ppy] (:p (bases passive-base)) ; passive position
+
               walk-lift-ratio (if (< (/ step-size 2) remaining-size); when walking, highest foot position is center TODO simplify 
                                 (/ (- step-size remaining-size) step-size) 
                                 (/ remaining-size step-size))
+
               run-lift-ratio-passive  (if (< remaining-size (/ step-size 3)) ; when running. highest foot position is third for passive
                                         (/ (- (/  step-size 3.0) remaining-size ) ( / step-size 3.0 ))
                                         0.0)
+              
               run-lift-ratio-active (/ remaining-size step-size) ; active foot falling is linear to target point
+
               walk-lift-active (Math/abs (* speed 6.0 walk-lift-ratio))
               walk-lift-passive 0.0
+
               run-lift-active (* legl 0.5 run-lift-ratio-active)
               run-lift-passive (* legl 0.5 run-lift-ratio-passive)
+
               speed-ratio (if (> (Math/abs speed) walks) ; walk / run speed ratio in actual state
                             (let [speed-diff (- runs (Math/abs speed))
                                   walkr (/ speed-diff (- runs walks))]
                               walkr)
                             1.0)
+
               lift-active (+ (* speed-ratio walk-lift-active) (* (- 1.0 speed-ratio) run-lift-active)) ; merge walk and run states
               lift-passive (+ (* speed-ratio walk-lift-passive) (* (- 1.0 speed-ratio) run-lift-passive))
+
+              [cpx cpy] current-pos
+              [ppx ppy] (:p (bases (:passive order))) ; passive position
+
               foot_l (if (= :base_l (:active order))
                        [cpx (- cpy lift-active)]
                        [ppx (- ppy lift-passive)]) ; final position
+
               foot_r (if (= :base_r (:active order))
                        [cpx (- cpy lift-active)]
                        [ppx (- ppy lift-passive)])
+
               step? (if (< actual-size current-size) true false)] ; do we need step
           (cond-> actor
-            true (assoc-in [:bases active-base :p] current-pos)
+            true (assoc-in [:bases (:active order) :p] current-pos)
             true (assoc-in [:masses :foot_l :p] foot_l) 
             true (assoc-in [:masses :foot_r :p] foot_r)
-            step? (step-feet-walk surfaces time))) ; step if base target is close
-        (step-feet-walk actor surfaces time)) ; step if no base target
-      (move-feet-walk-still actor surfaces)))) ; stay still or do kick if no speed
+            step? (step-feet-walk surfaces time))))))) ; step if base target is close
 
 
 (defn update-speed
