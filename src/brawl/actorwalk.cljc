@@ -302,7 +302,42 @@
               (assoc-in [:walk :order] base-order)
               (assoc-in [:walk :target] base-target)
               (assoc-in [:walk :surfaces] {:active newactivesurf :passive (or newpassivesurf newactivesurf)})))))))
-    
+
+
+(defn lift-active
+  "calculate active leg's lift height"
+  [step-size remaining-size speed walks runs legl]
+  (let [walk-lift-ratio-active (if (< (/ step-size 2) remaining-size); when walking, highest foot position is center TODO simplify 
+                                 (/ (- step-size remaining-size) step-size) 
+                                 (/ remaining-size step-size))
+        run-lift-ratio-active (/ remaining-size step-size) ; active foot falling is linear to target point
+        walk-lift-active (Math/abs (* speed 6.0 walk-lift-ratio-active))
+        run-lift-active (* legl 0.5 run-lift-ratio-active)
+        speed-ratio (if (> (Math/abs speed) walks) ; walk / run speed ratio in actual state
+                      (let [speed-diff (- runs (Math/abs speed))
+                            walkr (/ speed-diff (- runs walks))]
+                        walkr)
+                      1.0)
+        lift-active (+ (* speed-ratio walk-lift-active) (* (- 1.0 speed-ratio) run-lift-active))]  ; merge walk and run states
+    lift-active))
+
+
+(defn lift-passive
+  "calculate passive leg's lift height"
+  [step-size remaining-size speed walks runs legl]
+  (let [run-lift-ratio-passive  (if (< remaining-size (/ step-size 3)) ; when running. highest foot position is third for passive
+                                  (/ (- (/  step-size 3.0) remaining-size ) ( / step-size 3.0 ))
+                                  0.0)
+        walk-lift-passive 0.0
+        run-lift-passive (* legl 0.5 run-lift-ratio-passive)
+        speed-ratio (if (> (Math/abs speed) walks) ; walk / run speed ratio in actual state
+                      (let [speed-diff (- runs (Math/abs speed))
+                            walkr (/ speed-diff (- runs walks))]
+                        walkr)
+                      1.0)
+        lift-passive (+ (* speed-ratio walk-lift-passive) (* (- 1.0 speed-ratio) run-lift-passive))]
+    lift-passive))
+
 
 (defn move-feet-walk
   "move active base towards target point"
@@ -329,31 +364,9 @@
               
               remaining-size (- actual-size current-size)
 
-              walk-lift-ratio (if (< (/ step-size 2) remaining-size); when walking, highest foot position is center TODO simplify 
-                                (/ (- step-size remaining-size) step-size) 
-                                (/ remaining-size step-size))
-
-              run-lift-ratio-passive  (if (< remaining-size (/ step-size 3)) ; when running. highest foot position is third for passive
-                                        (/ (- (/  step-size 3.0) remaining-size ) ( / step-size 3.0 ))
-                                        0.0)
+              lift-active (lift-active step-size remaining-size speed walks runs legl)
+              lift-passive (lift-passive step-size remaining-size speed walks runs legl)
               
-              run-lift-ratio-active (/ remaining-size step-size) ; active foot falling is linear to target point
-
-              walk-lift-active (Math/abs (* speed 6.0 walk-lift-ratio))
-              walk-lift-passive 0.0
-
-              run-lift-active (* legl 0.5 run-lift-ratio-active)
-              run-lift-passive (* legl 0.5 run-lift-ratio-passive)
-
-              speed-ratio (if (> (Math/abs speed) walks) ; walk / run speed ratio in actual state
-                            (let [speed-diff (- runs (Math/abs speed))
-                                  walkr (/ speed-diff (- runs walks))]
-                              walkr)
-                            1.0)
-
-              lift-active (+ (* speed-ratio walk-lift-active) (* (- 1.0 speed-ratio) run-lift-active)) ; merge walk and run states
-              lift-passive (+ (* speed-ratio walk-lift-passive) (* (- 1.0 speed-ratio) run-lift-passive))
-
               [cpx cpy] current-pos
               [ppx ppy] (:p (bases (:passive order))) ; passive position
 
@@ -365,12 +378,14 @@
                        [cpx (- cpy lift-active)]
                        [ppx (- ppy lift-passive)])
 
-              step? (if (< actual-size current-size) true false)] ; do we need step
-          (cond-> actor
-            true (assoc-in [:bases (:active order) :p] current-pos)
-            true (assoc-in [:masses :foot_l :p] foot_l) 
-            true (assoc-in [:masses :foot_r :p] foot_r)
-            step? (step-feet-walk surfaces time))))))) ; step if base target is close
+              actor-new (-> actor
+                            (assoc-in [:bases (:active order) :p] current-pos)
+                            (assoc-in [:masses :foot_l :p] foot_l) 
+                            (assoc-in [:masses :foot_r :p] foot_r))]
+
+          (if (< actual-size current-size) ;; do we need to step?
+            (step-feet-walk actor-new surfaces time)
+            actor-new))))))
 
 
 (defn update-speed
@@ -393,18 +408,17 @@
               :else facing)]
     (-> actor
         (assoc :speed nsx)
-        (assoc :facing dir)))) ; TODO replace facing with dir
+        (assoc :facing dir))))
 
 
 (defn update-walk
   "update walk state"
   [state surfaces time delta]
-  (let [result (-> state
-                  (update-speed delta)
-                  (move-feet-walk surfaces time delta)
-                  (move-hip-walk)
-                  (move-knee-walk)
-                  (move-head-walk)
-                  (move-hand-walk surfaces)
-                  (send-commands))]
-    result))
+  (-> state
+      (update-speed delta)
+      (move-feet-walk surfaces time delta)
+      (move-hip-walk)
+      (move-knee-walk)
+      (move-head-walk)
+      (move-hand-walk surfaces)
+      (send-commands)))
