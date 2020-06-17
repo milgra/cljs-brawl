@@ -307,36 +307,32 @@
 (defn lift-active
   "calculate active leg's lift height"
   [step-size remaining-size speed walks runs legl]
-  (let [walk-lift-ratio-active (if (< (/ step-size 2) remaining-size); when walking, highest foot position is center TODO simplify 
-                                 (/ (- step-size remaining-size) step-size) 
-                                 (/ remaining-size step-size))
-        run-lift-ratio-active (/ remaining-size step-size) ; active foot falling is linear to target point
-        walk-lift-active (Math/abs (* speed 6.0 walk-lift-ratio-active))
-        run-lift-active (* legl 0.5 run-lift-ratio-active)
-        speed-ratio (if (> (Math/abs speed) walks) ; walk / run speed ratio in actual state
-                      (let [speed-diff (- runs (Math/abs speed))
-                            walkr (/ speed-diff (- runs walks))]
-                        walkr)
+  (let [run-ratio (/ remaining-size step-size) ;; active foot falling is linear to target point
+        walk-ratio (if (< (/ step-size 2) remaining-size); when walking, highest foot position is center TODO simplify 
+                     (/ (- step-size remaining-size) step-size)  ;; if smaller than half, increase linearly
+                     (/ remaining-size step-size)) ;; if bigger than half, decrease linearly
+        speed-ratio (if (> (Math/abs speed) walks) ;; walk / run speed ratio in actual state
+                      (let [speed-diff (- runs (Math/abs speed))]
+                        (/ speed-diff (- runs walks)))
                       1.0)
-        lift-active (+ (* speed-ratio walk-lift-active) (* (- 1.0 speed-ratio) run-lift-active))]  ; merge walk and run states
-    lift-active))
+        run-lift (* legl 0.5 run-ratio)
+        walk-lift (Math/abs (* speed 6.0 walk-ratio))]
+    (+ (* speed-ratio walk-lift) (* (- 1.0 speed-ratio) run-lift)))) ;; merge walk and run states
 
 
 (defn lift-passive
   "calculate passive leg's lift height"
   [step-size remaining-size speed walks runs legl]
-  (let [run-lift-ratio-passive  (if (< remaining-size (/ step-size 3)) ; when running. highest foot position is third for passive
+  (let [run-ratio  (if (< remaining-size (/ step-size 3)) ;; when running. highest foot position is third for passive
                                   (/ (- (/  step-size 3.0) remaining-size ) ( / step-size 3.0 ))
                                   0.0)
-        walk-lift-passive 0.0
-        run-lift-passive (* legl 0.5 run-lift-ratio-passive)
-        speed-ratio (if (> (Math/abs speed) walks) ; walk / run speed ratio in actual state
-                      (let [speed-diff (- runs (Math/abs speed))
-                            walkr (/ speed-diff (- runs walks))]
-                        walkr)
+        speed-ratio (if (> (Math/abs speed) walks) ;; walk / run speed ratio in actual state
+                      (let [speed-diff (- runs (Math/abs speed))]
+                        (/ speed-diff (- runs walks)))
                       1.0)
-        lift-passive (+ (* speed-ratio walk-lift-passive) (* (- 1.0 speed-ratio) run-lift-passive))]
-    lift-passive))
+        walk-lift 0.0
+        run-lift (* legl 0.5 run-ratio)]
+    (+ (* speed-ratio walk-lift) (* (- 1.0 speed-ratio) run-lift)))) ;; merge walk and run states
 
 
 (defn move-feet-walk
