@@ -142,13 +142,13 @@
   "check health and change state to dead if needed"
   [actor time]
   (let [{:keys [id health]} actor]
-    (if (<= health 0)
-      (cond-> actor
-        true (assoc-in [:drag :body] nil)
-        true (assoc :next-mode :rag)
-        true (assoc-in [:attack :timeout] (+ time 2000))
-        (= id :hero ) (update :commands conj {:text "show-wasted"}))
-      actor)))
+    (if-not (<= health 0)
+      actor
+      (let [actor-new (-> actor
+                          (assoc-in [:drag :body] nil)
+                          (assoc :next-mode :rag)
+                          (assoc-in [:attack :timeout] (+ time 2000)))]
+        (if (= id :hero ) (update actor-new :commands conj {:text "show-wasted"}) actor-new)))))
 
 
 (defn play-hit-or-death
