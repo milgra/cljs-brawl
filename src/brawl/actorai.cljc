@@ -127,7 +127,7 @@
                               :else direction)]
           (cond-> actor
             true (assoc [:ai :timeout] (+ time 100))
-            true (assoc :direction new-direction) 
+            true (assoc-in [:walk :direction] new-direction) 
             (<= x (- px arml)) (assoc-in [:control :right] true)
             (<= x (- px arml)) (assoc-in [:control :left] false)
             (>= x (+ px arml)) (assoc-in [:control :left] true)
@@ -158,7 +158,7 @@
               (assoc-in [:ai :timeout] (+ time 200)))
           (-> newactor
               (assoc-in [:ai :state] :follow)
-              (assoc-in [:ai :timeout] (+ time 200 (rand-int 20) (* level -30)))))))))
+              (assoc-in [:ai :timeout] (+ time 400 (rand-int 100) (* level -30)))))))))
 
 
 ;; after every action ai should reconsider finding new enemy, finding dead body, following, etc

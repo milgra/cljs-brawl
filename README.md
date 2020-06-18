@@ -43,6 +43,6 @@ Download/checkout the repo and start it up with :
 
 ## Todo
 
-* up/down switch, ragdoll injury fix
+* ragdoll injury fix, ragdoll fall down
 * improve gameplay
 * killed by XY from names

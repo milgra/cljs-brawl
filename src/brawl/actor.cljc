@@ -196,8 +196,8 @@
         [headisp bodyisp footlisp footrisp] hitpoints
         [hvx hvy :as hitv] (math2/sub-v2 target base)
 
-        hitsm (math2/resize-v2 hitv 10)
-        hitbg (math2/resize-v2 hitv 20)        
+        hitsm (math2/resize-v2 hitv 5)
+        hitbg (math2/resize-v2 hitv 10)
 
         neck-part (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p neck))))
         hip-part  (if bodyisp (math2/length-v2 (math2/sub-v2 bodyisp (:p hip))))
@@ -220,7 +220,7 @@
   [actor command time]
   (let [{:keys [id health facing mode]} actor
         {:keys [block]} (:control actor)
-        {:keys [base target power facing]} command
+        {:keys [base target power]} command
         [headisp bodyisp footlisp footrisp :as hitpoints] (hitpoints actor command)
         diff-facing? (not= facing (:facing command))
         hitpower (cond
@@ -239,15 +239,15 @@
         ;; move actor slightly back when blocking and facing the sender
         (-> actor
             (assoc-in [:attack :timeout] (+ time 1000))
-            (update :health - (/ power 2.0)) 
-            (update :speed + (* facing (/ hitpower 4.0)))
+            (update :health - (/ power 5.0)) 
+            (update :speed + (* -1 facing (/ hitpower 4.0)))
             (check-death time))
         ;; hit actor
         (-> actor
             (assoc-in [:attack :timeout] timeout )
             (assoc :next-mode :rag)
             (update :health - hitpower) 
-            (update :speed + (* facing (/ hitpower 3.0)))
+            (update :speed + (* -1 facing (/ hitpower 3.0)))
             (play-hit-or-death)
             (hit-masses hitpoints base target)
             (check-death time))))))
@@ -260,7 +260,7 @@
         hip-new (math2/add-v2 (:p head) [-20 0])
         neck-new (math2/add-v2 [-20 0] (math2/add-v2 (:p head) (math2/rotate-90-ccw (math2/sub-v2 (:p neck) (:p hip)))))]
     (-> dragged
-        (assoc-in [:attack :timeout] (+ time 5000))
+        (assoc-in [:attack :timeout] (+ time 1000))
         (assoc-in [:masses :hip :d] [0 0])
         (assoc-in [:masses :hip :p] hip-new)
         (assoc-in [:masses :neck :d] [0 0])
@@ -367,8 +367,10 @@
                        (phys2/move-masses (if dragged? [] surfaces) 0.4)) ;; if dragged be able to drag down the body at a fork
         mode-new (cond
                    (and (>  health 0) (> time timeout)) :walk
-                   (and (<= health 0) (> time timeout) (:q (:neck masses-new)) (:q (:hip masses-new))) :idle
+                   (and (<= health 0) (:q (:neck masses-new)) (:q (:hip masses-new))) :idle
                    :else next-mode)
+
+        injure?-new (if (and (<= health 0) (> time timeout)) false injure?) 
 
         commands-new (if-not (and injure? (= 0 (mod (int (* time 10.0)) 2)))
                        commands
@@ -380,6 +382,7 @@
                                         :radius 50.0
                                         :power 50}]))]
     (-> actor
+        (assoc :injure? injure?-new)
         (assoc :commands commands-new)
         (assoc :next-mode mode-new)
         (assoc :masses masses-new))))

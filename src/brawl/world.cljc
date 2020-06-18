@@ -172,7 +172,7 @@
         [hx hy] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2))]
         [tx ty] [ (+ vx (/ (- hx vx ) 6)) (+ vy (/ (- hy vy) 6) -10)]
         r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
-        h 330.0
+        h 300.0
         w (* h r)
         [l r b t :as new-rect] [(- tx w) (+ tx w) (+ ty h) (- ty h)]
         new-proj (math4/proj_ortho (+ l 50) (- r 50) (- b 50) (+ t 50) -1.0 1.0)]

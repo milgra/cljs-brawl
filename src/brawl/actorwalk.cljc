@@ -262,12 +262,12 @@
       {:active :base_r :passive :base_l})))
 
 
-(defn get-collided [step-zone surfaces base-point vert-direction]
+(defn get-collided [step-zone surfaces base-point direction]
   (let [collided-top (sort-by first < (phys2/get-colliding-surfaces-by-distance (:T step-zone) (math2/sub-v2 (:A step-zone) (:T step-zone)) 4.0 surfaces base-point))
         collided-bot (sort-by first < (phys2/get-colliding-surfaces-by-distance (:A step-zone) (math2/sub-v2 (:M step-zone) (:A step-zone)) 4.0 surfaces base-point))]
     (cond
-      (and (= vert-direction  1) (not (empty? collided-top))) collided-top
-      (and (= vert-direction -1) (not (empty? collided-bot))) collided-bot
+      (and (= direction  1) (not (empty? collided-top))) collided-top
+      (and (= direction -1) (not (empty? collided-bot))) collided-bot
       :else (concat collided-top collided-bot))))
 
 
@@ -276,12 +276,12 @@
   [actor surfaces time]
   ; speed must not be 0
   (let [{:keys [bases masses speed]} actor
-        {:keys [vert-direction] base-surfaces :surfaces} (:walk actor)
+        {:keys [direction] base-surfaces :surfaces} (:walk actor)
 
         base-order (get-base-order bases speed) ;; get foot order
         base-point (:p (bases (:passive base-order))) ;; get passive foot position
         step-zone (get-step-zone base-point speed) ;; generate step zone
-        collided (get-collided step-zone surfaces base-point vert-direction)] ;; get collided surfaces
+        collided (get-collided step-zone surfaces base-point direction)] ;; get collided surfaces
     (if (empty? collided)
       ;; no surface, jump
       (assoc actor :next-mode :jump)

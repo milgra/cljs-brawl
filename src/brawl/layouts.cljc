@@ -193,7 +193,7 @@
      :command "down"
      :width "150 px"
      :height "150 px"
-     :right "Edge 4 px"
+     :right "Edge 79 px"
      :bottom "Edge 4 px"}
 
     {:id "Right"
