@@ -4,10 +4,10 @@
             [gui.webgl :as webgl]
             [clojure.string :as str]))
   
-;; individual views
 
-(defn create-view [id class width height texture]
+(defn create-view
   "generate basic view with color"
+  [id class width height texture]
   {:x 0
    :y 0
    :id id
@@ -18,15 +18,17 @@
    :subviews []})
 
   
-(defn gen-id! [length]
+(defn gen-id!
   "generates fixed length alfanumeric hash"
+  [length]
    (let [chars (map char (concat (range 48 57) (range 65 90) (range 97 122)))
          id (take length (repeatedly #(rand-nth chars)))]
      (reduce str id)))
 
 
-(defn add-align [view top bottom left right center-x center-y]
+(defn add-align
   "add alignment properties to view"
+  [view top bottom left right center-x center-y]
   (-> view
       (assoc :top top)
       (assoc :bottom bottom)
@@ -36,34 +38,37 @@
       (assoc :center-y center-y)))
 
 
-(defn add-subview [{subviews :subviews :as view} subview]
+(defn add-subview
   "inserts subview's id to views subviews property"
-  (assoc view :subviews (conj subviews (subview :id))))
+  [view subview]
+  (let [{subviews :subviews} view]
+    (assoc view :subviews (conj subviews (subview :id)))))
 
-;; generator
 
-(defn setup-view [{:keys [class] :as view}]
+(defn setup-view
   "setup view and create subviews if needed"
-  (cond
-    (= class "Slider")
+  [view]
+  (case (:class view)
+    "Slider"
     (let [sldview (create-view (gen-id! 5) "None" {:pixel 10.0} {:ratio 1.0} {:type "Color" :color 0x009900FF})
           lblview (create-view (gen-id! 5) "Label" {:ratio 1.0} {:ratio 1.0} (:label view))
           newview (-> view
                       (add-subview sldview)
                       (add-subview lblview))]
       [newview sldview lblview]) ; return the modified view and the new view
-    (= class "Button")
+    "Button"
     (let [indview (create-view (gen-id! 5) "None" {:pixel 0.0} {:ratio 1.0} {:type "Color" :color 0xFF0000FF})
           lblview (create-view (gen-id! 5) "Label" {:ratio 1.0} {:ratio 1.0} (:label view))
           newview (-> view
                       (add-subview indview)
                       (add-subview lblview))]
       [newview indview lblview]) ; return the modified view and the new view
-    :else [view])) ; return the view only
+    [view])) ; return the view only
 
 
-(defn get-value [text scale]
+(defn get-value
   "extract measurement, value and element from alignment/dimension value"
+  [text scale]
   (let [[element value measure] (str/split text #" ")]
     (if (= measure nil)
       (if (= value "px") ; two element value for width and height , "100 px" or "50 %"
@@ -75,8 +80,9 @@
           {:element elem :ratio (/ (js/parseInt value) 100.0)})))))
 
 
-(defn gen-from-desc [viewmap viewdesc scale]
+(defn gen-from-desc
   "generate view structure from description"
+  [viewmap viewdesc scale]
   (let [subviews   (:subviews viewdesc)
         subids     (if subviews (map (fn [desc] (keyword (:id desc))) subviews) []) ; finalsubviews property needs ids only
         subviewmap (if subviews (reduce (fn [oldmap desc] (gen-from-desc oldmap desc scale)) viewmap subviews) viewmap) ; generate subviews into viewmap
@@ -103,8 +109,9 @@
 
 ;; alignment
 
-(defn align-view [viewmap id px py pwidth pheight]
+(defn align-view
   "aligns view"
+  [viewmap id px py pwidth pheight]
   (let [{:keys [x y w h width height top bottom left right center-x center-y] :as view } (get viewmap id)
         neww (cond
                (:pixel width) (:pixel width)
@@ -141,8 +148,9 @@
     (assoc view :w neww :h newh :x newx :y newy)))
 
 
-(defn align [viewmap coll px py pwidth pheight]
+(defn align
   "iterate through all views and align them based on their alignment switches"
+  [viewmap coll px py pwidth pheight]
   (reduce (fn [result id]
             (let [{:keys [top bottom left right center-x center-y] :as view} (get result id)
                   related-views (remove nil? (map :element [top bottom left right center-x center-y])) ; get views to align before actual view
@@ -155,8 +163,9 @@
           coll))
 
 
-(defn collect-visible-ids [viewmap coll path]
+(defn collect-visible-ids
   "collects ids of views that are currently visible"
+  [viewmap coll path]
   (reduce
    (fn [res id]
      (let [view (viewmap id)]
@@ -165,8 +174,9 @@
    coll))
 
 
-(defn collect-pressed-views [viewmap [ex ey]]
+(defn collect-pressed-views
   "collects view under touch point"
+  [viewmap [ex ey]]
   (reduce
    (fn [result view]
      (let [{:keys [id x y w h]} view]
@@ -179,8 +189,10 @@
 
 (defn touch-slider
   "touch event for slider"
-  [{:keys [command subviews x y w h] :as view} viewmap {type :type  [px py] :point }]
-  (let [subview (-> (get viewmap (first subviews))
+  [view viewmap msg]
+  (let [{:keys [command subviews x y w h]} view
+        {type :type [px py] :point} msg
+        subview (-> (get viewmap (first subviews))
                     (assoc :width {:pixel (- px x)}))]
     (if (= type "up")
       {:views [] :command {:text command :ratio (/ (- px x) w)}}
@@ -188,16 +200,19 @@
 
 
 (defn set-slider-value 
-  [viewmap {:keys [id command subviews x y w h] :as view} ratio]
-  (let [subview (-> (get viewmap (first subviews))
+  [viewmap view ratio]
+  (let [{:keys [id command subviews x y w h]} view
+        subview (-> (get viewmap (first subviews))
                     (assoc :width {:pixel (* w ratio)}))]
     (assoc viewmap (:id subview) subview)))
 
 
 (defn touch-button
   "touch event for button"
-  [{:keys [command subviews x y w h] :as view} viewmap {type :type [px py] :point}]
-  (let [subview (if (= type "down")
+  [view viewmap msg]
+  (let [{:keys [command subviews x y w h]} view
+        {type :type [px py] :point} msg
+        subview (if (= type "down")
                   (-> (get viewmap (first subviews))
                       (assoc :width {:pixel w}))
                   (-> (get viewmap (first subviews))

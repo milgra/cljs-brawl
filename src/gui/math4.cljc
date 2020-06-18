@@ -1,8 +1,9 @@
 (ns gui.math4)
 
 
-(defn proj_ortho [ left right bottom top near far ]
+(defn proj_ortho
   "create orthographic projection"
+  [left right bottom top near far ]
   (let [rpl ( + right left )
         rml ( - right left )
         tpb ( + top bottom )
@@ -31,8 +32,9 @@
      1.0 ]))
 
 
-(defn proj_pers [ fovy aspect nearz farz ]
+(defn proj_pers
   "create perspective projection"
+  [fovy aspect nearz farz]
   (let [cotan (/ 1.0 (Math/tan (/ fovy 2.0)))]
 
     [( / cotan aspect )

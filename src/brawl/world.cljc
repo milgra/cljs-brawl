@@ -110,12 +110,6 @@
           contacts))
 
 
-(defn hit-actors
-  "initiate hit on actors"
-  [actors command time]
-  (reduce (fn [result [id actor]] (assoc result id (actor/hit actor command time))) {} actors))
-
-
 (defn normal-attack
   "punch/kick/shoot"
   [state command time]
@@ -126,7 +120,8 @@
         contacts (remove nil? (map (fn [[id actor]]
                                      (first (remove nil? (actor/hitpoints actor command)))) actors))
         new-particles (create-particles contacts main-dir)
-        new-actors (hit-actors actors command time)]
+        new-actors (reduce (fn [result [id actor]]
+                             (assoc result id (actor/hit actor command time))) actors actors)]
     (-> state
         (assoc-in [:world :particles] (concat particles new-particles))
         (assoc-in [:world :actors] new-actors))))

@@ -5,8 +5,9 @@
   (:require [gui.bitmap :as bitmap]))
 
 
-(defn init [w h r g b a]
+(defn init
   "create texture map with given background color"
+  [w h r g b a]
   (let [result {:texbmp (bitmap/init w h 0 0 0 0)
                 :contents {}
                 :changed true
@@ -16,32 +17,38 @@
     result))
 
 
-(defn reset [{texbmp :texbmp :as texmap}]
-  (assoc texmap
-         :texbmp (bitmap/clear texbmp 0 0 0 0)
-         :contents {}
-         :changed true
-         :lasth 0
-         :lastx 0
-         :lasty 0))
+(defn reset
+  [texmap]
+  (let [{texbmp :texbmp} texmap]
+    (assoc texmap
+           :texbmp (bitmap/clear texbmp 0 0 0 0)
+           :contents {}
+           :changed true
+           :lasth 0
+           :lastx 0
+         :lasty 0)))
 
 
-(defn hasbmp? [{contents :contents} id]
+(defn hasbmp?
   "texmap contains bitmap with given id?"
-  (contains? contents id))
+  [texmap id]
+  (let [{contents :contents} texmap]
+    (contains? contents id)))
 
 
-(defn getbmp [{contents :contents} id]
+(defn getbmp
   "returns bitmap with given id"
-  (get contents id))
+  [texmap id]
+  (let [{contents :contents} texmap]
+    (get contents id)))
 
 
-(defn setbmp [{:keys [texbmp contents lastx lasty lasth] :as texmap}
-              {:keys [data width height] :as bitmap}
-              texid
-              inset]
+(defn setbmp
   "adds bmp to texmap with given id"
-  (let [;;new height is 0 if entering new row else check if we have to increase it
+  [texmap bitmap texid inset]
+  (let [{:keys [texbmp contents lastx lasty lasth]} texmap
+        {:keys [data width height]} bitmap
+        ;;new height is 0 if entering new row else check if we have to increase it
         newh (if (> (+ lastx width) (texbmp :width))
                height
                (if (> height lasth)
