@@ -151,6 +151,14 @@
       actor)))
 
 
+(defn play-hit-or-death
+  [actor]
+  (let [{:keys [health]} actor]
+    (if (<= health 0)
+      (update actor :commands conj {:text "play-death"})
+      (update actor :commands conj {:text "play-hit"}))))
+
+
 (defn hitpoints
   "returns hitpoints of actor bones and attack vector"
   [actor command]  
@@ -240,6 +248,7 @@
             (assoc :next-mode :rag)
             (update :health - hitpower) 
             (update :speed + (* facing (/ power 2.0)))
+            (play-hit-or-death)
             (hit-masses hitpoints base target)
             (check-death time))))))
 

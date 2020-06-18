@@ -67,7 +67,6 @@
                                (assoc result (:id actor) actor)))
                            actors
                            (range 0 count))]
-    (println "actors-new"(keys actors-new))
     (assoc state :actors actors-new)))
 
 
@@ -113,36 +112,21 @@
 
 (defn hit-actors
   "initiate hit on actors"
-  [actors sounds command time]
-  (reduce (fn [result [id actor]]
-            (let [newactor (actor/hit actor command time)]
-              (if (and (> (:health actor) 0 ) (< (:health newactor) 0))
-                (.play ((keyword (str "death" (rand-int 2))) sounds)))
-              (assoc result id newactor)))
-          {}
-          actors))
+  [actors command time]
+  (reduce (fn [result [id actor]] (assoc result id (actor/hit actor command time))) {} actors))
 
 
 (defn normal-attack
   "punch/kick/shoot"
   [state command time]
   (let [{:keys [actors particles]} (:world state)
-        {:keys [sounds]} state
         {:keys [id]} command
         sender (id actors)
         main-dir (math2/resize-v2 (math2/sub-v2 (:target command) (:base command)) 4.0)
         contacts (remove nil? (map (fn [[id actor]]
-                                     
                                      (first (remove nil? (actor/hitpoints actor command)))) actors))
         new-particles (create-particles contacts main-dir)
-        new-actors (hit-actors actors sounds command time)]
-    (if (get-in sender [:control :shoot]) (.play (:shot sounds))           
-        (when-not (empty? contacts)
-          (.play ((keyword (str "punch" (rand-int 3))) sounds))
-          ;; TODO MOVE THIS!!!
-          ;; start music at first punch, should do better but starting music needs user interaction
-          (set! (.-loop (:theme sounds)) true)
-          (.play (:theme sounds))))
+        new-actors (hit-actors actors command time)]
     (-> state
         (assoc-in [:world :particles] (concat particles new-particles))
         (assoc-in [:world :actors] new-actors))))
@@ -340,17 +324,11 @@
           surfaces (phys2/surfaces-from-pointlist points)
           lines (clj->js (reduce (fn [result {[tx ty] :t [bx by] :b}] (concat result [tx ty 1.0 1.0 1.0 1.0 (+ tx bx) (+ ty by) 1.0 1.0 1.0 1.0])) [] surfaces))
           newdrawer (webgl/load-shapes world-drawer (filter #(if (:id %) (not (clojure.string/includes? (:id %) "Pivot")) true) (:shapes msg)))
-          newworld (-> {:actors {}
-                        :guns {}
-                        :infos []
-                        :inited true
-                        :loaded true
-                        :warned nil
-                        :warntime 0
-                        :finished false
-                        :particles []
-                        :surfaces surfaces
-                        :surfacelines lines}
+          newworld (-> (init)
+                       (assoc :inited true)
+                       (assoc :loaded true)
+                       (assoc :surfaces surfaces)
+                       (assoc :surfacelines lines)
                        (create-objects pivots metrics (:level state)))]
       (cond-> state
         true (assoc :world-drawer newdrawer)
@@ -439,7 +417,7 @@
 
 (defn execute-command
   [state command time]
-  (let [{:keys [level]} state
+  (let [{:keys [level sounds]} state
         hero (get-in state [:worlds :actors :hero])
         path-metrics [:world :actors :hero :metrics]]
     (case (:text command)
@@ -456,6 +434,9 @@
       "load-level"    (load-next-level state)
       "restart-level" (load-same-level state)
       "show-wasted"   (brawlui/load-ui state layouts/wasted)
+      "play-death"    (do (.play ((keyword (str "death" (rand-int 2))) sounds)) state)
+      "play-hit"      (do (.play ((keyword (str "punch" (rand-int 3))) sounds)) state)
+      "play-shot"     (do (.play (:shot sounds)) state)
       state)))
 
 

@@ -23,14 +23,14 @@
         base (:p neck)
         target (if (= punch-hand :hand_l) (:p hand_l) (:p hand_r))]
     (-> actor
-        (update :commands into [{:id id
-                                 :text "attack"
-                                 :base base
-                                 :target target
-                                 :radius 100.0
-                                 :facing facing
-                                 :color color
-                                 :power 20}])
+        (update :commands conj {:id id
+                                :text "attack"
+                                :base base
+                                :target target
+                                :radius 100.0
+                                :facing facing
+                                :color color
+                                :power 20})
         (assoc-in [:attack :action-sent] true))))
 
 
@@ -42,14 +42,14 @@
         base (:p hip)
         target (if (= :base_l (:active order)) (:p foot_l) (:p foot_r))]
     (-> actor
-        (update :commands into [{:id id
-                                 :text "attack"
-                                 :base base
-                                 :target target
-                                 :facing facing
-                                 :radius 100.0
-                                 :color color
-                                 :power 40}])
+        (update :commands conj {:id id
+                                :text "attack"
+                                :base base
+                                :target target
+                                :facing facing
+                                :radius 100.0
+                                :color color
+                                :power 40})
         (assoc-in [:attack :action-sent] true))))
 
 
@@ -61,14 +61,15 @@
         base (:p neck)
         target (math2/add-v2 (:p neck) [(* facing 500.0) 0.0])]
     (-> actor
-        (update :commands into [{:id id
-                                 :text "attack"
-                                 :base base
-                                 :target target
-                                 :radius 500.0
-                                 :facing facing
-                                 :color color
-                                 :power 110}])
+        (update :commands conj {:text "play-shoot"})
+        (update :commands conj {:id id
+                                :text "attack"
+                                :base base
+                                :target target
+                                :radius 500.0
+                                :facing facing
+                                :color color
+                                :power 110})
         (assoc-in [:attack :action-sent] true)
         (assoc-in [:attack :bullets] (dec bullets)))))
 
@@ -76,7 +77,7 @@
 (defn send-pickup [actor]
   (let [{:keys [id]} actor]
     (-> actor
-        (update :commands into [{:text "pickup" :id id}])
+        (update :commands conj {:text "pickup" :id id})
         (assoc-in [:attack :pickup-sent] true))))
 
 

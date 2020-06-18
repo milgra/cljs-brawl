@@ -155,23 +155,29 @@
 
 (defn update-controls
   "set up control state based on keycodes"
-  [state msg]  
-  (let [{:keys [keycodes controls]} state
-        new-codes (if-not (and msg (= (:id msg) "key"))
-                    keycodes
-                    (assoc keycodes (:code msg) (:value msg)))
-        new-controls {:left (new-codes 37)
-                      :right (new-codes 39)
-                      :up (new-codes 38)
-                      :down (new-codes 40)
-                      :punch (new-codes 70)
-                      :shoot (new-codes 86)
-                      :run (new-codes 32)
-                      :kick (new-codes 83)
-                      :block (new-codes 68)}]
-    (-> state
-        (assoc :keycodes new-codes)
-        (assoc :controls new-controls))))
+  [state msg]
+  (if-not (and msg (= (:id msg) "key"))
+    state
+    (let [{:keys [keycodes controls theme-started sounds]} state
+          new-codes (assoc keycodes (:code msg) (:value msg))
+          new-controls {:left (new-codes 37)
+                        :right (new-codes 39)
+                        :up (new-codes 38)
+                        :down (new-codes 40)
+                        :punch (new-codes 70)
+                        :shoot (new-codes 86)
+                        :run (new-codes 32)
+                        :kick (new-codes 83)
+                        :block (new-codes 68)}]
+      
+      (when (not theme-started)
+        (set! (.-loop (:theme sounds)) true)
+        (.play (:theme sounds)))
+
+      (-> state
+          (assoc :theme-started true)
+          (assoc :keycodes new-codes)
+          (assoc :controls new-controls)))))
 
 
 (defn simulate
@@ -218,6 +224,7 @@
                :ui-ratio (min 2.0 (or (.-devicePixelRatio js/window) 1.0))
                :time 0
                :gametime 0
+               :theme-started false
                :level 0
                :msgch (chan)
                :sounds (audio/sounds)

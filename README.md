@@ -29,6 +29,8 @@ Download/checkout the repo and start it up with :
 
 ## Todo
 
+* move play sound into actors
+* hit/shoot should stop after the first hit
 * world cljc sounds move to commands/etc
 * kotojeles nevek
 * refactor
