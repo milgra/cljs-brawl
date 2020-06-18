@@ -53,6 +53,6 @@
                                 k l 0 0 0 1
                                 m n 0 0 0 1))
         ;; draw fire if shot
-        (and (< s 6) (> s -1)) (fb/append! (array c d 0.9 0.9 0 1.0
+        (and (< s 6) (> s 0)) (fb/append! (array c d 0.9 0.9 0 1.0
                                                   o p 0.9 0.9 0 1.0
                                                   e f 0.9 0.9 0 1.0))))))

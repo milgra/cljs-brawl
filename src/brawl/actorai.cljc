@@ -10,7 +10,7 @@
        (filter #(not= (:color %) color)) ;; filter actors with different colors
        (filter #(> (:health %) 0)) ;; filter dead actors
        (map (fn [{{{[ex ey] :p} :head} :masses id :id}] [(Math/abs (- ex x)) (Math/abs (- ey y)) id])) ;; extract distance
-       (filter (fn [[dx dy id]] (and (< dx 500) (< dy 500)))) ;; filter far away actors
+       (filter (fn [[dx dy id]] (and (< dx 500) (< dy 100)))) ;; filter far away actors
        (map (fn [[dx dy id]] [(+ dx dy) id])) ;; map to distance sum
        (sort-by first))) ;; sort by distance sum
 

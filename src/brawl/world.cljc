@@ -402,7 +402,7 @@
                     nearby-gun
                     (assoc-in [:drag :gun] nearby-gun)
                     nearby-gun
-                    (assoc :bullets 6)
+                    (assoc-in [:attack :bullets] 6)
                     nearby-actor
                     (assoc-in [:drag :body] nearby-actor))]
     (cond-> state
