@@ -40,3 +40,5 @@ where to extract data
 eric chachi virtual machine easy to port
 clojureis like a virtual languageü runs on everything
 chain small steps instead of doing something with a complicated reduce function
+
+c - cljs code size comparison
