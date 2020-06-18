@@ -3,7 +3,7 @@
             [mpd.phys2 :as phys2]))
 
 
-(defn triangle_with_bases
+(defn triangle-with-bases
   "calculates third point of triangle based on the two base points, side length and direction, used for knee and elbow"
   [a b size dir]
   (let [[x y :as ab2] (math2/scale-v2 (math2/sub-v2 b a) 0.5)
@@ -74,7 +74,8 @@
         (assoc-in [:attack :bullets] (dec bullets)))))
 
 
-(defn send-pickup [actor]
+(defn send-pickup
+  [actor]
   (let [{:keys [id]} actor]
     (-> actor
         (update :commands conj {:text "pickup" :id id})
@@ -152,8 +153,8 @@
                  (and punch (= punch-hand :hand_r) (not left) (not right)) [(+ nx (* facing arml 0.99)) (+ ny punch-y)]
                  :else [(+ nx nrx) (+ ny nry)])
 
-        elbow_l (triangle_with_bases neck hand_l (* arml 0.5) facing)
-        elbow_r (triangle_with_bases neck hand_r (* arml 0.5) facing)]
+        elbow_l (triangle-with-bases neck hand_l (* arml 0.5) facing)
+        elbow_r (triangle-with-bases neck hand_r (* arml 0.5) facing)]
 
     (-> actor
         (assoc-in [:masses :hand_l :p] hand_l)
@@ -204,8 +205,8 @@
   (let [{:keys [masses speed facing]} actor
         {legl :legl} (:metrics actor)
         {base-order :order base-target :target} (:walk actor)
-        knee_l (triangle_with_bases (get-in masses [:foot_l :p]) (get-in masses [:hip :p]) (/ legl 1.95) facing)
-        knee_r (triangle_with_bases (get-in masses [:foot_r :p]) (get-in masses [:hip :p]) (/ legl 1.95) facing)]
+        knee_l (triangle-with-bases (get-in masses [:foot_l :p]) (get-in masses [:hip :p]) (/ legl 1.95) facing)
+        knee_r (triangle-with-bases (get-in masses [:foot_r :p]) (get-in masses [:hip :p]) (/ legl 1.95) facing)]
     (-> actor
         (assoc-in [:masses :knee_l :p] knee_l) 
         (assoc-in [:masses :knee_r :p] knee_r))))
