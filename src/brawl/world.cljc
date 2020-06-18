@@ -134,17 +134,17 @@
         {:keys [sounds]} state
         {:keys [id]} command
         sender (id actors)
-        dragged ((:body (:drag sender)) actors)
+        dragged ((get-in sender [:drag :body]) actors)
         masses (:masses dragged)
         newmasses (reduce (fn [res [id mass]] ; reset mass directions for next rag
-                            (assoc res id (assoc mass :d [(+ (* 6.0 (:facing sender)) (* (:speed sender) 0.5)) -5])))
+                            (assoc res id (assoc mass :d [(+ (* 6.0 (:facing sender)) (* (:speed sender) 0.5)) -2])))
                           masses
                           masses)
         newdragged (-> dragged
                        (assoc :masses newmasses)
                        (assoc-in [:drag :injure?] true)
                        (assoc-in [:drag :dragged?] false))
-        newsender (assoc sender :body nil)]
+        newsender (assoc-in sender [:drag :body] nil)]
     (-> state
         (assoc-in [:world :actors id] newsender)
         (assoc-in [:world :actors (:id dragged)] newdragged))))

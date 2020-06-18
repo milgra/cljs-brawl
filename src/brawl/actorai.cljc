@@ -151,7 +151,7 @@
                          (assoc-in [:control :punch] false)
                          (assoc-in [:control :kick] false)
                          (assoc-in [:control :block] false))]
-        (if (and target (= 1 (rand-int 2)))
+        (if (and target (= 1 (rand-int 3)))
            (-> newactor
               (assoc-in [:ai :state] :follow)
               (assoc-in [:ai :target] target)

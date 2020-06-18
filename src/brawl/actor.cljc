@@ -127,7 +127,7 @@
      :next-mode nil
      :speed -2.0
      :facing 1.0
-     :health (+ 100.0 (* level 50.0))
+     :health (+ (if (= id :hero) 150.0 100.0) (* level 10.0))
      :control default-control
      :commands []
      ;; substates
@@ -240,14 +240,14 @@
         (-> actor
             (assoc-in [:attack :timeout] (+ time 1000))
             (update :health - (/ power 2.0)) 
-            (update :speed + (* facing (/ power 2.0)))
+            (update :speed + (* facing (/ hitpower 4.0)))
             (check-death time))
         ;; hit actor
         (-> actor
             (assoc-in [:attack :timeout] timeout )
             (assoc :next-mode :rag)
             (update :health - hitpower) 
-            (update :speed + (* facing (/ power 2.0)))
+            (update :speed + (* facing (/ hitpower 3.0)))
             (play-hit-or-death)
             (hit-masses hitpoints base target)
             (check-death time))))))
@@ -331,8 +331,8 @@
                      (:p bl))
         actor-new (-> actor
                       (assoc-in [:walk :jump-state] 0) ; reset jump state
+                      (assoc-in [:walk :target] nil) ; reset stepping
                       (assoc :next-mode nil)
-                      (assoc-in [:base :target] nil) ; reset stepping
                       (assoc :mode :walk)
                       (assoc :masses masses-new))]
     (cond-> actor-new

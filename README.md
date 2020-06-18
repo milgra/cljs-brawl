@@ -29,14 +29,8 @@ Download/checkout the repo and start it up with :
 
 ## Todo
 
-* move play sound into actors
-* hit/shoot should stop after the first hit
-* world cljc sounds move to commands/etc
-* kotojeles nevek
-* refactor
 * randomize fix
 * improve buddy ai when attacking
-* continuous punch/kick/block
 * killed by XY from names
 
 how does a real-time game with complex algorithms ( phyisics simulation, ui/font rendering, ai) look like
