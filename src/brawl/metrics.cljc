@@ -4,15 +4,15 @@
   "normalize base values"
   [base mkey]
   (let [{:keys [hitpower hitrate stamina speed height color_a color_b]} base
-        half (- 1.25 (* height 0.5)) 
-        hp (if (or (= mkey :hitrate) (= mkey :height)) (- half hitrate) hitpower) 
-        hr (if (or (= mkey :hitpower) (= mkey :height)) (- half hitpower) hitrate)
-        st (if (or (= mkey :speed) (= mkey :height)) (- half speed) stamina)
-        sp (if (or (= mkey :stamina) (= mkey :height)) (- half stamina) speed)
-        nhp (cond (< hr 0) (- hp hr) (> hr 1.0) (+ hp (- hr 1.0)) :else hp) ; check overflow
-        nhr (cond (< hp 0) (- hr hp) (> hp 1.0) (+ hr (- hp 1.0)) :else hr)
-        nst (cond (< sp 0) (- st sp) :else st)
-        nsp (cond (< st 0) (- sp st) :else sp)]
+        half (- 1.25 (* height 0.5))
+        hp (if (= mkey :hitpower) hitpower (- half hitrate)) 
+        hr (if (= mkey :hitrate) hitrate (- half hp))
+        sp (if (= mkey :speed) speed (- half stamina))
+        st (if (= mkey :stamina) stamina (- half sp))
+        nhp (max 0.0 (min 1.0 (min hp half)))
+        nhr (max 0.0 (min 1.0 (min hr half)))
+        nst (max 0.0 (min 1.0 (min st half)))
+        nsp (max 0.0 (min 1.0 (min sp half)))]
     (assoc base :hitpower nhp :hitrate nhr :stamina nst :speed nsp)))
 
 
@@ -35,8 +35,8 @@
   (basemetrics-normalize
    {:height (/ (rand 10) 10)
     :hitpower (/ (rand 10) 10)
-    :hitrate (/ (rand 10) 10)
     :stamina (/ (rand 10) 10)
+    :hitrate (/ (rand 10) 10)
     :speed (/ (rand 10) 10)
     :color_a [1.0 (rand) (rand) 1.0]
     :color_b [1.0 (rand) (rand) 1.0]} :height))
@@ -46,14 +46,11 @@
   "generate metrics based on base metrics"
   [base]
   (let [{:keys [hitpower hitrate stamina speed height color_a color_b]} base
-        hp (cond (> hitpower 1.0) 1.0 (< hitpower 0.0) 0.0 :else hitpower)
-        hr (cond (> hitrate 1.0) 1.0 (< hitrate 0.0) 0.0 :else hitrate)
-        st (cond (> stamina 1.0) 1.0 (< stamina 0.0) 0.0 :else stamina)
-        sp (cond (> speed 1.0) 1.0 (< speed 0.0) 0.0 :else speed)
-
-        size (cond (> height 1.0) 1.0
-                   (< height 0.0) 0.0
-                   :else height)
+        hp hitpower
+        hr hitrate
+        st stamina
+        sp speed
+        size height
 
         headl (+ 16.0 (* size 8.0))
         bodyl (+ 50.0 (* size 20.0)) 
@@ -87,7 +84,7 @@
         drb (if (> rb 0.2) (- rb 0.2) rb)
         dgb (if (> gb 0.2) (- gb 0.2) gb)
         dbb (if (> bb 0.2) (- bb 0.2) bb)]
-
+    
     {:headl headl :bodyl bodyl :arml arml :legl legl ; lengths
      :headw headw :neckw neckw :armw armw :bodyw headw :hipw hipw :legw legw ; widths
      :walks walks :runs runs   :punchs punchs :kicks kicks ; speed

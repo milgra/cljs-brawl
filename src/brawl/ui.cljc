@@ -99,7 +99,7 @@
 
 
 (defn update-metrics-value [state changed-key changed-val]
-  (let [hero (get-in state [:worlds :actors :hero])
+  (let [hero (get-in state [:world :actors :hero])
         path-metrics [:world :actors :hero :metrics]
         nbase (-> (get-in hero [:metrics :base])
                   (assoc changed-key changed-val)
@@ -173,9 +173,8 @@
       (= text "set-height")                       (update-metrics-value state :height (:ratio command))
       (= text "set-hitrate")                      (update-metrics-value state :hitrate (:ratio command))
       (= text "set-stamina")                      (update-metrics-value state :stamina (:ratio command))
-      (= text "set-hitpower")                     (update-metrics-value state :ratio (:ratio command))
-      (and (= text "randomize") (= type "up"))    (let [nbase (-> (metrics/basemetrics-random)
-                                                                  (metrics/basemetrics-normalize :height))
+      (= text "set-hitpower")                     (update-metrics-value state :hitpower (:ratio command))
+      (and (= text "randomize") (= type "up"))    (let [nbase (metrics/basemetrics-random)
                                                         nmetrics (metrics/generate-metrics nbase)]
                                                     (-> state
                                                         (assoc-in [:world :actors :hero :metrics] nmetrics)

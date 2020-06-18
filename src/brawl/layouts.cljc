@@ -38,7 +38,7 @@
      :width "150 px"
      :height "50 px"
      :center-x "Edge 50 %"
-     :command "set-heivght"}
+     :command "set-height"}
     
     {:id "Stamina"
      :class "Slider"
