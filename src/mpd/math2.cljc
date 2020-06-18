@@ -1,52 +1,69 @@
 (ns mpd.math2)
 
 
-(defn add-v2 [[ax ay][bx by]]
+(defn add-v2
+  "adds two vectors"
+  [[ax ay][bx by]]
   [(+ ax bx) (+ ay by)])
 
 
-(defn sub-v2 [[ax ay][bx by]]
+(defn sub-v2
+  "subtracts second vector from first"
+  [[ax ay][bx by]]
   [(- ax bx) (- ay by)])
 
 
-(defn dot-v2 [[ax ay][bx by]]
+(defn dot-v2
+  "dot product of two vectors"
+  [[ax ay][bx by]]
   (+ (* ax bx) (* ay by)))
 
  
-(defn length-v2 [[ax ay]]
+(defn length-v2
+  "length of vector with square root"
+  [[ax ay]]
   (Math/sqrt (+ (* ax ax) (* ay ay))))
 
 
-(defn scale-v2 [[x y] ratio]
+(defn scale-v2
+  "scale vector with scalar"
+  [[x y] ratio]
   [(* x ratio) (* y ratio)])
 
 
-(defn resize-v2 [[x y] size]
+(defn resize-v2
+  "resize vector to length"
+  [[x y] size]
   (if (and (not= size 0) (or (not= x 0) (not= y 0)))
     (let [ratio (/ size (length-v2 [x y]))]
       [(* x ratio) (* y ratio)])
     [x y]))
 
 
-(defn angle-x-v2 [[x y]]
+(defn angle-x-v2
   "angle of vector from x axis"
+  [[x y]]
   (Math/atan2 y x))
 
 
-(defn rad-to-degree [rad]
+(defn rad-to-degree
+  "convert radians to degrees"
+  [rad]
   (/ (* 180 rad) 3.14))
 
 
-(defn normalize-angle [angle]
+(defn normalize-angle
   "bring angle between 0 and 2PI radians"
+  [angle]
   (if (< angle 0)
     (+ angle Math/PI Math/PI)
     angle))
 
 
-(defn isp-l2-l2 [[tax tay][bax bay][tbx tby][bbx bby]]
+(defn isp-l2-l2
   "line-line intersection calculation based on determinant calculation : Ax + By = C
    parameters : trans a basis a trans b basis b"
+  [[tax tay][bax bay][tbx tby][bbx bby]]
   (if (or
        (and (= bax 0)(= bay 0))
        (and (= bbx 0)(= bby 0)))
@@ -64,9 +81,10 @@
         ( / (- (* A2 C1) (* A1 C2)) DT) ]))))
 
 
-(defn p2-in-v2? [[px py] [tx ty] [bx by] radius]
+(defn p2-in-v2?
   "check if p is inside vector defined by trans and basis with given radius from endpoints
    it checks point distance from the halfpoint of the vector"
+  [[px py] [tx ty] [bx by] radius]
   (let [lx (/ bx 2)
         ly (/ by 2)
         cx (+ tx lx)
@@ -78,9 +96,10 @@
     (and xok yok)))
 
 
-(defn dist-p2-l2 [[px py] [tx ty] [bx by]]
+(defn dist-p2-l2
   "calculate distance of point and line
    https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line #Line defined by two points"
+  [[px py] [tx ty] [bx by]]
   (let [cx (+ tx bx)
         cy (+ ty by)]
     (/
@@ -171,8 +190,9 @@
             (add-v2 isp normal-min))))))) ;; push over surface
 
 
-(defn dist-p2-v2 [[px py] [tx ty] [bx by]]
+(defn dist-p2-v2
   "perpendicular distance of point and vector considering endpoints"
+  [[px py] [tx ty] [bx by]]
   (let [cross (isp-l2-l2 [tx ty][bx by][px py][(- by) bx])
         connv (sub-v2 [px py] cross)]
     (if (p2-in-v2? cross [tx ty] [bx by] 0)
@@ -180,24 +200,29 @@
       ##Inf)))
 
 
-(defn mirror-v2-bases [[ax ay] [vx vy]]
+(defn mirror-v2-bases
   "mirrors vector on axis, projects v on a, then adds the connecting vector of v and p to p"
+  [[ax ay] [vx vy]]
   (let [[px py] (isp-l2-l2 [0 0] [ax ay] [vx vy] [ay (- ax)])
         [bx by] [(- px vx) (- py vy)]]
     [(+ px bx) (+ py by)]))
 
 
-(defn dist-p2-p2-cubic [[ax ay][bx by]]
+(defn dist-p2-p2-cubic
   "returns distance of two points based on x and y distances to avoid square root calculation"
+  [[ax ay][bx by]]
   (+ (Math/abs (- bx ax)) (Math/abs (- by ay))))
 
 
-(defn rotate-90-cw [ [x y] ]
+(defn rotate-90-cw
+  [[x y]]
   [y (- x)])
 
 
-(defn rotate-90-ccw [ [x y] ]
+(defn rotate-90-ccw
+  [[x y]]
   [(- y) x])
 
-(defn rotate-up-v2 [ [x y] ]
+(defn rotate-up-v2
+  [[x y]]
   (if (< x 0) [(- y) x] [y (- x)]))
