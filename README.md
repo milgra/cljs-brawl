@@ -1,12 +1,14 @@
-# BRAWL
+# CLJS-BRAWL
 
 A physics based 2D side scrolling action game written in Clojurescript/WebGL.
 
-[PLAY](https://milgra.github.io/cljs-brawl/index.html) ( Keys : ARROWS SPACE F D S )
+If you find the game joyful or the source code useful please consider donating : [DONATE](paypal.me/milgra)
+
+[PLAY THE GAME](https://milgra.github.io/cljs-brawl/index.html)
 
 ## Story
 
-You rent a tiny flat in an Eastern-European-style block of flats. You want to visit your girlfriend but you see gang members on the road. They take your money and food every time. Today you won't let this happen!!! 
+You rent a tiny flat in an Eastern-European-style block of flats. You want to visit your girlfriend but you see gang members on the road. They take your money and food every time. Today you won't let this happen!!!
 
 ## Development
 
@@ -35,20 +37,27 @@ ClojureScript is fast enough but converting clojure types to javascript types is
 Clojure code Compared to the C equivalent of the game :
 
 C - 18500 lines, 740000 characters ( excluding the low level frameworks that are present in html5/javascript)
+
 Clojure - 7000 lines,  210000 characters
 
 The clojure code size is roughly the third of the C code size.
 
 Most common pattern dilemmas
 
-1. One complex reducer function or multiple simple threaded reducers ( aka transducers ) ?
+1. One complex reducer function or multiple simple threaded reducers ( aka transducers )?
 
-The second solution wins in clarity and readability altough it needs multiple iterations instead of one.
+   The second solution wins in clarity and readability altough it needs multiple iterations instead of one.
 
 2. Extract sub-data for a function or pass the whole dataset and let the function extract and re-insert data for itself
-It's hard to decide. In higher parts of a program the second version results in a cleaner code, both caller and callee functions are cleaner but in case of lower parts it is overkill, for example you don't want to extract x and y components of vectors from the whole state in an add-vector function.
 
-### How to run/develop the game
+   It's hard to decide. In higher parts of a program the second version results in a cleaner code, both caller and callee functions are cleaner but in case of lower parts it is overkill, for example you don't want to extract x and y components of vectors from the whole state in an add-vector function.
+
+## Frameworks used in the game
+
+cljs_webgl - for clojure-style opengl state handling
+tubax - for svg/xml parsing
+
+## How to run/develop the game
 
 Download/checkout the repo and start it up with :
 

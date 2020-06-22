@@ -104,7 +104,6 @@
   (reduce (fn [res [x y]]
             (concat
              res
-             (repeatedly 10 #(particle/init x y [1.0 1.0 1.0 0.5] (math2/resize-v2 [(+ (- 1.0) (rand 2.0)) (+ (- 1.0) (rand 2.0))] (+ 1.0 (rand 2.0))) :dust))
              (repeatedly 5 #(particle/init x y [1.0 0.0 0.0 0.5] [ (+ dx -2.0 (rand 2.0)) (+ dy -2.0 (rand 2.0))] :blood))))
           []
           contacts))
