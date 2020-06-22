@@ -2,7 +2,7 @@
 
 A physics based 2D side scrolling action game written in Clojurescript/WebGL.
 
-If you find the game joyful or the source code useful please consider donating : [DONATE](paypal.me/milgra)
+If you find the game joyful or the source code useful please consider donating : [DONATE](www.paypal.me/milgra)
 
 [PLAY THE GAME](https://milgra.github.io/cljs-brawl/index.html)
 
@@ -50,7 +50,7 @@ Most common pattern dilemmas
 
 2. Extract sub-data for a function or pass the whole dataset and let the function extract and re-insert data for itself
 
-   It's hard to decide. In higher parts of a program the second version results in a cleaner code, both caller and callee functions are cleaner but in case of lower parts it is overkill, for example you don't want to extract x and y components of vectors from the whole state in an add-vector function.
+   It's hard to decide. In higher parts of a program the second version results in a cleaner code, caller functions are cleaner and callees are all right but in case of lower parts it is overkill, for example you don't want to extract x and y components of vectors from the whole state in an add-vector function.
 
 ## Frameworks used in the game
 
@@ -59,7 +59,9 @@ tubax - for svg/xml parsing
 
 ## How to run/develop the game
 
-Download/checkout the repo and start it up with :
+Install clojure and shadow-cljs
+Check out the repo
+Start the app with :
 
 ```shadow-cljs watch app```
 
