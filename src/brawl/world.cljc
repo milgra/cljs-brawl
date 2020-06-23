@@ -386,27 +386,37 @@
         actor (id actors)
         {{hip :hip} :masses color :color :as actor} actor
         ;; look for gun
-        nearby-gun (first (remove nil? (map (fn [[_ {:keys [id p d]}]]
-                                              (if-not (< (math2/length-v2 (math2/sub-v2 p (:p hip))) 80.0) nil id)) guns)))
+        nearby-gun (->> (vals guns)
+                       (filter #(not (:dragged? %)))
+                       (filter (fn [{:keys [id p d]}] (< (math2/length-v2 (math2/sub-v2 p (:p hip))) 80.0)))
+                       (first))
 
-        nearby-actor (first (remove nil? (map (fn [[_ {{ehip :hip} :masses ecolor :color ehealth :health eid :id {edragged :dragged?} :drag}]]
-                                                (let [dist (math2/length-v2 (math2/sub-v2 (:p ehip) (:p hip)))]
-                                                  (if (and (< ehealth 0) (not= id eid) (not edragged) (< dist 150.0)) eid nil))) actors)))
+        nearby-actor (->> (vals actors)
+                          (filter #(< (:health %) 0))
+                          (filter #(not (get-in % [:drag :dragged?])))
+                          (filter #(not= (:id %) id))
+                          (filter (fn [{{ehip :hip} :masses}] (< (math2/length-v2 (math2/sub-v2 (:p ehip) (:p hip))) 150.0)))
+                          (first))
 
         dragged-actor (if nearby-actor
-                        (-> (nearby-actor actors)
+                        (-> nearby-actor
                             (assoc-in [:drag :dragged?] true)
                             (assoc :next-mode :rag)))
+
+        dragged-gun (if nearby-gun
+                      (assoc nearby-gun :dragged? true))
+
         new-actor (cond-> actor
                     nearby-gun
-                    (assoc-in [:drag :gun] nearby-gun)
+                    (assoc-in [:drag :gun] (:id nearby-gun))
                     nearby-gun
                     (assoc-in [:attack :bullets] 6)
                     nearby-actor
-                    (assoc-in [:drag :body] nearby-actor))]
+                    (assoc-in [:drag :body] (:id nearby-actor)))]
     (cond-> state
-        true (assoc-in [:world :actors id] new-actor)
-        nearby-actor (assoc-in [:world :actors nearby-actor] dragged-actor))))
+      true (assoc-in [:world :actors id] new-actor)
+      nearby-gun (assoc-in [:world :guns (:id nearby-gun)] dragged-gun)
+      nearby-actor (assoc-in [:world :actors (:id nearby-actor)] dragged-actor))))
 
 
 (defn execute-command

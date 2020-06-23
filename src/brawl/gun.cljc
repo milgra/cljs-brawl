@@ -11,7 +11,9 @@
    :d [-10 0] ; direction
    :f 1.0 ; facing
    :b 6 ; bullets
-   :s 0}) ; shot frames
+   :s 0
+   :dragged? false
+   }) ; shot frames
 
 
 (defn get-skin-triangles

@@ -10,14 +10,14 @@
          part path]
     (if-not part
       (map (fn [[x y]] [(* 2.5 x) (* 2.5 y)]) (rest points))
-      (let [command (first part)
-            sub-path (subs part 1)
+      (let [sub-path (subs part 1)
             next-match (re-find  #"[a-zA-Z]" sub-path)
             index (if next-match (s/index-of sub-path next-match))
             sub-word (if-not next-match sub-path (subs sub-path 0 index))
             next-part (if-not next-match nil (subs part (+ index 1)))
             words (remove s/blank? (s/split sub-word #" "))
             coords (map (fn [str] (s/split str #",")) words)
+            command (first part)
             finalpoints (reduce (fn [oldpoints [x y :as pair]]
                                   (let [[px py] (last oldpoints)]
                                     (case command
