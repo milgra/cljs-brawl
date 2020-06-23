@@ -5,31 +5,54 @@
 
 (defn parse-path
   "parse path, convert string pairs starting with M L to coord array"
-  [path]
-  (reduce
-   (fn extract [res act]
-     (cond
-       (or (s/starts-with? act "M") (s/starts-with? act "L"))
-       (conj res (map #(* (float (cljs.reader/read-string %)) 2.5 ) (s/split (subs act 1) #",")))
-       ;;(s/starts-with? act "z")
-       ;;(conj res (first res))
-       :else
-       res))
-   []
-   (s/split path #" ")))
+  [path id]
+  (loop [points [[0 0]]
+         part path]
+    (if-not part
+      (map (fn [[x y]] [(* 2.5 x) (* 2.5 y)]) (rest points))
+      (let [command (first part)
+            sub-path (subs part 1)
+            next-match (re-find  #"[a-zA-Z]" sub-path)
+            index (if next-match (s/index-of sub-path next-match))
+            sub-word (if-not next-match sub-path (subs sub-path 0 index))
+            next-part (if-not next-match nil (subs part (+ index 1)))
+            words (remove s/blank? (s/split sub-word #" "))
+            coords (map (fn [str] (s/split str #",")) words)
+            finalpoints (reduce (fn [oldpoints [x y :as pair]]
+                                  (let [[px py] (last oldpoints)]
+                                    (case command
+                                      "M" (conj oldpoints [(cljs.reader/read-string x)
+                                                           (cljs.reader/read-string y)])
+                                      "m" (conj oldpoints [(+ px (cljs.reader/read-string x))
+                                                           (+ py (cljs.reader/read-string y))])
+                                      "L" (conj oldpoints [(cljs.reader/read-string x)
+                                                           (cljs.reader/read-string y)])
+                                      "l" (conj oldpoints [(+ px (cljs.reader/read-string x))
+                                                           (+ py (cljs.reader/read-string y))])
+                                      "H" (conj oldpoints [(cljs.reader/read-string x)
+                                                           py])
+                                      "h" (conj oldpoints [(+ px (cljs.reader/read-string x))
+                                                           py])
+                                      "V" (conj oldpoints [px
+                                                           (+ py (cljs.reader/read-string x))])
+                                      "v" (conj oldpoints [px
+                                                           (+ py (cljs.reader/read-string x))])
+                                      oldpoints))) points coords)]
+        (recur finalpoints next-part)))))
 
 
 (defn parse-shape
   "parse shape, extract color and path from xml node"
   [attrs id]
-  (if (contains? attrs :fill)
-    {:type "shape"
-     :id (or (attrs :id) id)
-     :color (js/parseInt (subs (attrs :fill) 1) 16)
-     :path (parse-path (attrs :d))}
-    {:type "shape"
-     :id (or (attrs :id) id)
-     :path (parse-path (attrs :d))}))
+  (let [myid (if (= id "Surfaces") id  (or (:id attrs) id))]
+    (if (contains? attrs :fill)
+      {:type "shape"
+       :id myid
+       :color (js/parseInt (subs (:fill attrs) 1) 16)
+       :path (parse-path (:d attrs) (:id attrs))}
+      {:type "shape"
+       :id myid
+       :path (parse-path (:d attrs) (:id attrs))})))
 
 
 (defn parse-svg
@@ -40,7 +63,7 @@
       (map? element) (let [{:keys [tag attributes content]} element]
                        (cond
                          (= tag :g)
-                         (parse-svg content (attributes :id))
+                         (parse-svg content (:id attributes))
                          (= tag :path)
                          (concat [(parse-shape attributes id)] (parse-svg content id))
                          :else
@@ -48,7 +71,7 @@
       (vector? element) (reduce #(concat %1 (parse-svg %2 id)) [] element))))
 
 
-;; (psvg (xml->clj
+;; (parse-svg (xml->clj
 ;; "<?xml version='1.0' encoding='UTF-8'?>
 ;; <svg version='1.1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' x='0' y='0' width='612' height='792' viewBox='0, 0, 612, 792'>
 ;;   <g id='Layer_1'>
@@ -60,4 +83,4 @@
 ;;   <g id='Surfaces'>
 ;;     <path d='M38.613,241.018 L53.321,396.925 L1103.035,464.38 L1204.737,465.087 L2197.789,408.692 L2218.38,258.667' fill-opacity='0' stroke='#000000' stroke-width='1'/>
 ;;   </g>
-;; </svg>"))
+;; </svg>") "")
