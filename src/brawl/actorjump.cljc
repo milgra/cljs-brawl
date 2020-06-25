@@ -77,12 +77,12 @@
         lethal-new (if (> sy 20) true jump-lethal)
         speed-new (if (> sy 20) sy jump-speed)
         mode-new (if ground :walk next-mode)]
-    (if (and ground jump-lethal (= (:id actor) :hero))
-      (let [masses-new (reduce (fn [res [id mass]] (update-in res [id :d 1] + speed-new)) masses masses)] ; reset mass directions for next rag
-        (-> actor
+    (if (and ground jump-lethal)
+      (let [masses-new (reduce (fn [res [id mass]] (update-in res [id :d 1] + speed-new)) masses masses)  ; reset mass directions for next rag
+            actor-new (if (= (:id actor) :hero) (update actor :commands conj {:text "show-wasted"}) actor)]
+        (-> actor-new
             (assoc :health -1)
             (assoc :masses masses-new)
-            (update :commands conj {:text "show-wasted"})
             (assoc :next-mode :rag)))
       (-> actor
           (assoc-in [:walk :jump-lethal] lethal-new)
