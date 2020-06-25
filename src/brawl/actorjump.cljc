@@ -67,20 +67,30 @@
 (defn update-jump
   "jump state update, update base masses in the world, check if they reached ground" 
   [actor surfaces time delta]
-  (let [{:keys [bases masses speed next-mode]} actor
+  (let [{:keys [health bases masses speed next-mode]} actor
+        {:keys [jump-lethal jump-speed]} (:walk actor)
         newbases (-> bases 
                      (phys2/add-gravity [0.0 (* 0.5 delta)])
                      (phys2/move-masses surfaces (* 0.5 delta)))
         ground (and (:q (:base_l newbases) (:base_r newbases))) ;; check quisence of bases
-        mode-new (cond
-                   ground :walk
-                   ;;(< speed -15) :idle
-                   :else next-mode)]
-    (-> actor
-        (assoc :next-mode mode-new)
-        (assoc :bases newbases)
-        (move-hip-jump)
-        (move-feet-jump surfaces)
-        (walk/move-knee-walk)
-        (move-head-jump)
-        (walk/move-hand-walk surfaces))))
+        [sx sy] (:d (:base_l bases))
+        lethal-new (if (> sy 20) true jump-lethal)
+        speed-new (if (> sy 20) sy jump-speed)
+        mode-new (if ground :walk next-mode)]
+    (if (and ground jump-lethal (= (:id actor) :hero))
+      (let [masses-new (reduce (fn [res [id mass]] (update-in res [id :d 1] + speed-new)) masses masses)] ; reset mass directions for next rag
+        (-> actor
+            (assoc :health -1)
+            (assoc :masses masses-new)
+            (update :commands conj {:text "show-wasted"})
+            (assoc :next-mode :rag)))
+      (-> actor
+          (assoc-in [:walk :jump-lethal] lethal-new)
+          (assoc-in [:walk :jump-speed] speed-new)
+          (assoc :next-mode mode-new)
+          (assoc :bases newbases)
+          (move-hip-jump)
+          (move-feet-jump surfaces)
+          (walk/move-knee-walk)
+          (move-head-jump)
+          (walk/move-hand-walk surfaces)))))

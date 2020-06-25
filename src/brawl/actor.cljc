@@ -16,17 +16,17 @@
 
 (defn default-masses
   [x y]
-  {:head    (phys2/mass2 x y 4.0 1.0 0.5 0.6)
-   :neck    (phys2/mass2 x y 4.0 1.0 0.5 0.6)
-   :hip     (phys2/mass2 x y 4.0 1.0 0.5 0.6)
-   :hand_l  (phys2/mass2 x y 4.0 1.0 0.5 0.6)
-   :hand_r  (phys2/mass2 x y 4.0 1.0 0.5 0.6)
-   :elbow_l (phys2/mass2 x y 4.0 1.0 0.5 0.6)
-   :elbow_r (phys2/mass2 x y 4.0 1.0 0.5 0.6)
-   :knee_l  (phys2/mass2 x y 4.0 1.0 0.5 0.6)
-   :knee_r  (phys2/mass2 x y 4.0 1.0 0.5 0.6)
-   :foot_l  (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.5 0.6)
-   :foot_r  (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.5 0.6)})
+  {:head    (phys2/mass2 x y 4.0 1.0 0.5 0.2)
+   :neck    (phys2/mass2 x y 4.0 1.0 0.5 0.2)
+   :hip     (phys2/mass2 x y 4.0 1.0 0.5 0.2)
+   :hand_l  (phys2/mass2 x y 4.0 1.0 0.5 0.2)
+   :hand_r  (phys2/mass2 x y 4.0 1.0 0.5 0.2)
+   :elbow_l (phys2/mass2 x y 4.0 1.0 0.5 0.2)
+   :elbow_r (phys2/mass2 x y 4.0 1.0 0.5 0.2)
+   :knee_l  (phys2/mass2 x y 4.0 1.0 0.5 0.2)
+   :knee_r  (phys2/mass2 x y 4.0 1.0 0.5 0.2)
+   :foot_l  (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.5 0.2)
+   :foot_r  (phys2/mass2 (+ x 20.0) y 4.0 1.0 0.5 0.2)})
 
 
 (defn default-distance-guards
@@ -72,6 +72,8 @@
    :step-size 0 ;; current step size
    :squat-size 0 ;; current squat size
    :jump-state 0 ;; jump state, 0 (squat phase) 1 (jumping phase)
+   :jump-lethal false ;; fall speed is too high
+   :jump-speed 0
    :idle-angle 0})
 
 
@@ -145,9 +147,9 @@
     (if-not (<= health 0)
       actor
       (let [actor-new (-> actor
-                          (assoc-in [:drag :body] nil)
                           (assoc :next-mode :rag)
-                          (assoc-in [:attack :timeout] (+ time 2000)))]
+                          (assoc-in [:attack :timeout] (+ time 2000))
+                          (update :commands conj {:text "drop" :id id}))]
         (if (= id :hero ) (update actor-new :commands conj {:text "show-wasted"}) actor-new)))))
 
 
@@ -240,14 +242,14 @@
         (-> actor
             (assoc-in [:attack :timeout] (+ time 1000))
             (update :health - (/ power 5.0)) 
-            (update :speed + (* -1 facing (/ hitpower 4.0)))
+            (update :speed + (* -2.5 facing))
             (check-death time))
         ;; hit actor
         (-> actor
             (assoc-in [:attack :timeout] timeout )
             (assoc :next-mode :rag)
             (update :health - hitpower) 
-            (update :speed + (* -1 facing (/ hitpower 3.0)))
+            (update :speed + (* -2.5 facing))
             (play-hit-or-death)
             (hit-masses hitpoints base target)
             (check-death time))))))

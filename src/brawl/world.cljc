@@ -116,14 +116,15 @@
         {:keys [id]} command
         sender (id actors)
         main-dir (math2/resize-v2 (math2/sub-v2 (:target command) (:base command)) 4.0)
-        contacts (remove nil? (map (fn [[id actor]]
-                                     (first (remove nil? (actor/hitpoints actor command)))) actors))
-        new-particles (create-particles contacts main-dir)
-        new-actors (reduce (fn [result [id actor]]
-                             (assoc result id (actor/hit actor command time))) actors actors)]
-    (-> state
-        (assoc-in [:world :particles] (concat particles new-particles))
-        (assoc-in [:world :actors] new-actors))))
+        [id isps :as attacked] (first (reduce (fn [res [id actor]] (let [isps (actor/hitpoints actor command)]
+                                                                     (if (empty? (remove nil? isps)) res (conj res [id isps])))) [] actors))]
+    (if-not attacked
+      state
+      (let [new-particles (create-particles [(first (remove nil? isps))] main-dir)
+            new-actor (actor/hit (id actors) command time)]
+        (-> state
+            (assoc-in [:world :particles] (concat particles new-particles))
+            (assoc-in [:world :actors id] new-actor))))))
 
 
 (defn throw-body
@@ -419,6 +420,34 @@
       nearby-actor (assoc-in [:world :actors (:id nearby-actor)] dragged-actor))))
 
 
+(defn drop-object
+  [state command]
+  (let [{:keys [actors guns]} (:world state)
+        {:keys [gun body]} (:drag state)
+        {:keys [id text]} command
+        actor (id actors)
+        {:keys [gun body injure? dragged?]} actor
+        ;; look for gun
+        dragged-gun (if gun
+                      (-> (gun guns)
+                          (assoc :dragged? false))
+                      nil)
+        
+        dragged-actor (if body
+                       (-> (body actors)
+                           (assoc-in [:drag :dragged?] false)
+                           (assoc-in [:drag :injure?] false))
+                       nil)
+
+        new-actor (-> actor
+                    (assoc-in [:drag :gun] nil)
+                    (assoc-in [:drag :body] nil))]
+    (cond-> state
+      true (assoc-in [:world :actors id] new-actor)
+      dragged-gun (assoc-in [:world :guns (:id dragged-gun)] dragged-gun)
+      dragged-actor (assoc-in [:world :actors (:id dragged-actor)] dragged-actor))))
+
+
 (defn execute-command
   [state command time]
   (let [{:keys [level sounds]} state
@@ -426,6 +455,7 @@
         path-metrics [:world :actors :hero :metrics]]
     (case (:text command)
       "pickup"        (pickup-object state command)
+      "drop"          (drop-object state command)
       "attack"        (execute-attack state command time)
       "new-game"      (load-first-level state)
       "next-level"    (if (= level 6)

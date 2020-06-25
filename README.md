@@ -67,11 +67,6 @@ Start the app with :
 
 ## Todo
 
-* post-drag after shooting?
-* death if position is bigger than 3000
 * hosszabb lab/kez utes
-* hero halala utan nyugodjon meg az ellen
-* harmadik palya lepcso alatt ongyilkossag
-* pisztolyt elveszik
 * improve gameplay
 * killed by XY from names

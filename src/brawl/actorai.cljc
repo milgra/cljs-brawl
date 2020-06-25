@@ -40,7 +40,7 @@
         (if (and (< (Math/abs dx) 500)
                  (< (Math/abs dy) 500)
                  (> (Math/abs dx) 50)
-                 (> (Math/abs dx) 50)
+                 (> (Math/abs dy) 50)
                  (> health 0)) true false)))))
 
 
@@ -86,12 +86,18 @@
                      (assoc-in [:ai :timeout] (+ time 200)))]
     (if (and (= color 0xFF0000FF) (= target :hero))
       (assoc-in newactor [:ai :state] :idle)
-      (if (and dead (not= target :hero))
-        ;; pick up body, in next idle state we will find our enemy
-        (-> newactor
-            (assoc-in [:ai :state] :idle)
-            (assoc-in [:control :down] true)
-            (assoc-in [:ai :timeout] (+ time 100)))
+      (if dead
+        (if (not= target :hero)
+          ;; pick up body, in next idle state we will find our enemy
+          (-> newactor
+              (assoc-in [:ai :state] :idle)
+              (assoc-in [:control :down] true)
+              (assoc-in [:ai :timeout] (+ time 100)))
+          ;; reset target
+          (-> newactor
+              (assoc-in [:ai :state] :idle)
+              (assoc-in [:ai :target] nil)
+              (assoc-in [:ai :timeout] (+ time 100))))
         ;; attack enemy
         (cond-> newactor
           true (assoc-in [:ai :timeout] (+ time 100))
@@ -131,8 +137,7 @@
             (<= x (- px arml)) (assoc-in [:control :right] true)
             (<= x (- px arml)) (assoc-in [:control :left] false)
             (>= x (+ px arml)) (assoc-in [:control :left] true)
-            (>= x (+ px arml)) (assoc-in [:control :right] false)
-            body (assoc-in [:control :punch] true))))))))
+            (>= x (+ px arml)) (assoc-in [:control :right] false))))))))
         
 
 (defn update-attack
@@ -152,7 +157,7 @@
                          (assoc-in [:control :kick] false)
                          (assoc-in [:control :block] false))]
         (if (and target (= 1 (rand-int 3)))
-           (-> newactor
+          (-> newactor
               (assoc-in [:ai :state] :follow)
               (assoc-in [:ai :target] target)
               (assoc-in [:ai :timeout] (+ time 200)))
