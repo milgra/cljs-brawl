@@ -48,7 +48,7 @@ Most common pattern dilemmas
 
 1. One complex reducer function or multiple simple threaded reducers ( aka transducers )?
 
-   The second solution wins in clarity and readability altough it needs multiple iterations instead of one.
+   The second solution wins in clarity and readability altough it needs multiple iterations instead of one. If you also filter out items with every step then the speed should be almost identical.
 
 2. Extract sub-data for a function or pass the whole dataset and let the function extract and re-insert data for itself
 
