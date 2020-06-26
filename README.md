@@ -8,6 +8,8 @@ I'm looking for a job, so if you need a clojure programmer don't hesitate to con
 
 [PLAY THE GAME](https://milgra.github.io/cljs-brawl/index.html)
 
+(Controls : F - Punch D - Block S - Kick V - Shoot Cursos keys - movement)
+
 ## Story
 
 You rent a tiny flat in an Eastern-European-style block of flats. You want to visit your girlfriend but you see gang members on the road. They take your money and food every time. Today you won't let this happen!!!
