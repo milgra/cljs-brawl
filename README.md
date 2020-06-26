@@ -82,3 +82,4 @@ The UI renderer and the Mass Point Dynamics Engine I wrote for the game are also
 * longer kick
 * better ai proximity
 * K.O. by XY on wasted screen
+* better aspect ratio on mobile devices
