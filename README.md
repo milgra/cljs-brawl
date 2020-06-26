@@ -56,8 +56,8 @@ Most common pattern dilemmas
 
 ## Frameworks used in the game
 
-cljs_webgl - for clojure-style opengl state handling
-tubax - for svg/xml parsing
+  * cljs_webgl - for clojure-style opengl state handling
+  * tubax - for svg/xml parsing
 
 ## How to run/develop the game
 
