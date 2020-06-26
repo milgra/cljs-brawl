@@ -67,6 +67,7 @@ Start the app with :
 
 ## Todo
 
+* punhc/kick timeout
 * hosszabb lab/kez utes
 * improve gameplay
 * killed by XY from names

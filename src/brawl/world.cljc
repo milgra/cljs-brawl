@@ -272,7 +272,7 @@
                                                (not= :hero id) (actor/update-actor actor nil surfaces result guns time delta)
                                                :else (actor/update-actor actor controls surfaces result guns time delta))]
                                 (assoc result id newactor)))
-                           {}
+                           actors
                            actors)]
     (assoc-in state [:world :actors] new-actors)))
 
@@ -392,15 +392,16 @@
                        (filter (fn [{:keys [id p d]}] (< (math2/length-v2 (math2/sub-v2 p (:p hip))) 80.0)))
                        (first))
 
-        nearby-actor (->> (vals actors)
+        nearby-body (->> (vals actors)
+                          (filter #(= (:mode %) :idle))
                           (filter #(< (:health %) 0))
                           (filter #(not (get-in % [:drag :dragged?])))
                           (filter #(not= (:id %) id))
                           (filter (fn [{{ehip :hip} :masses}] (< (math2/length-v2 (math2/sub-v2 (:p ehip) (:p hip))) 150.0)))
                           (first))
 
-        dragged-actor (if nearby-actor
-                        (-> nearby-actor
+        dragged-body (if nearby-body
+                        (-> nearby-body
                             (assoc-in [:drag :dragged?] true)
                             (assoc :next-mode :rag)))
 
@@ -412,12 +413,12 @@
                     (assoc-in [:drag :gun] (:id nearby-gun))
                     nearby-gun
                     (assoc-in [:attack :bullets] 6)
-                    nearby-actor
-                    (assoc-in [:drag :body] (:id nearby-actor)))]
+                    nearby-body
+                    (assoc-in [:drag :body] (:id nearby-body)))]
     (cond-> state
       true (assoc-in [:world :actors id] new-actor)
       nearby-gun (assoc-in [:world :guns (:id nearby-gun)] dragged-gun)
-      nearby-actor (assoc-in [:world :actors (:id nearby-actor)] dragged-actor))))
+      nearby-body (assoc-in [:world :actors (:id nearby-body)] dragged-body))))
 
 
 (defn drop-object

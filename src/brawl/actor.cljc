@@ -87,6 +87,7 @@
 (def default-ai
   {:state :idle
    :target nil ;; enemy to chase/hit
+   :attacker nil
    :timeout 0}) ;; decision timeout
 
 
@@ -246,7 +247,8 @@
             (check-death time))
         ;; hit actor
         (-> actor
-            (assoc-in [:attack :timeout] timeout )
+            (assoc-in [:attack :timeout] timeout)
+            (assoc-in [:ai :attacker] id)
             (assoc :next-mode :rag)
             (update :health - hitpower) 
             (update :speed + (* -2.5 facing))
