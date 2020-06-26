@@ -59,6 +59,14 @@ Most common pattern dilemmas
 * cljs_webgl - for clojure-style opengl state handling
 * tubax - for svg/xml parsing
 
+## Related projects
+
+The UI renderer and the Mass Point Dynamics Engine I wrote for the game are also open-sourced separately :
+
+[UI Renderer](https://milgra.github.io/cljs-gui)
+[MPD Engine](https://milgra.github.io/cljs-mpd)
+
+
 ## How to run/develop the game
 
 * Install clojure and shadow-cljs
