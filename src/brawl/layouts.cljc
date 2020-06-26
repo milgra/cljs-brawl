@@ -244,7 +244,7 @@
      :subviews [{:id "By"
                  :class "Button"
                  :texture {:type "Color" :color 0x00000000}
-                 :label {:type "Label" :text "By Milan Toth v1.0" :size 15 :color 0xFFFFFFFF}
+                 :label {:type "Label" :text "By Milan Toth v0.9b" :size 15 :color 0xFFFFFFFF}
                  :width "150 px" 
                  :height "40 px" 
                  :right "Edge 4 px" 

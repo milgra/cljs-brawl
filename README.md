@@ -1,8 +1,9 @@
-# CLJS-BRAWL
+# CLJS-BRAWL 0.9b
 
 A physics based 2D side scrolling action game written in Clojurescript/WebGL.
 
 If you find the game joyful or the source code useful please consider donating : [DONATE](www.paypal.me/milgra)
+I'm looking for a job, so if you need a clojure programmer don't hesitate to contact me! :)
 
 [PLAY THE GAME](https://milgra.github.io/cljs-brawl/index.html)
 
@@ -67,7 +68,8 @@ Start the app with :
 
 ## Todo
 
-* punhc/kick timeout
-* hosszabb lab/kez utes
-* improve gameplay
-* killed by XY from names
+* add punhc/kick timeout to normalize maximum hit count
+* increase enemy count/ai toughness after first walkthrough
+* longer kick
+* better ai proximity
+* K.O. by XY on wasted screen
