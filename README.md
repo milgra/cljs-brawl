@@ -56,14 +56,14 @@ Most common pattern dilemmas
 
 ## Frameworks used in the game
 
-  * cljs_webgl - for clojure-style opengl state handling
-  * tubax - for svg/xml parsing
+* cljs_webgl - for clojure-style opengl state handling
+* tubax - for svg/xml parsing
 
 ## How to run/develop the game
 
-Install clojure and shadow-cljs
-Check out the repo
-Start the app with :
+* Install clojure and shadow-cljs
+* Check out the repo
+* Start the app with :
 
 ```shadow-cljs watch app```
 
