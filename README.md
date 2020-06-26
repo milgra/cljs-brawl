@@ -63,8 +63,8 @@ Most common pattern dilemmas
 
 The UI renderer and the Mass Point Dynamics Engine I wrote for the game are also open-sourced separately :
 
-* [UI Renderer](www.github.com/milgra/cljs-gui)
-* [MPD Engine](www.github.com/milgra/cljs-mpd)
+* [UI Renderer](https://github.com/milgra/cljs-gui)
+* [MPD Engine](https://github.com/milgra/cljs-mpd)
 
 
 ## How to run/develop the game
