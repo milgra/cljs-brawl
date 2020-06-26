@@ -69,7 +69,7 @@
                                 :radius 500.0
                                 :facing facing
                                 :color color
-                                :power 110})
+                                :power 100})
         (assoc-in [:attack :action-sent] true)
         (assoc-in [:attack :bullets] (dec bullets)))))
 
@@ -275,28 +275,37 @@
   "puts a triangle from the passive base on the surfaces, collision ponit is the new base target for the active base"
   [actor surfaces time]
   ; speed must not be 0
-  (let [{:keys [bases masses speed]} actor
-        {:keys [direction] base-surfaces :surfaces} (:walk actor)
-
+  (let [{:keys [id bases masses speed]} actor
+        {:keys [direction empty-step] base-surfaces :surfaces} (:walk actor)
         base-order (get-base-order bases speed) ;; get foot order
         base-point (:p (bases (:passive base-order))) ;; get passive foot position
         step-zone (get-step-zone base-point speed) ;; generate step zone
         collided (get-collided step-zone surfaces base-point direction)] ;; get collided surfaces
-    (if (empty? collided)
-      ;; no surface, jump
-      (assoc actor :next-mode :jump)
-      ;; else use first result
-      (let [surfaceres (first collided) ;; get first surface
-            base-target (nth surfaceres 1) ;; get isp of first surface
-            step-size (math2/length-v2 (math2/sub-v2 base-target (:p (bases (:active base-order))))) ;; calculate step size
-            newpassivesurf (:active base-surfaces)
-            newactivesurf (nth surfaceres 2)
-            newslope (math2/rad-to-degree (math2/angle-x-v2 (:b (nth surfaceres 2))))]
+    ;; else use first result
+    (let [surfaceres (if (empty? collided) nil (first collided)) ;; get first surface
+          base-target (if (empty? collided) (:A step-zone) (nth surfaceres 1)) ;; get isp of first surface
+          step-size (math2/length-v2 (math2/sub-v2 base-target (:p (bases (:active base-order))))) ;; calculate step size
+          newpassivesurf (:active base-surfaces)
+          newactivesurf (if (empty? collided) nil (nth surfaceres 2))
+          new-empty-step (if (empty? collided) true false)
+          newslope (if (empty? collided) 0 (math2/rad-to-degree (math2/angle-x-v2 (:b (nth surfaceres 2)))))]
+      (if (and empty-step new-empty-step)
+        ;; fall
+        (cond-> actor
+            true (assoc :health -1)
+            true (assoc :next-mode :rag)
+            true (assoc-in [:attack :timeout] (+ time 2000))
+            true (update :commands conj {:text "drop" :id id})
+            (= id :hero) (update :commands conj {:text "show-wasted"}))
+        ;; normal step        
         (if-not (and (< newslope 50) (> newslope -50))
           ;; too steep slope, stop stepping
-          (assoc actor :speed 0.0)
+          (-> actor
+              (assoc actor :speed 0.0)
+              (assoc-in [:walk :empty-step] new-empty-step))
           ;; slope is okay, normal step
           (-> actor
+              (assoc-in [:walk :empty-step] new-empty-step)
               (assoc-in [:walk :zone] {:A (:A step-zone)
                                        :B (math2/add-v2 (:A step-zone)(:B step-zone))
                                        :C (math2/add-v2 (:A step-zone)(:C step-zone))})
@@ -395,10 +404,10 @@
         nsx (cond
               right (if (> speed max)
                       (+ max 0.1)
-                      (+ speed (* 0.8 delta)))
+                      (+ speed (* 0.5 delta)))
               left (if (< speed (- max))
                       (- (- max) 0.1)
-                      (- speed (* 0.8 delta)))
+                      (- speed (* 0.5 delta)))
               :else (* speed (- 1.0 (* 0.15 delta))))
         dir (cond
               (and (> nsx 0.0) right (not block)) 1

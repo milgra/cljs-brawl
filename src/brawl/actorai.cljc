@@ -48,7 +48,7 @@
 (defn look-for-target
   "check for enemy to attack, hero to follow, or set attacker as target"
   [actor actors time]
-  (let [{:keys [color id]} actor
+  (let [{:keys [color id level]} actor
         {:keys [body]} (:drag actor)
         {:keys [timeout attacker state]} (:ai actor)
         {{[x y :as pos] :p} :head} (:masses actor)]
@@ -65,7 +65,7 @@
               target (if-not (empty? enemies) ;; look for enemy target
                        (second (first enemies))
                        (let [bodies (collect-bodies id actors pos)] ;; look for dead body target
-                         (if (and (not body) (not (empty? bodies)))
+                         (if (and (not body) (not (empty? bodies)) (> level 2) (= (rand-int 3) 0))
                            (second (first bodies))
                            (if (follow-hero? actor actors) :hero nil))))] ;; or follow hero
 
@@ -85,7 +85,7 @@
 (defn follow-target
   "go after enemy/hero/body and attack/idle/pickup"
   [actor control surfaces actors time delta]
-  (let [{:keys [id color]} actor
+  (let [{:keys [id color level]} actor
         {:keys [body]} (:drag actor)
         {:keys [direction]} (:walk actor)
         {:keys [arml legl]} (:metrics actor)
@@ -136,7 +136,7 @@
           (cond-> still-actor
             true (assoc [:ai :timeout] (+ time 100))
             true (assoc-in [:walk :direction] new-direction) 
-            true (assoc-in [:control :run] true)
+            (> level 2) (assoc-in [:control :run] true)
             (<= x (- px arml)) (assoc-in [:control :right] true)
             (<= x (- px arml)) (assoc-in [:control :left] false)
             (>= x (+ px arml)) (assoc-in [:control :left] true)
@@ -159,7 +159,7 @@
         (= pick 3) (assoc-in [:control :down] true)
         true (assoc-in [:ai :state] :follow)
         true (assoc-in [:ai :target] target)
-        true (assoc-in [:ai :timeout] (+ time 200))))))
+        true (assoc-in [:ai :timeout] (+ time 500 (* level -20)))))))>
 
 
 ;; after every action ai should reconsider finding new enemy, finding dead body, following, etc

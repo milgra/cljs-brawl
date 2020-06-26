@@ -74,6 +74,7 @@
    :jump-state 0 ;; jump state, 0 (squat phase) 1 (jumping phase)
    :jump-lethal false ;; fall speed is too high
    :jump-speed 0
+   :empty-step false
    :idle-angle 0})
 
 
@@ -130,7 +131,7 @@
      :next-mode nil
      :speed -2.0
      :facing 1.0
-     :health (+ (if (= id :hero) 150.0 100.0) (* level 10.0))
+     :health (+ (if (= id :hero) 150.0 100.0) (* level 5.0))
      :control default-control
      :commands []
      ;; substates
@@ -227,7 +228,7 @@
         [headisp bodyisp footlisp footrisp :as hitpoints] (hitpoints actor command)
         diff-facing? (not= facing (:facing command))
         hitpower (cond
-                   headisp power ;; head kick/punch is full power
+                   headisp (if (= power 100) (+ health 1) power) ;; head kick/punch is full power
                    bodyisp (* power 0.6)
                    footlisp (* power 0.4)
                    footrisp (* power 0.4))
@@ -371,7 +372,7 @@
                        (phys2/move-masses (if dragged? [] surfaces) 0.4)) ;; if dragged be able to drag down the body at a fork
         mode-new (cond
                    (and (>  health 0) (> time timeout)) :walk
-                   (and (<= health 0) (:q (:neck masses-new)) (:q (:hip masses-new))) :idle
+                   (and (<= health 0) (> time timeout) (:q (:neck masses-new))) :idle
                    :else next-mode)
 
         injure?-new (if (and (<= health 0) (> time timeout)) false injure?) 
@@ -384,7 +385,7 @@
                                         :target (get-in masses (math2/resize-v2 [:neck :d] 10.0))
                                         :facing 0
                                         :radius 50.0
-                                        :power 50}]))]
+                                        :power 30}]))]
     (-> actor
         (assoc :injure? injure?-new)
         (assoc :commands commands-new)

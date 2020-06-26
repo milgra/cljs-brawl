@@ -61,7 +61,7 @@
 (defn create-actors
   [state tokens herometrics pos currlevel]
   (let [{:keys [actors]} state
-        count (if (> (count tokens) 3) (js/parseInt (second (nth tokens 4))) 1)
+        count 1 ;;(if (> (count tokens) 3) (js/parseInt (second (nth tokens 4))) 1)
         actors-new (reduce (fn [result _]
                              (let [actor (create-actor tokens herometrics pos currlevel)]
                                (assoc result (:id actor) actor)))
@@ -143,7 +143,8 @@
         newdragged (-> dragged
                        (assoc :masses newmasses)
                        (assoc-in [:drag :injure?] true)
-                       (assoc-in [:drag :dragged?] false))
+                       (assoc-in [:drag :dragged?] false)
+                       (assoc-in [:attack :timeout] (+ time 500)))
         newsender (assoc-in sender [:drag :body] nil)]
     (-> state
         (assoc-in [:world :actors id] newsender)
@@ -382,9 +383,9 @@
 (defn pickup-object
   [state command]
   (let [{:keys [actors guns]} (:world state)
-        {:keys [gun body]} (:drag state)
         {:keys [id text]} command
         actor (id actors)
+        {:keys [gun body]} (:drag actor)
         {{hip :hip} :masses color :color :as actor} actor
         ;; look for gun
         nearby-gun (->> (vals guns)
@@ -400,25 +401,25 @@
                           (filter (fn [{{ehip :hip} :masses}] (< (math2/length-v2 (math2/sub-v2 (:p ehip) (:p hip))) 150.0)))
                           (first))
 
-        dragged-body (if nearby-body
+        dragged-body (if (and (not body) nearby-body)
                         (-> nearby-body
                             (assoc-in [:drag :dragged?] true)
                             (assoc :next-mode :rag)))
 
-        dragged-gun (if nearby-gun
+        dragged-gun (if (and (not gun) nearby-gun (= id :hero))
                       (assoc nearby-gun :dragged? true))
 
         new-actor (cond-> actor
-                    nearby-gun
+                    dragged-gun
                     (assoc-in [:drag :gun] (:id nearby-gun))
-                    nearby-gun
+                    dragged-gun
                     (assoc-in [:attack :bullets] 6)
-                    nearby-body
+                    dragged-body
                     (assoc-in [:drag :body] (:id nearby-body)))]
     (cond-> state
       true (assoc-in [:world :actors id] new-actor)
-      nearby-gun (assoc-in [:world :guns (:id nearby-gun)] dragged-gun)
-      nearby-body (assoc-in [:world :actors (:id nearby-body)] dragged-body))))
+      dragged-gun (assoc-in [:world :guns (:id dragged-gun)] dragged-gun)
+      dragged-body (assoc-in [:world :actors (:id dragged-body)] dragged-body))))
 
 
 (defn drop-object

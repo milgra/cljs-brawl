@@ -459,7 +459,7 @@
      
      [{:id "MsgText"
        :class ""
-       :texture {:type "Label" :text "Congratulations!!!" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
+       :texture {:type "Label" :text "You did it!!!" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
        :width "400 px" 
        :height "90 px" 
        :center-y "Edge 50 %" 
@@ -479,7 +479,7 @@
        :class "Button"
        :command "new game"
        :texture {:type "Color" :color 0x00000000}
-       :label {:type "Label" :text "Restart Level" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
+       :label {:type "Label" :text "Keep playing" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
        :width "200 px" 
        :height "50 px" 
        :center-y "Edge 50 %" 
