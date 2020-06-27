@@ -56,6 +56,10 @@ Most common pattern dilemmas
 
    It's hard to decide. In higher parts of a program the second version results in a cleaner code, caller functions are cleaner and callees are all right but in case of lower parts it is overkill, for example you don't want to extract x and y components of vectors from the whole state in an add-vector function.
 
+3. Destructure right in the function's parameter list or destructure in the head of the function in a let block 
+
+  The first solution is tempting but after a certain complexity the parameter list becomes very bloated and unreadable meanwhile the second solution produces super clean code, you can destructure sub-maps row by row and the line count is only one row bigger (with the original parameter list)
+
 ## Frameworks used in the game
 
 * cljs_webgl - for clojure-style opengl state handling
@@ -68,6 +72,7 @@ The UI renderer and the Mass Point Dynamics Engine I wrote for the game are also
 * [UI Renderer](https://github.com/milgra/cljs-gui)
 * [MPD Engine](https://github.com/milgra/cljs-mpd)
 
+The svg parser is pretty simple but usable, it is in src/brawl/svg.cljs
 
 ## How to run/develop the game
 
@@ -79,7 +84,7 @@ The UI renderer and the Mass Point Dynamics Engine I wrote for the game are also
 
 ## Todo
 
-* add punhc/kick timeout to normalize maximum hit count
+* add punch/kick timeout to normalize maximum hit count
 * increase enemy count/ai toughness after first walkthrough
 * longer kick
 * better ai proximity
