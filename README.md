@@ -84,6 +84,7 @@ The svg parser is pretty simple but usable, it is in src/brawl/svg.cljs
 
 ## Todo
 
+* shoot sound missing
 * add punch/kick timeout to normalize maximum hit count
 * increase enemy count/ai toughness after first walkthrough
 * longer kick
