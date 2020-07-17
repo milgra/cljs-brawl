@@ -1,24 +1,26 @@
 (ns ^:figwheel-hooks brawl.core
   (:require
-   [cljs.core.async :refer [<! chan put! take! poll!]]
-   [cljs-webgl.context :as context]
-   [goog.dom :as dom]
-   [goog.events :as events]
-   [gui.math4 :as math4]
-   [gui.webgl :as uiwebgl]
-   [brawl.ui :as brawlui]
-   [brawl.gun :as gun]
-   [brawl.world :as world]
-   [brawl.webgl :as webgl]
-   [brawl.audio :as audio]
-   [brawl.actor :as actor]
-   [brawl.metrics :as metrics]
-   [brawl.layouts :as layouts]
-   [brawl.particle :as particle]
-   [brawl.defaults :as defaults]
-   [brawl.actorskin :as actorskin]
-   [brawl.floatbuffer :as floatbuffer])
-  (:import [goog.events EventType]))
+    [brawl.actor :as actor]
+    [brawl.actorskin :as actorskin]
+    [brawl.audio :as audio]
+    [brawl.defaults :as defaults]
+    [brawl.floatbuffer :as floatbuffer]
+    [brawl.gun :as gun]
+    [brawl.layouts :as layouts]
+    [brawl.metrics :as metrics]
+    [brawl.particle :as particle]
+    [brawl.ui :as brawlui]
+    [brawl.webgl :as webgl]
+    [brawl.world :as world]
+    [cljs-webgl.context :as context]
+    [cljs.core.async :refer [<! chan put! take! poll!]]
+    [goog.dom :as dom]
+    [goog.events :as events]
+    [gui.math4 :as math4]
+    [gui.webgl :as uiwebgl])
+  (:import
+    (goog.events
+      EventType)))
 
 
 (defn resize-context!
@@ -39,10 +41,10 @@
   [state name url]
   (let [font (js/FontFace. name (str "url(" url ")"))]
     (.then
-     (.load font)
-     (fn []
-       (.add (.-fonts js/document) font)
-       (put! (:msgch state) {:id "redraw-ui"})))))
+      (.load font)
+      (fn []
+        (.add (.-fonts js/document) font)
+        (put! (:msgch state) {:id "redraw-ui"})))))
 
 
 (defn init-events!
@@ -52,49 +54,49 @@
         mouse-down (atom false)]
 
     (events/listen
-     js/window
-     EventType.RESIZE
-     (fn [event]
-       (put! (:msgch state) {:id "resize"})
-       (resize-context!)))
-    
-    (events/listen
-     js/document
-     EventType.KEYDOWN
-     (fn [event]
-       (let [code (.-keyCode event)
-             prev (get @key-codes code)]
-         (swap! key-codes assoc code true)
-         (if (not prev) (put! (:msgch state) {:id "key" :code (.-keyCode event) :value true})))))
+      js/window
+      EventType.RESIZE
+      (fn [event]
+        (put! (:msgch state) {:id "resize"})
+        (resize-context!)))
 
     (events/listen
-     js/document
-     EventType.KEYUP
-     (fn [event]
-       (let [code (.-keyCode event)
-             prev (get @key-codes code)]
-         (swap! key-codes assoc code false)
-         (if prev (put! (:msgch state) {:id "key" :code (.-keyCode event) :value false})))))
+      js/document
+      EventType.KEYDOWN
+      (fn [event]
+        (let [code (.-keyCode event)
+              prev (get @key-codes code)]
+          (swap! key-codes assoc code true)
+          (if (not prev) (put! (:msgch state) {:id "key" :code (.-keyCode event) :value true})))))
 
     (events/listen
-     js/document
-     EventType.POINTERDOWN
-     (fn [event]
-       (swap! mouse-down not)
-       (put! (:msgch state) {:id "mouse" :type "down" :point [(.-clientX event) (.-clientY event)]})))
+      js/document
+      EventType.KEYUP
+      (fn [event]
+        (let [code (.-keyCode event)
+              prev (get @key-codes code)]
+          (swap! key-codes assoc code false)
+          (if prev (put! (:msgch state) {:id "key" :code (.-keyCode event) :value false})))))
 
     (events/listen
-     js/document
-     EventType.POINTERUP
-     (fn [event]
-       (swap! mouse-down not)
-       (put! (:msgch state) {:id "mouse" :type "up" :point [(.-clientX event) (.-clientY event)]})))
+      js/document
+      EventType.POINTERDOWN
+      (fn [event]
+        (swap! mouse-down not)
+        (put! (:msgch state) {:id "mouse" :type "down" :point [(.-clientX event) (.-clientY event)]})))
 
     (events/listen
-     js/document
-     EventType.POINTERMOVE
-     (fn [event]
-       (if @mouse-down (put! (:msgch state) {:id "mouse" :type "down" :point [(.-clientX event) (.-clientY event)]}))))))
+      js/document
+      EventType.POINTERUP
+      (fn [event]
+        (swap! mouse-down not)
+        (put! (:msgch state) {:id "mouse" :type "up" :point [(.-clientX event) (.-clientY event)]})))
+
+    (events/listen
+      js/document
+      EventType.POINTERMOVE
+      (fn [event]
+        (if @mouse-down (put! (:msgch state) {:id "mouse" :type "down" :point [(.-clientX event) (.-clientY event)]}))))))
 
 
 (defn draw-ui
@@ -108,11 +110,11 @@
 (defn collect-triangles
   [buffer actors guns variation view-rect]
   (-> buffer
-      (floatbuffer/empty!)
-      ((partial reduce (fn [oldbuf [id actor]]
-                         (if (not= id :hero) (actorskin/get-skin-triangles oldbuf actor variation view-rect) oldbuf))) actors)
-      ((partial reduce (fn [oldbuf [id gun]] (gun/get-skin-triangles gun oldbuf view-rect))) guns)
-      (actorskin/get-skin-triangles (:hero actors) variation view-rect)))
+    (floatbuffer/empty!)
+    ((partial reduce (fn [oldbuf [id actor]]
+                       (if (not= id :hero) (actorskin/get-skin-triangles oldbuf actor variation view-rect) oldbuf))) actors)
+    ((partial reduce (fn [oldbuf [id gun]] (gun/get-skin-triangles gun oldbuf view-rect))) guns)
+    (actorskin/get-skin-triangles (:hero actors) variation view-rect)))
 
 
 (defn collect-points
@@ -138,7 +140,7 @@
         {:keys [actors guns particles surfacelines view-rect projection] :as world} (:world state)]
     (if-not (:inited world)
       state
-      (let [variation (Math/floor (mod (/ frame 10.0) 3.0 ))
+      (let [variation (Math/floor (mod (/ frame 10.0) 3.0))
             triangles (collect-triangles buffer actors guns variation view-rect)]
         (webgl/clear! world-drawer)
         (webgl/draw-shapes! world-drawer projection variation)
@@ -148,9 +150,9 @@
           (let [buffer-line (collect-lines points actors surfacelines view-rect physics)]
             (if physics (webgl/draw-lines! world-drawer projection buffer-line))
             (-> state
-                (assoc :world-drawer world-drawer)
-                (assoc-in [:world :view-rect] view-rect)
-                (assoc :buffer buffer-line))))))))
+              (assoc :world-drawer world-drawer)
+              (assoc-in [:world :view-rect] view-rect)
+              (assoc :buffer buffer-line))))))))
 
 
 (defn update-controls
@@ -169,15 +171,15 @@
                         :run (new-codes 32)
                         :kick (new-codes 83)
                         :block (new-codes 68)}]
-      
+
       (when (not theme-started)
         (set! (.-loop (:theme sounds)) true)
         (.play (:theme sounds)))
 
       (-> state
-          (assoc :theme-started true)
-          (assoc :keycodes new-codes)
-          (assoc :controls new-controls)))))
+        (assoc :theme-started true)
+        (assoc :keycodes new-codes)
+        (assoc :controls new-controls)))))
 
 
 (defn simulate
@@ -190,21 +192,22 @@
       (let [message (poll! (:msgch state))
             new-state (-> old-state
                           ;; get controls
-                          (update-controls message)
+                        (update-controls message)
                           ;; world
-                          (world/execute-commands time)
-                          (world/reset-world message time)
-                          (world/update-world message time 1.0)
+                        (world/execute-commands time)
+                        (world/reset-world message time)
+                        (world/update-world message time 1.0)
                           ;; ui
-                          (brawlui/execute-commands message)
-                          (brawlui/update-ui message time 1.0))]
+                        (brawlui/execute-commands message)
+                        (brawlui/update-ui message time 1.0))]
         (recur (- old-time 16.6) new-state)))))
 
 
 (defn animate
   "main runloop, syncs animation to display refresh rate"
   [state draw-fn]
-  (letfn [(loop [prestate frame]
+  (letfn [(loop
+            [prestate frame]
             (fn [time]
               (let [delta (- time (:time prestate))
                     state (if (< delta time)
@@ -238,10 +241,10 @@
                :commands-world []}
 
         final (-> state
-                  (defaults/load-defaults!)
-                  (audio/set-effects-volume)
-                  (audio/set-music-volume)
-                  (brawlui/load-ui layouts/info))]
+                (defaults/load-defaults!)
+                (audio/set-effects-volume)
+                (audio/set-music-volume)
+                (brawlui/load-ui layouts/info))]
 
     (load-font! final "Ubuntu Bold" "css/Ubuntu-Bold.ttf")
     (init-events! final)
@@ -249,17 +252,17 @@
     (world/load-level! final (:level final))
 
     (animate
-     final
-     (fn [prestate frame time delta]
-       (let [{gametime :gametime} prestate
-             usedstate (assoc prestate :gametime (+ delta gametime))]
-         (if-not (= (mod frame 1) 0 ) ;; frame skipping for development
-           usedstate
-           (-> usedstate
-               (simulate time)
+      final
+      (fn [prestate frame time delta]
+        (let [{gametime :gametime} prestate
+              usedstate (assoc prestate :gametime (+ delta gametime))]
+          (if-not (= (mod frame 1) 0) ;; frame skipping for development
+            usedstate
+            (-> usedstate
+              (simulate time)
                ;; drawing
-               (draw-world frame)
-               (draw-ui))))))))
+              (draw-world frame)
+              (draw-ui))))))))
 
 ;; start main once, avoid firing new runloops with new reloads
 (defonce mainloop (main))

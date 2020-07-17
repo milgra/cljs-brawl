@@ -5,7 +5,7 @@
   []
   {:data (js/Float32Array. 512)
    :index 0
-   :length 512 })
+   :length 512})
 
 
 (defn append!

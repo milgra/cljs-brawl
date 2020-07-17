@@ -1,6 +1,7 @@
 (ns brawl.actorskin
-  (:require [brawl.floatbuffer :as fb])
-  (:use [mpd.math2 :only [rotate-up-v2 resize-v2 scale-v2 rotate-90-cw rotate-90-ccw add-v2 sub-v2]]))
+  (:require
+    [brawl.floatbuffer :as fb]
+    [mpd.math2 :refer [rotate-up-v2 resize-v2 scale-v2 rotate-90-cw rotate-90-ccw add-v2 sub-v2]]))
 
 
 (def black [0.0 0.0 0.0 1.0])
@@ -10,7 +11,7 @@
   "collects points"
   [actor floatbuffer [l r b t]]
   (let [{{{[e f] :p} :hip :as masses} :masses} actor]
-    (if (and (< l e) (> r e) (< t f) (> b f)) 
+    (if (and (< l e) (> r e) (< t f) (> b f))
       (reduce (fn [oldbuf [mid {[x y] :p :as mass}]] (fb/append! oldbuf (array x y 1.0 1.0 1.0 1.0))) floatbuffer masses)
       floatbuffer)))
 
@@ -19,7 +20,7 @@
   "collects lines"
   [actor floatbuffer [l r b t]]
   (let [{:keys [head neck hip elbow_l elbow_r hand_l hand_r knee_l knee_r foot_l foot_r] {[e f] :p} :hip} (:masses actor)]
-    (if (and (< l e) (> r e) (< t f) (> b f)) 
+    (if (and (< l e) (> r e) (< t f) (> b f))
       (let [[a b] (:p head)
             [c d] (:p neck)
             [g h] (:p knee_l)
@@ -31,18 +32,18 @@
             [u v] (:p elbow_r)
             [x y] (:p hand_r)]
         (fb/append!
-         floatbuffer (array
-                      a b 1 1 1 1 c d 1 1 1 1 ;; head -> neck
-                      c d 1 1 1 1 e f 1 1 1 1 ;; neck -> hip
-                      e f 1 1 1 1 g h 1 1 1 1 ;; hip -> knee_l
-                      g h 1 1 1 1 i j 1 1 1 1 ;; knee_l -> foot_l
-                      e f 1 1 1 1 k l 1 1 1 1 ;; hip -> knee_r
-                      k l 1 1 1 1 m n 1 1 1 1 ;; knee_r -> foot_r
-                      c d 1 1 1 1 o p 1 1 1 1 ;; neck -> elbow_l
-                      o p 1 1 1 1 q r 1 1 1 1 ;; elbow_l -> hand_l
-                      c d 1 1 1 1 u v 1 1 1 1 ;; neck -> elbow_r
-                      u v 1 1 1 1 x y 1 1 1 1 ;; elbow_r -> hand_r
-                      )))
+          floatbuffer (array
+                        a b 1 1 1 1 c d 1 1 1 1 ;; head -> neck
+                        c d 1 1 1 1 e f 1 1 1 1 ;; neck -> hip
+                        e f 1 1 1 1 g h 1 1 1 1 ;; hip -> knee_l
+                        g h 1 1 1 1 i j 1 1 1 1 ;; knee_l -> foot_l
+                        e f 1 1 1 1 k l 1 1 1 1 ;; hip -> knee_r
+                        k l 1 1 1 1 m n 1 1 1 1 ;; knee_r -> foot_r
+                        c d 1 1 1 1 o p 1 1 1 1 ;; neck -> elbow_l
+                        o p 1 1 1 1 q r 1 1 1 1 ;; elbow_l -> hand_l
+                        c d 1 1 1 1 u v 1 1 1 1 ;; neck -> elbow_r
+                        u v 1 1 1 1 x y 1 1 1 1 ;; elbow_r -> hand_r
+                        )))
       ;; step-zone?
       floatbuffer)))
 
@@ -60,10 +61,10 @@
             sa (nth remszs 0)
             sb (nth remszs 1)
             ab (sub-v2 pb pa)
-            [a b :as nlsa] (add-v2 pa (resize-v2( rotate-90-ccw ab) sa))
-            [c d :as nrsa] (add-v2 pa (resize-v2( rotate-90-cw ab) sa))
-            [e f :as nlea] (add-v2 pb (resize-v2( rotate-90-ccw ab) sb))
-            [g h :as nrea] (add-v2 pb (resize-v2( rotate-90-cw ab) sb))]
+            [a b :as nlsa] (add-v2 pa (resize-v2 (rotate-90-ccw ab) sa))
+            [c d :as nrsa] (add-v2 pa (resize-v2 (rotate-90-cw ab) sa))
+            [e f :as nlea] (add-v2 pb (resize-v2 (rotate-90-ccw ab) sb))
+            [g h :as nrea] (add-v2 pb (resize-v2 (rotate-90-cw ab) sb))]
         ;; nlsa nrsa nrea
         ;; nlsa nrea nlea
         (fb/append! oldbuf (array a b x y z w c d x y z w g h x y z w a b x y z w g h x y z w e f x y z w)))
@@ -75,21 +76,20 @@
             sb (nth remszs 1)
             ab (sub-v2 pb pa)
             bc (sub-v2 pc pb)
-            [a b :as nlsa] (add-v2 pa (resize-v2( rotate-90-ccw ab) sa))
-            [c d :as nrsa] (add-v2 pa (resize-v2( rotate-90-cw ab) sa))
-            [e f :as nlea] (add-v2 pb (resize-v2( rotate-90-ccw ab) sb))
-            [g h :as nrea] (add-v2 pb (resize-v2( rotate-90-cw ab) sb))
-            [i j :as nlsb] (add-v2 pb (resize-v2( rotate-90-ccw bc) sb))
-            [k l :as nrsb] (add-v2 pb (resize-v2( rotate-90-cw bc) sb))]
+            [a b :as nlsa] (add-v2 pa (resize-v2 (rotate-90-ccw ab) sa))
+            [c d :as nrsa] (add-v2 pa (resize-v2 (rotate-90-cw ab) sa))
+            [e f :as nlea] (add-v2 pb (resize-v2 (rotate-90-ccw ab) sb))
+            [g h :as nrea] (add-v2 pb (resize-v2 (rotate-90-cw ab) sb))
+            [i j :as nlsb] (add-v2 pb (resize-v2 (rotate-90-ccw bc) sb))
+            [k l :as nrsb] (add-v2 pb (resize-v2 (rotate-90-cw bc) sb))]
         ;; nlsa nrsa nrea
         ;; nlsa nrea nlea
         ;; nlea nlsb pb
         ;; nrea nrsb pb
         (recur (rest rempts)
-               (rest remszs)
-               (fb/append! oldbuf (array a b x y z w c d x y z w g h x y z w a b x y z w g h x y z w e f x y z w
-                                         e f x y z w i j x y z w m n x y z w g h x y z w k l x y z w m n x y z w)))
-               ))))
+          (rest remszs)
+          (fb/append! oldbuf (array a b x y z w c d x y z w g h x y z w a b x y z w g h x y z w e f x y z w
+                               e f x y z w i j x y z w m n x y z w g h x y z w k l x y z w m n x y z w)))))))
 
 
 (defn gen-foot-triangles
@@ -98,14 +98,14 @@
   (let [ab (resize-v2 (sub-v2 pb pa) (+ 20.0 size))
         npb (add-v2 pb (resize-v2 ab (+ 10 size)))
         [a b :as leftp] (if (= facing -1)
-                (add-v2 npb (resize-v2 (rotate-90-cw ab) (+ 2.0 size)))
-                (add-v2 npb (resize-v2 (rotate-90-cw ab) 30.0)))
+                          (add-v2 npb (resize-v2 (rotate-90-cw ab) (+ 2.0 size)))
+                          (add-v2 npb (resize-v2 (rotate-90-cw ab) 30.0)))
         [c d :as rightp] (if (= facing -1)
-                (add-v2 npb (resize-v2 (rotate-90-ccw ab) 30.0))
-                (add-v2 npb (resize-v2 (rotate-90-ccw ab) (+ 2.0 size))))
+                           (add-v2 npb (resize-v2 (rotate-90-ccw ab) 30.0))
+                           (add-v2 npb (resize-v2 (rotate-90-ccw ab) (+ 2.0 size))))
         [e f :as topp] (if (= facing -1)
-                (add-v2 leftp (resize-v2 ab (+ -15.0 size)))
-                (add-v2 rightp (resize-v2 ab (+ -15.0 size))))]
+                         (add-v2 leftp (resize-v2 ab (+ -15.0 size)))
+                         (add-v2 rightp (resize-v2 ab (+ -15.0 size))))]
     (fb/append! buf (array e f x y z w a b x y z w c d x y z w))))
 
 
@@ -121,8 +121,8 @@
         [g h :as nrea] (add-v2 pb (resize-v2 (rotate-90-cw ab) (+ 11.0 stroke)))
         ab23 (add-v2 npa (scale-v2 ab 0.66))
         [i j :as nose] (if (= -1 facing)
-               (add-v2 ab23 (resize-v2 (rotate-90-ccw ab) (+ 15.0 stroke)))
-               (add-v2 ab23 (resize-v2 (rotate-90-cw ab) (+ 15.0 stroke))))]
+                         (add-v2 ab23 (resize-v2 (rotate-90-ccw ab) (+ 15.0 stroke)))
+                         (add-v2 ab23 (resize-v2 (rotate-90-cw ab) (+ 15.0 stroke))))]
     (if (= -1 facing)
       (fb/append! buf (array a b x y z w c d x y z w g h x y z w a b x y z w g h x y z w i j x y z w i j x y z w e f x y z w g h x y z w))
       (fb/append! buf (array a b x y z w c d x y z w i j x y z w a b x y z w i j x y z w e f x y z w i j x y z w g h x y z w e f x y z w))
@@ -155,7 +155,7 @@
           (and (= af :base_r) (not= ps nil)) (gen-foot-triangles (:p knee_r) (:p foot_r) (+ r6 3.0) facing black)
           (and (= af :base_r) (not= ps nil)) (gen-foot-triangles (:p knee_r) (:p foot_r) r6 facing colb)
           ;; body
-          true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [6.0 (+ hipw 5 r7 ) (+ legw 5 r8) (+ legw 5 r9)] black) ; stroke
+          true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [6.0 (+ hipw 5 r7) (+ legw 5 r8) (+ legw 5 r9)] black) ; stroke
           true (gen-tube-triangles [(:p neck) (:p hip) (:p knee_l) (:p foot_l)] [1.0 (+ hipw r0) (+ legw r1) (+ legw r2)] cola)
           ;; passive left
           (and (= pf :base_l) (not= ps nil)) (gen-foot-triangles (add-v2 (:p foot_l) (rotate-up-v2 (:b ps))) (:p foot_l) (+ r3 3.0) facing black)

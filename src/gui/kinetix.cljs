@@ -1,9 +1,10 @@
 (ns gui.kinetix
-  (:require [gui.texmap :as texmap]
-            [gui.bitmap :as bitmap]
-            [gui.webgl :as webgl]
-            [clojure.string :as str]))
-  
+  (:require
+    [clojure.string :as str]
+    [gui.bitmap :as bitmap]
+    [gui.texmap :as texmap]
+    [gui.webgl :as webgl]))
+
 
 (defn create-view
   "generate basic view with color"
@@ -17,25 +18,25 @@
    :texture texture ; "Color 0xFFFFFFFF" "Label Text 0xFFFFFFFF 0x000000FF" "Debug" 
    :subviews []})
 
-  
+
 (defn gen-id!
   "generates fixed length alfanumeric hash"
   [length]
-   (let [chars (map char (concat (range 48 57) (range 65 90) (range 97 122)))
-         id (take length (repeatedly #(rand-nth chars)))]
-     (reduce str id)))
+  (let [chars (map char (concat (range 48 57) (range 65 90) (range 97 122)))
+        id (take length (repeatedly #(rand-nth chars)))]
+    (reduce str id)))
 
 
 (defn add-align
   "add alignment properties to view"
   [view top bottom left right center-x center-y]
   (-> view
-      (assoc :top top)
-      (assoc :bottom bottom)
-      (assoc :left left)
-      (assoc :right right)
-      (assoc :center-x center-x)
-      (assoc :center-y center-y)))
+    (assoc :top top)
+    (assoc :bottom bottom)
+    (assoc :left left)
+    (assoc :right right)
+    (assoc :center-x center-x)
+    (assoc :center-y center-y)))
 
 
 (defn add-subview
@@ -53,15 +54,15 @@
     (let [sldview (create-view (gen-id! 5) "None" {:pixel 10.0} {:ratio 1.0} {:type "Color" :color 0x009900FF})
           lblview (create-view (gen-id! 5) "Label" {:ratio 1.0} {:ratio 1.0} (:label view))
           newview (-> view
-                      (add-subview sldview)
-                      (add-subview lblview))]
+                    (add-subview sldview)
+                    (add-subview lblview))]
       [newview sldview lblview]) ; return the modified view and the new view
     "Button"
     (let [indview (create-view (gen-id! 5) "None" {:pixel 0.0} {:ratio 1.0} {:type "Color" :color 0xFF0000FF})
           lblview (create-view (gen-id! 5) "Label" {:ratio 1.0} {:ratio 1.0} (:label view))
           newview (-> view
-                      (add-subview indview)
-                      (add-subview lblview))]
+                    (add-subview indview)
+                    (add-subview lblview))]
       [newview indview lblview]) ; return the modified view and the new view
     [view])) ; return the view only
 
@@ -87,32 +88,32 @@
         subids     (if subviews (map (fn [desc] (keyword (:id desc))) subviews) []) ; finalsubviews property needs ids only
         subviewmap (if subviews (reduce (fn [oldmap desc] (gen-from-desc oldmap desc scale)) viewmap subviews) viewmap) ; generate subviews into viewmap
         view (reduce
-              (fn [result [k v]]
-                (case k
-                  :id       (assoc result :id (keyword v))
-                  :class    (assoc result :class v)
-                  :command  (assoc result :command v)
-                  :color    (assoc result :color v)
-                  :width    (assoc result :width (get-value v scale))
-                  :height   (assoc result :height (get-value v scale))
-                  :center-x (assoc result :center-x (get-value v scale))      
-                  :center-y (assoc result :center-y (get-value v scale))
-                  :left     (assoc result :left (get-value v scale))
-                  :right    (assoc result :right (get-value v scale))
-                  :top      (assoc result :top (get-value v scale))
-                  :bottom   (assoc result :bottom (get-value v scale))
-                  :subviews (assoc result :subviews subids)
-                  :label    (assoc result :label (update v :size * scale))
-                  (assoc result k v))) {:x 0.0 :y 0.0 :w 150.0 :h 50.0 :subviews []} viewdesc)
-    newviews (setup-view view)] ; generate subviews for sliders, buttons, etc
-  (reduce #(assoc %1 (:id %2) %2) subviewmap newviews)))
+               (fn [result [k v]]
+                 (case k
+                   :id       (assoc result :id (keyword v))
+                   :class    (assoc result :class v)
+                   :command  (assoc result :command v)
+                   :color    (assoc result :color v)
+                   :width    (assoc result :width (get-value v scale))
+                   :height   (assoc result :height (get-value v scale))
+                   :center-x (assoc result :center-x (get-value v scale))
+                   :center-y (assoc result :center-y (get-value v scale))
+                   :left     (assoc result :left (get-value v scale))
+                   :right    (assoc result :right (get-value v scale))
+                   :top      (assoc result :top (get-value v scale))
+                   :bottom   (assoc result :bottom (get-value v scale))
+                   :subviews (assoc result :subviews subids)
+                   :label    (assoc result :label (update v :size * scale))
+                   (assoc result k v))) {:x 0.0 :y 0.0 :w 150.0 :h 50.0 :subviews []} viewdesc)
+        newviews (setup-view view)] ; generate subviews for sliders, buttons, etc
+    (reduce #(assoc %1 (:id %2) %2) subviewmap newviews)))
 
 ;; alignment
 
 (defn align-view
   "aligns view"
   [viewmap id px py pwidth pheight]
-  (let [{:keys [x y w h width height top bottom left right center-x center-y] :as view } (get viewmap id)
+  (let [{:keys [x y w h width height top bottom left right center-x center-y] :as view} (get viewmap id)
         neww (cond
                (:pixel width) (:pixel width)
                (:ratio width) (* (:ratio width) pwidth)
@@ -133,7 +134,7 @@
                (:ratio left) (+ px (* (:ratio left) pwidth)) ; align view to the left based on ratio
                (:ratio right) (- (+ px (* (:ratio right) pwidth)) neww) ; align view to the right based on ratio
                :else px)
-               
+
         newy (cond
                (:ratio center-y) (- (+ py (* pheight (:ratio center-y))) (* newh 0.5)) ; align view center to ratio
                (:pixel center-y) (- (+ py (:pixel center-y)) (* newh 0.5)) ; align view center by pixel
@@ -144,7 +145,7 @@
                (:ratio top) (+ py (* (:ratio top) pheight)) ; align view to the left based on ratio
                (:ratio bottom) (- (+ py (* (:ratio bottom) pheight)) newh) ; align view to the right based on ratio
                :else py)]
-    
+
     (assoc view :w neww :h newh :x newx :y newy)))
 
 
@@ -159,32 +160,32 @@
                   {:keys [x y w h subviews]} aligned-view  ; align self
                   aligned-viewmap (align related-viewmap subviews x y w h)] ; align subviews
               (assoc aligned-viewmap id aligned-view)))
-          viewmap
-          coll))
+    viewmap
+    coll))
 
 
 (defn collect-visible-ids
   "collects ids of views that are currently visible"
   [viewmap coll path]
   (reduce
-   (fn [res id]
-     (let [view (viewmap id)]
-       (concat res (collect-visible-ids viewmap (:subviews view) (str path ":" (:class view) )))))
-   coll
-   coll))
+    (fn [res id]
+      (let [view (viewmap id)]
+        (concat res (collect-visible-ids viewmap (:subviews view) (str path ":" (:class view))))))
+    coll
+    coll))
 
 
 (defn collect-pressed-views
   "collects view under touch point"
   [viewmap [ex ey]]
   (reduce
-   (fn [result view]
-     (let [{:keys [id x y w h]} view]
-       (if (and (and (> ex x) (< ex (+ x w))) (and (> ey y) (< ey (+ y h))))
-         (conj result id)
-         result)))
-   []
-   (vals viewmap)))
+    (fn [result view]
+      (let [{:keys [id x y w h]} view]
+        (if (and (and (> ex x) (< ex (+ x w))) (and (> ey y) (< ey (+ y h))))
+          (conj result id)
+          result)))
+    []
+    (vals viewmap)))
 
 
 (defn touch-slider
@@ -193,17 +194,17 @@
   (let [{:keys [command subviews x y w h]} view
         {type :type [px py] :point} msg
         subview (-> (get viewmap (first subviews))
-                    (assoc :width {:pixel (- px x)}))]
+                  (assoc :width {:pixel (- px x)}))]
     (if (= type "up")
       {:views [] :command {:text command :ratio (/ (- px x) w)}}
       {:views [subview] :command nil})))
 
 
-(defn set-slider-value 
+(defn set-slider-value
   [viewmap view ratio]
   (let [{:keys [id command subviews x y w h]} view
         subview (-> (get viewmap (first subviews))
-                    (assoc :width {:pixel (* w ratio)}))]
+                  (assoc :width {:pixel (* w ratio)}))]
     (assoc viewmap (:id subview) subview)))
 
 
@@ -214,9 +215,9 @@
         {type :type [px py] :point} msg
         subview (if (= type "down")
                   (-> (get viewmap (first subviews))
-                      (assoc :width {:pixel w}))
+                    (assoc :width {:pixel w}))
                   (-> (get viewmap (first subviews))
-                      (assoc :width {:pixel 0})))]
+                    (assoc :width {:pixel 0})))]
     (if (= type "up")
       {:views [subview] :command {:text command :type type}}
       {:views [subview] :command {:text command :type type}})))

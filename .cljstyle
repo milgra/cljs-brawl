@@ -1,0 +1,10 @@
+;; cljstyle configuration
+{:max-consecutive-blank-lines 1
+ :reformat-types? true
+ :insert-missing-whitespace? true
+ :remove-surrounding-whitespace? true
+ :identation? true
+ :indents ^:replace {#".*" [[:inner 0][:block 0][:stair 0]]}
+ :line-break-vars? true
+ :line-break-functions? true
+ :file-ignore #{"checkouts" "target"}}

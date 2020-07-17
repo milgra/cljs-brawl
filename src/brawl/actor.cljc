@@ -1,11 +1,12 @@
 (ns brawl.actor
-  (:require [mpd.math2 :as math2]
-            [mpd.phys2 :as phys2]
-            [brawl.math :as math]
-            [brawl.metrics :as metrics]
-            [brawl.actorai :as ai]
-            [brawl.actorjump :as jump]
-            [brawl.actorwalk :as walk]))
+  (:require
+    [brawl.actorai :as ai]
+    [brawl.actorjump :as jump]
+    [brawl.actorwalk :as walk]
+    [brawl.math :as math]
+    [brawl.metrics :as metrics]
+    [mpd.math2 :as math2]
+    [mpd.phys2 :as phys2]))
 
 
 (defn default-bases
@@ -31,16 +32,16 @@
 
 (defn default-distance-guards
   [masses metrics]
-   [(phys2/dguard2 masses :head :neck (:headl metrics) 0.0)
-    (phys2/dguard2 masses :neck :hip (:bodyl metrics) 0.0)
-    (phys2/dguard2 masses :neck :elbow_l (* 0.5 (:arml metrics)) 0.0)
-    (phys2/dguard2 masses :neck :elbow_r (* 0.5 (:arml metrics)) 0.0)
-    (phys2/dguard2 masses :elbow_l :hand_l (* 0.5 (:arml metrics)) 0.0)
-    (phys2/dguard2 masses :elbow_r :hand_r (* 0.5 (:arml metrics)) 0.0)
-    (phys2/dguard2 masses :hip :knee_l (* 0.5 (:legl metrics)) 0.0)
-    (phys2/dguard2 masses :hip :knee_r (* 0.5 (:legl metrics)) 0.0)
-    (phys2/dguard2 masses :knee_l :foot_l (* 0.5 (:legl metrics)) 0.0)
-    (phys2/dguard2 masses :knee_r :foot_r (* 0.5 (:legl metrics)) 0.0)])
+  [(phys2/dguard2 masses :head :neck (:headl metrics) 0.0)
+   (phys2/dguard2 masses :neck :hip (:bodyl metrics) 0.0)
+   (phys2/dguard2 masses :neck :elbow_l (* 0.5 (:arml metrics)) 0.0)
+   (phys2/dguard2 masses :neck :elbow_r (* 0.5 (:arml metrics)) 0.0)
+   (phys2/dguard2 masses :elbow_l :hand_l (* 0.5 (:arml metrics)) 0.0)
+   (phys2/dguard2 masses :elbow_r :hand_r (* 0.5 (:arml metrics)) 0.0)
+   (phys2/dguard2 masses :hip :knee_l (* 0.5 (:legl metrics)) 0.0)
+   (phys2/dguard2 masses :hip :knee_r (* 0.5 (:legl metrics)) 0.0)
+   (phys2/dguard2 masses :knee_l :foot_l (* 0.5 (:legl metrics)) 0.0)
+   (phys2/dguard2 masses :knee_r :foot_r (* 0.5 (:legl metrics)) 0.0)])
 
 
 (defn default-angle-guards
@@ -60,7 +61,7 @@
    :punch false
    :kick false
    :block false
-   :run false })
+   :run false})
 
 
 (def default-walk
@@ -149,10 +150,10 @@
     (if-not (<= health 0)
       actor
       (let [actor-new (-> actor
-                          (assoc :next-mode :rag)
-                          (assoc-in [:attack :timeout] (+ time 2000))
-                          (update :commands conj {:text "drop" :id id}))]
-        (if (= id :hero ) (update actor-new :commands conj {:text "show-wasted"}) actor-new)))))
+                        (assoc :next-mode :rag)
+                        (assoc-in [:attack :timeout] (+ time 2000))
+                        (update :commands conj {:text "drop" :id id}))]
+        (if (= id :hero) (update actor-new :commands conj {:text "show-wasted"}) actor-new)))))
 
 
 (defn play-hit-or-death
@@ -165,7 +166,7 @@
 
 (defn hitpoints
   "returns hitpoints of actor bones and attack vector"
-  [actor command]  
+  [actor command]
   (let [{:keys [id color health mode]} actor
         {:keys [head neck hip knee_l knee_r]} (:masses actor)
         {:keys [base target radius]} command
@@ -178,12 +179,12 @@
     (if-not (and diff-color? nearby? not-rag? alive?)
       [] ;; no hitpoints, return empty vector
       (let [[hvx hvy :as hitv] (math2/sub-v2 target base)
-        
+
             headv (math2/sub-v2 (:p neck) (:p head))
             bodyv (math2/sub-v2 (:p hip) (:p neck))
             footlv (math2/sub-v2 (:p knee_l) (:p hip))
             footrv (math2/sub-v2 (:p knee_r) (:p hip))
-            
+
             headisp (math2/intersect-v2-v2 base hitv (:p head) headv)
             bodyisp (math2/intersect-v2-v2 base hitv (:p neck) bodyv)
             footlisp (math2/intersect-v2-v2 base hitv (:p hip) footlv)
@@ -242,20 +243,20 @@
       (if (and block diff-facing?)
         ;; move actor slightly back when blocking and facing the sender
         (-> actor
-            (assoc-in [:attack :timeout] (+ time 1000))
-            (update :health - (/ power 5.0)) 
-            (update :speed + (* -2.5 facing))
-            (check-death time))
+          (assoc-in [:attack :timeout] (+ time 1000))
+          (update :health - (/ power 5.0))
+          (update :speed + (* -2.5 facing))
+          (check-death time))
         ;; hit actor
         (-> actor
-            (assoc-in [:attack :timeout] timeout)
-            (assoc-in [:ai :attacker] id)
-            (assoc :next-mode :rag)
-            (update :health - hitpower) 
-            (update :speed + (* -2.5 facing))
-            (play-hit-or-death)
-            (hit-masses hitpoints base target)
-            (check-death time))))))
+          (assoc-in [:attack :timeout] timeout)
+          (assoc-in [:ai :attacker] id)
+          (assoc :next-mode :rag)
+          (update :health - hitpower)
+          (update :speed + (* -2.5 facing))
+          (play-hit-or-death)
+          (hit-masses hitpoints base target)
+          (check-death time))))))
 
 
 (defn update-dragged
@@ -265,12 +266,12 @@
         hip-new (math2/add-v2 (:p head) [-20 0])
         neck-new (math2/add-v2 [-20 0] (math2/add-v2 (:p head) (math2/rotate-90-ccw (math2/sub-v2 (:p neck) (:p hip)))))]
     (-> dragged
-        (assoc-in [:attack :timeout] (+ time 1000))
-        (assoc-in [:masses :hip :d] [0 0])
-        (assoc-in [:masses :hip :p] hip-new)
-        (assoc-in [:masses :neck :d] [0 0])
-        (assoc-in [:masses :neck :p] neck-new))))
-  
+      (assoc-in [:attack :timeout] (+ time 1000))
+      (assoc-in [:masses :hip :d] [0 0])
+      (assoc-in [:masses :hip :p] hip-new)
+      (assoc-in [:masses :neck :d] [0 0])
+      (assoc-in [:masses :neck :p] neck-new))))
+
 
 (defn update-gun
   "update points of gun based on dragged"
@@ -281,28 +282,28 @@
         {:keys [bullets]} (:attack actor)
         {:keys [shoot]} (:control actor)]
     (assoc gun
-           :p (:p hand_l)
-           :f (- facing)
-           :d (if shoot [(* facing 100.0) 0.0] (math2/sub-v2 (:p hand_l) (:p elbow_l)))
-           :s (if (and shoot (> bullets 0)) (inc s) 0))))
+      :p (:p hand_l)
+      :f (- facing)
+      :d (if shoot [(* facing 100.0) 0.0] (math2/sub-v2 (:p hand_l) (:p elbow_l)))
+      :s (if (and shoot (> bullets 0)) (inc s) 0))))
 
 
 (defn change-mode-idle
   "change mode to idle"
   [actor surfaces]
   (-> actor
-      (assoc-in [:drag :dragged?] false)
-      (assoc-in [:drag :injure?] false)
-      (assoc :next-mode nil)
-      (assoc :mode :idle)))
+    (assoc-in [:drag :dragged?] false)
+    (assoc-in [:drag :injure?] false)
+    (assoc :next-mode nil)
+    (assoc :mode :idle)))
 
 
 (defn change-mode-rag
   "change mode to rag"
   [actor surfaces]
   (-> actor
-      (assoc :next-mode nil)
-      (assoc :mode :rag)))
+    (assoc :next-mode nil)
+    (assoc :mode :rag)))
 
 
 (defn change-mode-jump
@@ -318,7 +319,7 @@
       (= mode :walk) (assoc-in [:bases :base_l :p] [(- hx 10.0) (- (min ly ry) 10.0)])
       (= mode :walk) (assoc-in [:bases :base_r :p] [(+ hx 10.0) (- (min ly ry) 10.0)])
       (= mode :walk) (assoc-in [:bases :base_l :d] [(/ speed 2) -10])
-      (= mode :walk) (assoc-in [:bases :base_r :d] [(/ speed 2) -10])         
+      (= mode :walk) (assoc-in [:bases :base_r :d] [(/ speed 2) -10])
       true (assoc :next-mode nil)
       true (assoc :mode :jump))))
 
@@ -335,11 +336,11 @@
                      (second (first feet-new))
                      (:p bl))
         actor-new (-> actor
-                      (assoc-in [:walk :jump-state] 0) ; reset jump state
-                      (assoc-in [:walk :target] nil) ; reset stepping
-                      (assoc :next-mode nil)
-                      (assoc :mode :walk)
-                      (assoc :masses masses-new))]
+                    (assoc-in [:walk :jump-state] 0) ; reset jump state
+                    (assoc-in [:walk :target] nil) ; reset stepping
+                    (assoc :next-mode nil)
+                    (assoc :mode :walk)
+                    (assoc :masses masses-new))]
     (cond-> actor-new
       (= mode :rag) (assoc-in [:bases :base_l :p] feet-final)
       (= mode :rag) (assoc-in [:bases :base_r :p] feet-final)
@@ -353,7 +354,7 @@
   (case (:next-mode actor)
     :walk (change-mode-walk actor surfaces)
     :jump (change-mode-jump actor surfaces)
-    :rag (change-mode-rag actor surfaces)    
+    :rag (change-mode-rag actor surfaces)
     :idle (change-mode-idle actor surfaces)
     actor))
 
@@ -366,16 +367,16 @@
         {:keys [timeout]} (:attack actor)
 
         masses-new (-> masses
-                       (phys2/add-gravity [0.0 0.4])
+                     (phys2/add-gravity [0.0 0.4])
                        ;;(phys2/keep-angles (:aguards state))
-                       (phys2/keep-distances (:dguards actor))
-                       (phys2/move-masses (if dragged? [] surfaces) 0.4)) ;; if dragged be able to drag down the body at a fork
+                     (phys2/keep-distances (:dguards actor))
+                     (phys2/move-masses (if dragged? [] surfaces) 0.4)) ;; if dragged be able to drag down the body at a fork
         mode-new (cond
                    (and (>  health 0) (> time timeout)) :walk
                    (and (<= health 0) (> time timeout) (:q (:neck masses-new))) :idle
                    :else next-mode)
 
-        injure?-new (if (and (<= health 0) (> time timeout)) false injure?) 
+        injure?-new (if (and (<= health 0) (> time timeout)) false injure?)
 
         commands-new (if-not (and injure? (= 0 (mod (int (* time 10.0)) 2)))
                        commands
@@ -387,10 +388,10 @@
                                         :radius 50.0
                                         :power 30}]))]
     (-> actor
-        (assoc :injure? injure?-new)
-        (assoc :commands commands-new)
-        (assoc :next-mode mode-new)
-        (assoc :masses masses-new))))
+      (assoc :injure? injure?-new)
+      (assoc :commands commands-new)
+      (assoc :next-mode mode-new)
+      (assoc :masses masses-new))))
 
 
 (defn update-mode
@@ -410,7 +411,7 @@
         {direction :direction} (:walk actor)
         {:keys [punch-hand kick-y punch-y action-sent pickup-sent]} (:attack actor)
         {:keys [left right up down punch kick shoot block run]} control]
-    
+
     (if-not control
       actor
       (let [p-hand (if (and (not (:punch self-control)) punch) ;; change only when punch state changes
@@ -419,25 +420,25 @@
             punch-y (if (and (not (:punch self-control)) punch) (rand 15) punch-y) ;; punch height
             kick-y (if (and (not (:kick self-control)) kick) (rand 30) kick-y)] ;; kick height
         (-> actor
-            
-            (assoc-in [:attack :action-sent] (if (and (not punch) (not kick) (not shoot)) false action-sent)) ;; set action sent to false if no action is happening
-            (assoc-in [:attack :pickup-sent] (if (not down) false pickup-sent)) ;; set it to false if no pickup is happening
-            (assoc-in [:attack :punch-hand] p-hand)
-            (assoc-in [:walk :direction] (cond ;; change vertical direction in case of up/down
-                                                down -1
-                                                up 1
-                                                :else direction))
-            (assoc-in [:attack :punch-y] punch-y)
-            (assoc-in [:attack :kick-y] kick-y)
-            (assoc-in [:control :punch] punch)
-            (assoc-in [:control :kick] kick)
-            (assoc-in [:control :shoot] shoot)
-            (assoc-in [:control :left] left)
-            (assoc-in [:control :right] right)
-            (assoc-in [:control :up] up)
-            (assoc-in [:control :down] down)
-            (assoc-in [:control :block] block)
-            (assoc-in [:control :run] run))))))
+
+          (assoc-in [:attack :action-sent] (if (and (not punch) (not kick) (not shoot)) false action-sent)) ;; set action sent to false if no action is happening
+          (assoc-in [:attack :pickup-sent] (if (not down) false pickup-sent)) ;; set it to false if no pickup is happening
+          (assoc-in [:attack :punch-hand] p-hand)
+          (assoc-in [:walk :direction] (cond ;; change vertical direction in case of up/down
+                                         down -1
+                                         up 1
+                                         :else direction))
+          (assoc-in [:attack :punch-y] punch-y)
+          (assoc-in [:attack :kick-y] kick-y)
+          (assoc-in [:control :punch] punch)
+          (assoc-in [:control :kick] kick)
+          (assoc-in [:control :shoot] shoot)
+          (assoc-in [:control :left] left)
+          (assoc-in [:control :right] right)
+          (assoc-in [:control :up] up)
+          (assoc-in [:control :down] down)
+          (assoc-in [:control :block] block)
+          (assoc-in [:control :run] run))))))
 
 
 (defn update-angle
@@ -446,7 +447,7 @@
   (let [{angle :idle-angle} (:walk actor)
         health (:health actor)]
     (cond-> actor
-      (and (< health 100.0) (> health 0.0)) (update :health + (* 0.05 delta)) 
+      (and (< health 100.0) (> health 0.0)) (update :health + (* 0.05 delta))
       (> angle math/MPI2) (assoc-in [:walk :idle-angle] (- angle math/MPI2))
       (< angle math/MPI2) (update-in [:walk :idle-angle] + (* 0.05 delta)))))
 
@@ -455,8 +456,8 @@
   "update actor state"
   [actor control surfaces actors guns time delta]
   (-> actor
-      (ai/update-ai control surfaces actors time delta) ;; ai controls for others
-      (update-controls control) ;; manual controls for hero
-      (update-angle delta)
-      (update-mode surfaces time delta)
-      (change-mode surfaces)))
+    (ai/update-ai control surfaces actors time delta) ;; ai controls for others
+    (update-controls control) ;; manual controls for hero
+    (update-angle delta)
+    (update-mode surfaces time delta)
+    (change-mode surfaces)))

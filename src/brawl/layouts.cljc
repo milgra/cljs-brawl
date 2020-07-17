@@ -11,6 +11,7 @@
 ;; left - positon of top edge of element, pixel or percent, absolute or relative "Edge 50 %" "CustomButton 10 px"
 ;; right - positon of top edge of element, pixel or percent, absolute or relative "Edge 50 %" "CustomButton 10 px"
 
+
 (def sliders
 ;; |Hitpower Height Stamina|
 ;; |Hitrate         Speed  |
@@ -21,7 +22,7 @@
    :height "101 px"
    :center-x "Edge 50 %"
    :center-y "Edge 10 %"
-   :subviews 
+   :subviews
 
    [{:id "Hitpower"
      :class "Slider"
@@ -39,7 +40,7 @@
      :height "50 px"
      :center-x "Edge 50 %"
      :command "set-height"}
-    
+
     {:id "Stamina"
      :class "Slider"
      :texture {:type "Color" :color 0x555555FF}
@@ -48,7 +49,7 @@
      :height "50 px"
      :right "Edge 0 px"
      :command "set-stamina"}
-    
+
     {:id "Hitrate"
      :class "Slider"
      :texture {:type "Color" :color 0x555555FF}
@@ -57,7 +58,7 @@
      :height "50 px"
      :bottom "Edge 0 px"
      :command "set-hitrate"}
-    
+
     {:id "Speed"
      :class "Slider"
      :texture {:type "Color" :color 0x555555FF}
@@ -67,7 +68,7 @@
      :right "Edge 0 px"
      :bottom "Edge 0 px"
      :command "set-speed"}]})
-  
+
 
 (def generator
 ;;|                Menu|
@@ -77,38 +78,38 @@
 ;;|     StartGame      |
   {:id "Generator"
    :class ""
-   :width "100 %" 
-   :height "100 %" 
+   :width "100 %"
+   :height "100 %"
    :subviews
-   
+
    [{:id "Menu"
      :class "Button"
      :texture {:type "Color" :color 0xFFFFFF09}
      :label {:type "Label" :text "Menu" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
-     :command "show-menu" 
-     :width "150 px" 
-     :height "50 px" 
-     :top "Edge 0 px" 
+     :command "show-menu"
+     :width "150 px"
+     :height "50 px"
+     :top "Edge 0 px"
      :right "Edge 0 px"}
 
     sliders
 
     {:id "Randomize"
-     :class "Button" 
+     :class "Button"
      :texture {:type "Color" :color 0xFFFFFF19}
      :label {:type "Label" :text "Randomize" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
-     :command "randomize" 
-     :width "200 px" 
-     :height "50 px" 
+     :command "randomize"
+     :width "200 px"
+     :height "50 px"
      :center-x "Edge 50 %"
      :bottom "StartGame 10 px"}
-    
+
     {:id "StartGame"
      :class "Button"
      :texture {:type "Color" :color 0xDD0000FF}
      :label {:type "Label" :text "Start Game" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
-     :command "start-game" 
-     :width "200 px" 
+     :command "start-game"
+     :width "200 px"
      :height "50 px"
      :center-x "Edge 50 %"
      :bottom "Edge 50 px"}]})
@@ -122,18 +123,18 @@
 ;;Kick  Shoot   Health Bullets Power    Down|
   {:id "Hud"
    :class ""
-   :width "100 %" 
-   :height "100 %" 
+   :width "100 %"
+   :height "100 %"
    :subviews
-   
+
    [{:id "Menu"
      :class "Button"
      :texture {:type "Color" :color 0xFFFFFF19}
      :label {:type "Label" :text "Menu" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
-     :command "show-menu" 
-     :width "150 px" 
-     :height "50 px" 
-     :top "Edge 0 px" 
+     :command "show-menu"
+     :width "150 px"
+     :height "50 px"
+     :top "Edge 0 px"
      :right "Edge 0 px"}
 
     {:id "Kick"
@@ -147,42 +148,42 @@
      :bottom "Edge 4 px"}
 
     {:id "Block"
-     :class "Button" 
+     :class "Button"
      :texture {:type "Color" :color 0xFFFFFF19}
      :label {:type "Label" :text "BLOCK (D)" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
-     :command "block" 
-     :width "150 px" 
-     :height "150 px" 
+     :command "block"
+     :width "150 px"
+     :height "150 px"
      :left "Edge 4 px"
      :bottom "Kick 4 px"}
-    
+
     {:id "Punch"
-     :class "Button" 
+     :class "Button"
      :texture {:type "Color" :color 0xFFFFFF19}
      :label {:type "Label" :text "PUNCH (F)" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
-     :command "punch" 
-     :width "150 px" 
-     :height "150 px" 
+     :command "punch"
+     :width "150 px"
+     :height "150 px"
      :left "Edge 4 px"
      :bottom "Block 4 px"}
 
     {:id "Shoot"
-     :class "Button" 
+     :class "Button"
      :texture {:type "Color" :color 0xFFFFFF19}
      :label {:type "Label" :text "SHOOT (V)" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
-     :command "shoot" 
-     :width "150 px" 
-     :height "150 px" 
+     :command "shoot"
+     :width "150 px"
+     :height "150 px"
      :left "Kick 4 px"
      :bottom "Edge 4 px"}
-    
+
     {:id "Jump"
-     :class "Button" 
+     :class "Button"
      :texture {:type "Color" :color 0xFFFFFF19}
      :label {:type "Label" :text "JUMP" :size 25 :color 0xFFFFFFFF :background 0xFFFFFF11}
-     :command "jump" 
-     :width "150 px" 
-     :height "150 px" 
+     :command "jump"
+     :width "150 px"
+     :height "150 px"
      :left "Kick 4 px"
      :bottom "Shoot 4 px"}
 
@@ -229,25 +230,25 @@
   {:id "Menu"
    :class ""
    :texture {:type "Color" :color 0x000000EE}
-   :width "100 %" 
-   :height "100 %" 
+   :width "100 %"
+   :height "100 %"
    :subviews
-   
+
    [{:id "Brawl"
      :class "Button"
      :texture {:type "Color" :color 0xFFFFFF0F}
      :label {:type "Label" :text "BRAWL" :size 50 :color 0xFFFFFFFF}
-     :width "400 px" 
-     :height "140 px" 
-     :bottom "Continue 8 px" 
+     :width "400 px"
+     :height "140 px"
+     :bottom "Continue 8 px"
      :center-x "Edge 50 %"
      :subviews [{:id "By"
                  :class "Button"
                  :texture {:type "Color" :color 0x00000000}
                  :label {:type "Label" :text "By Milan Toth v0.9b" :size 15 :color 0xFFFFFFFF}
-                 :width "150 px" 
-                 :height "40 px" 
-                 :right "Edge 4 px" 
+                 :width "150 px"
+                 :height "40 px"
+                 :right "Edge 4 px"
                  :bottom "Edge 4 px"}]}
 
     {:id "Continue"
@@ -255,9 +256,9 @@
      :command "continue"
      :texture {:type "Color" :color 0xFFFFFF0F}
      :label {:type "Label" :text "Continue" :size 25 :color 0xFFFFFFFF}
-     :width "350 px" 
-     :height "50 px" 
-     :center-y "Edge 40 %" 
+     :width "350 px"
+     :height "50 px"
+     :center-y "Edge 40 %"
      :center-x "Edge 50 %"}
 
     {:id "NewGame"
@@ -265,9 +266,9 @@
      :command "new game"
      :texture {:type "Color" :color 0xFFFFFF0F}
      :label {:type "Label" :text "New Game" :size 25 :color 0xFFFFFFFF}
-     :width "350 px" 
-     :height "50 px" 
-     :top "Continue 4 px" 
+     :width "350 px"
+     :height "50 px"
+     :top "Continue 4 px"
      :center-x "Edge 50 %"}
 
     {:id "Options"
@@ -275,9 +276,9 @@
      :command "options"
      :texture {:type "Color" :color 0xFFFFFF0F}
      :label {:type "Label" :text "Options" :size 25 :color 0xFFFFFFFF}
-     :width "350 px" 
-     :height "50 px" 
-     :top "NewGame 4 px" 
+     :width "350 px"
+     :height "50 px"
+     :top "NewGame 4 px"
      :center-x "Edge 50 %"}
 
     {:id "Source"
@@ -285,19 +286,19 @@
      :command "source code"
      :texture {:type "Color" :color 0xFFFFFF0F}
      :label {:type "Label" :text "Source Code" :size 25 :color 0xFFFFFFFF}
-     :width "350 px" 
-     :height "50 px" 
-     :top "Options 4 px" 
+     :width "350 px"
+     :height "50 px"
+     :top "Options 4 px"
      :center-x "Edge 50 %"}
-    
+
     {:id "Donate"
      :class "Button"
      :command "donate"
      :texture {:type "Color" :color 0xFFFFFF0F}
      :label {:type "Label" :text "Donate" :size 25 :color 0xFFFFFFFF}
-     :width "350 px" 
-     :height "50 px" 
-     :top "Source 4 px" 
+     :width "350 px"
+     :height "50 px"
+     :top "Source 4 px"
      :center-x "Edge 50 %"}]})
 
 
@@ -313,18 +314,18 @@
   {:id "Options"
    :class ""
    :texture {:type "Color" :color 0x000000EE}
-   :width "100 %" 
-   :height "100 %" 
+   :width "100 %"
+   :height "100 %"
    :subviews
-   
+
    [{:id "Music"
      :class "Slider"
      :command "set music volume"
      :texture {:type "Color" :color 0xFFFFFF0F}
      :label {:type "Label" :text "Music Volume" :size 25 :color 0xFFFFFFFF}
-     :width "350 px" 
-     :height "50 px" 
-     :center-y "Edge 40 %" 
+     :width "350 px"
+     :height "50 px"
+     :center-y "Edge 40 %"
      :center-x "Edge 50 %"}
 
     {:id "Effects"
@@ -332,9 +333,9 @@
      :command "set effects volume"
      :texture {:type "Color" :color 0xFFFFFF0F}
      :label {:type "Label" :text "Sound Volume" :size 25 :color 0xFFFFFFFF}
-     :width "350 px" 
-     :height "50 px" 
-     :top "Music 4 px" 
+     :width "350 px"
+     :height "50 px"
+     :top "Music 4 px"
      :center-x "Edge 50 %"}
 
     {:id "Physics"
@@ -342,9 +343,9 @@
      :command "show physics"
      :texture {:type "Color" :color 0xFFFFFF0F}
      :label {:type "Label" :text "Show Physics" :size 25 :color 0xFFFFFFFF}
-     :width "350 px" 
-     :height "50 px" 
-     :top "Effects 4 px" 
+     :width "350 px"
+     :height "50 px"
+     :top "Effects 4 px"
      :center-x "Edge 50 %"}
 
     {:id "Fullscreen"
@@ -352,9 +353,9 @@
      :command "fullscreen"
      :texture {:type "Color" :color 0xFFFFFF0F}
      :label {:type "Label" :text "Fullscreen" :size 25 :color 0xFFFFFFFF}
-     :width "350 px" 
-     :height "50 px" 
-     :top "Physics 4 px" 
+     :width "350 px"
+     :height "50 px"
+     :top "Physics 4 px"
      :center-x "Edge 50 %"}
 
     {:id "OptBack"
@@ -362,9 +363,9 @@
      :command "options back"
      :texture {:type "Color" :color 0xFFFFFF0F}
      :label {:type "Label" :text "Back" :size 25 :color 0xFFFFFFFF}
-     :width "350 px" 
-     :height "50 px" 
-     :top "Fullscreen 4 px" 
+     :width "350 px"
+     :height "50 px"
+     :top "Fullscreen 4 px"
      :center-x "Edge 50 %"}]})
 
 
@@ -372,60 +373,59 @@
   {:id "Info"
    :class ""
    :texture {:type "Color" :color 0x00AA00AA}
-   :width "100 %" 
-   :height "100 %" 
+   :width "100 %"
+   :height "100 %"
    :subviews
-   
+
    [{:id "Message"
      :class ""
      :texture {:type "Color" :color 0x00FF0055}
-     :width "100 %" 
-     :height "90 px" 
-     :center-y "Edge 50 %" 
+     :width "100 %"
+     :height "90 px"
+     :center-y "Edge 50 %"
      :center-x "Edge 50 %"
      :subviews
 
      [{:id "Text"
-      :class ""
-      :texture {:type "Label" :text "Loading" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
-      :width "400 px" 
-      :height "90 px" 
-      :center-y "Edge 50 %" 
-      :center-x "Edge 50 %"}]}]})
+       :class ""
+       :texture {:type "Label" :text "Loading" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
+       :width "400 px"
+       :height "90 px"
+       :center-y "Edge 50 %"
+       :center-x "Edge 50 %"}]}]})
 
 
 (def wasted
   {:id "Failure"
    :class ""
    :texture {:type "Color" :color 0xFF0000AA}
-   :width "100 %" 
-   :height "100 %" 
+   :width "100 %"
+   :height "100 %"
    :subviews
-   
+
    [{:id "Message"
      :class ""
      :texture {:type "Color" :color 0xFF000055}
-     :width "100 %" 
-     :height "90 px" 
-     :center-y "Edge 50 %" 
+     :width "100 %"
+     :height "90 px"
+     :center-y "Edge 50 %"
      :center-x "Edge 50 %"
      :subviews
-     
+
      [{:id "MsgText"
        :class ""
        :texture {:type "Label" :text "Wasted" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
-       :width "400 px" 
-       :height "90 px" 
-       :center-y "Edge 50 %" 
-       :center-x "Edge 50 %"}]
-     }
+       :width "400 px"
+       :height "90 px"
+       :center-y "Edge 50 %"
+       :center-x "Edge 50 %"}]}
 
     {:id "Restart"
      :class ""
      :texture {:type "Color" :color 0x00FF00AA}
-     :width "100 %" 
-     :height "50 px" 
-     :bottom "Edge 50 px" 
+     :width "100 %"
+     :height "50 px"
+     :bottom "Edge 50 px"
      :center-x "Edge 50 %"
      :subviews
 
@@ -434,9 +434,9 @@
        :command "restart level"
        :texture {:type "Color" :color 0x00000000}
        :label {:type "Label" :text "Restart Level" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
-       :width "200 px" 
-       :height "50 px" 
-       :center-y "Edge 50 %" 
+       :width "200 px"
+       :height "50 px"
+       :center-y "Edge 50 %"
        :center-x "Edge 50 %"}]}]})
 
 
@@ -444,34 +444,33 @@
   {:id "Finished"
    :class ""
    :texture {:type "Color" :color 0xFF0000AA}
-   :width "100 %" 
-   :height "100 %" 
+   :width "100 %"
+   :height "100 %"
    :subviews
-   
+
    [{:id "Message"
      :class ""
      :texture {:type "Color" :color 0xFF000055}
-     :width "100 %" 
-     :height "90 px" 
-     :center-y "Edge 50 %" 
+     :width "100 %"
+     :height "90 px"
+     :center-y "Edge 50 %"
      :center-x "Edge 50 %"
      :subviews
-     
+
      [{:id "MsgText"
        :class ""
        :texture {:type "Label" :text "You did it!!!" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
-       :width "400 px" 
-       :height "90 px" 
-       :center-y "Edge 50 %" 
-       :center-x "Edge 50 %"}]
-     }
+       :width "400 px"
+       :height "90 px"
+       :center-y "Edge 50 %"
+       :center-x "Edge 50 %"}]}
 
     {:id "Restart"
      :class ""
      :texture {:type "Color" :color 0x00FF00AA}
-     :width "100 %" 
-     :height "50 px" 
-     :bottom "Edge 50 px" 
+     :width "100 %"
+     :height "50 px"
+     :bottom "Edge 50 px"
      :center-x "Edge 50 %"
      :subviews
 
@@ -480,7 +479,7 @@
        :command "new game"
        :texture {:type "Color" :color 0x00000000}
        :label {:type "Label" :text "Keep playing" :size 30 :color 0xFFFFFFFF :background 0xFFFFFF00}
-       :width "200 px" 
-       :height "50 px" 
-       :center-y "Edge 50 %" 
+       :width "200 px"
+       :height "50 px"
+       :center-y "Edge 50 %"
        :center-x "Edge 50 %"}]}]})

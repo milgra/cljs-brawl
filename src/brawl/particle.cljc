@@ -1,6 +1,8 @@
 (ns brawl.particle
-  (:require [brawl.floatbuffer :as fb]
-            [mpd.math2 :as math2]))
+  (:require
+    [brawl.floatbuffer :as fb]
+    [mpd.math2 :as math2]))
+
 
 (defn init
   "create particle"
@@ -37,7 +39,7 @@
         nx (+ x sx)
         ny (+ y sy)
         nc (inc cnt)]
-    (if (> nc 20) nil (assoc particle :pos [nx ny] :cnt nc :col [r g b a ] ))))
+    (if (> nc 20) nil (assoc particle :pos [nx ny] :cnt nc :col [r g b a]))))
 
 
 (defn update-blood
@@ -56,7 +58,7 @@
   [particle rect]
   (case (:type particle)
     :seed (update-seed particle rect)
-    :blood(update-blood particle rect)
+    :blood (update-blood particle rect)
     :dust (update-dust particle)
     particle))
 

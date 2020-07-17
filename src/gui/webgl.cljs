@@ -1,20 +1,21 @@
 (ns gui.webgl
-  (:require [gui.bitmap :as bitmap]
-            [gui.texmap :as texmap]
-            [brawl.floatbuffer :as fb]
-            [clojure.string :as str]
-            [cljs-webgl.context :as context]
-            [cljs-webgl.shaders :as shaders]
-            [cljs-webgl.texture :as texture]
-            [cljs-webgl.buffers :as buffers]
-            [cljs-webgl.typed-arrays :as arrays]
-            [cljs-webgl.constants.shader :as shader]
-            [cljs-webgl.constants.buffer-object :as buffer-object]
-            [cljs-webgl.constants.draw-mode :as draw-mode]
-            [cljs-webgl.constants.data-type :as data-type]
-            [cljs-webgl.constants.capability :as capability]
-            [cljs-webgl.constants.blending-factor-dest :as blend]
-            [cljs-webgl.constants.texture-unit :as texture-unit]))
+  (:require
+    [brawl.floatbuffer :as fb]
+    [cljs-webgl.buffers :as buffers]
+    [cljs-webgl.constants.blending-factor-dest :as blend]
+    [cljs-webgl.constants.buffer-object :as buffer-object]
+    [cljs-webgl.constants.capability :as capability]
+    [cljs-webgl.constants.data-type :as data-type]
+    [cljs-webgl.constants.draw-mode :as draw-mode]
+    [cljs-webgl.constants.shader :as shader]
+    [cljs-webgl.constants.texture-unit :as texture-unit]
+    [cljs-webgl.context :as context]
+    [cljs-webgl.shaders :as shaders]
+    [cljs-webgl.texture :as texture]
+    [cljs-webgl.typed-arrays :as arrays]
+    [clojure.string :as str]
+    [gui.bitmap :as bitmap]
+    [gui.texmap :as texmap]))
 
 
 (def ui-vertex-source
@@ -42,31 +43,31 @@
   "initializes webgl module"
   []
   (let [context (context/get-context
-                 (.getElementById js/document "main")
-                 {:premultiplied-alpha false :alpha false})
+                  (.getElementById js/document "main")
+                  {:premultiplied-alpha false :alpha false})
 
         tempcanvas (.createElement js/document "canvas")
 
         ui-shader (shaders/create-program
-                   context
-                   (shaders/create-shader context shader/vertex-shader ui-vertex-source)
-                   (shaders/create-shader context shader/fragment-shader ui-fragment-source))
+                    context
+                    (shaders/create-shader context shader/vertex-shader ui-vertex-source)
+                    (shaders/create-shader context shader/fragment-shader ui-fragment-source))
 
         ui-buffer (buffers/create-buffer
-                   context
-                   (arrays/float32 [0.0 0.0 0.0 0.0])
-                   buffer-object/array-buffer
-                   buffer-object/static-draw)
+                    context
+                    (arrays/float32 [0.0 0.0 0.0 0.0])
+                    buffer-object/array-buffer
+                    buffer-object/static-draw)
 
         ui-texmap (texmap/init 1024 1024 0 0 0 0)
         ui-texture (.createTexture context)
-        
+
         ui-location-pos (shaders/get-attrib-location context ui-shader "position")
         ui-location-texcoord (shaders/get-attrib-location context ui-shader "texcoord")]
 
     (set! (. tempcanvas -width) 1000)
     (set! (. tempcanvas -height) 200)
-    
+
     {:context context
      :tempcanvas tempcanvas
      :floatbuffer (fb/create!)
@@ -82,7 +83,7 @@
 (defn sizes-for-glyph
   "returns glyph sizes"
   [canvas text height]
-  (let [context (.getContext canvas "2d" )
+  (let [context (.getContext canvas "2d")
         itemhth (* height 1.2)]
     (set! (.-font context) (str height "px Ubuntu Bold"))
     (set! (.-fillStyle context) "#000000")
@@ -97,7 +98,7 @@
         g (bit-and (bit-shift-right color 16) 0xFF)
         b (bit-and (bit-shift-right color 8) 0xFF)
         a (bit-and color 0xFF)]
-    (str "rgba("r","g","b","(/ a 255)")")))
+    (str "rgba(" r "," g "," b "," (/ a 255) ")")))
 
 
 (defn bitmap-for-glyph
@@ -140,13 +141,13 @@
                                       g (bit-and (bit-shift-right (:color texture) 16) 0xFF)
                                       b (bit-and (bit-shift-right (:color texture) 8) 0xFF)
                                       a (bit-and (:color texture) 0xFF)]
-                                  (texmap/setbmp tmap (bitmap/init 10 10 r g b a) texture 1))                        
+                                  (texmap/setbmp tmap (bitmap/init 10 10 r g b a) texture 1))
                         ;; show glyph
                         "Label" (let [bmp (bitmap-for-glyph tempcanvas w h texture)]
                                   (texmap/setbmp tmap bmp texture 0))
                         ;; return empty texmap if unknown
                         tmap))]
-       
+
         (recur (rest remviews) newtmap)))))
 
 
@@ -162,16 +163,16 @@
   [state]
   (let [{:keys [context ui-texmap]} state]
     (buffers/clear-color-buffer
-     context
-     0.1
-     0.1
-     0.4
-     1.0)))
+      context
+      0.1
+      0.1
+      0.4
+      1.0)))
 
 
 (defn update!
-  "update content of framebuffer" 
-  [state views]  
+  "update content of framebuffer"
+  [state views]
   (let [{:keys [context
                 tempcanvas
                 floatbuffer
@@ -181,7 +182,7 @@
                 ui-location-pos
                 ui-location-texcoord
                 ui-texmap
-                ui-texture]}state
+                ui-texture]} state
         ;; generate textures for new views
         newtexmap (tex-gen-for-ids tempcanvas ui-texmap views)
         ;; generate vertex data from views
@@ -191,35 +192,35 @@
                           oldbuf
                           (let [[tlx tly brx bry] (texmap/getbmp newtexmap texture)]
                             (fb/append!
-                             oldbuf
-                             (array x y tlx tly
-                                    (+ x w) y brx tly
-                                    x (+ y h) tlx bry
-                                    
-                                    (+ x w) y brx tly
-                                    (+ x w) (+ y h) brx bry
-                                    x (+ y h) tlx bry))))) resfb views)]
-    
+                              oldbuf
+                              (array x y tlx tly
+                                (+ x w) y brx tly
+                                x (+ y h) tlx bry
+
+                                (+ x w) y brx tly
+                                (+ x w) (+ y h) brx bry
+                                x (+ y h) tlx bry))))) resfb views)]
+
     ;; upload texture map if changed
     (when (newtexmap :changed)
       (texture/upload-texture
-      context
-       ui-texture
-       (:data (:texbmp newtexmap))
-       1024
-       1024))
+        context
+        ui-texture
+        (:data (:texbmp newtexmap))
+        1024
+        1024))
 
     ;; upload buffer
     (buffers/upload-buffer
-     context
-     ui-buffer
-     (:data newfb)
-     buffer-object/array-buffer
-     buffer-object/dynamic-draw)
+      context
+      ui-buffer
+      (:data newfb)
+      buffer-object/array-buffer
+      buffer-object/dynamic-draw)
 
     (-> state
-        (assoc :ui-texmap (assoc newtexmap :changed false))
-        (assoc :floatbuffer newfb))))
+      (assoc :ui-texmap (assoc newtexmap :changed false))
+      (assoc :floatbuffer newfb))))
 
 
 (defn draw!
@@ -237,34 +238,34 @@
                 ui-texture]} state]
     ;; draw vertexes
     (buffers/draw!
-     context
-     :count (/ (:index floatbuffer) 4)
-     :first 0
-     :shader ui-shader
-     :draw-mode draw-mode/triangles
-     :attributes [{:buffer ui-buffer
-                   :location ui-location-pos
-                   :components-per-vertex 2
-                   :type data-type/float
-                   :offset 0
-                   :stride 16}
-                  {:buffer ui-buffer
-                   :location ui-location-texcoord
-                   :components-per-vertex 2
-                   :type data-type/float
-                   :offset 8
-                   :stride 16}]
-     :uniforms [{:name "projection"
-                 :type :mat4
-                 :values projection}
-                {:name "texture_main"
-                 :type :sampler-2d
-                 :values 0}]
-     :capabilities {capability/blend true}
-     :blend-function [[blend/src-alpha blend/one-minus-src-alpha]]
-     :textures [{:texture ui-texture 
-                 :name "texture_main"
-                 :texture-unit texture-unit/texture0}])
+      context
+      :count (/ (:index floatbuffer) 4)
+      :first 0
+      :shader ui-shader
+      :draw-mode draw-mode/triangles
+      :attributes [{:buffer ui-buffer
+                    :location ui-location-pos
+                    :components-per-vertex 2
+                    :type data-type/float
+                    :offset 0
+                    :stride 16}
+                   {:buffer ui-buffer
+                    :location ui-location-texcoord
+                    :components-per-vertex 2
+                    :type data-type/float
+                    :offset 8
+                    :stride 16}]
+      :uniforms [{:name "projection"
+                  :type :mat4
+                  :values projection}
+                 {:name "texture_main"
+                  :type :sampler-2d
+                  :values 0}]
+      :capabilities {capability/blend true}
+      :blend-function [[blend/src-alpha blend/one-minus-src-alpha]]
+      :textures [{:texture ui-texture
+                  :name "texture_main"
+                  :texture-unit texture-unit/texture0}])
 
     state))
 

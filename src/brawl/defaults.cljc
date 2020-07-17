@@ -1,5 +1,6 @@
 (ns brawl.defaults)
 
+
 (defn local-storage-supported?
   []
   (let [item "workshub-test-ls"]
@@ -30,4 +31,4 @@
       (.setItem js/localStorage "state-saved?" true)
       (.setItem js/localStorage "state" state-js)
       state)
-  state))
+    state))

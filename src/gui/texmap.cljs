@@ -2,7 +2,8 @@
 ; places smaller bitmaps into one big bitmap to use it as gpu texture
 
 (ns gui.texmap
-  (:require [gui.bitmap :as bitmap]))
+  (:require
+    [gui.bitmap :as bitmap]))
 
 
 (defn init
@@ -21,12 +22,12 @@
   [texmap]
   (let [{texbmp :texbmp} texmap]
     (assoc texmap
-           :texbmp (bitmap/clear texbmp 0 0 0 0)
-           :contents {}
-           :changed true
-           :lasth 0
-           :lastx 0
-         :lasty 0)))
+      :texbmp (bitmap/clear texbmp 0 0 0 0)
+      :contents {}
+      :changed true
+      :lasth 0
+      :lastx 0
+      :lasty 0)))
 
 
 (defn hasbmp?
@@ -72,15 +73,15 @@
         newtly (/ (+ newy inset) (texbmp :height))
         newbrx (/ (- texw inset) (texbmp :width))
         newbry (/ (- texh inset) (texbmp :height))
-        
+
         over? (> newh (texbmp :height))]
 
     (if over?
       texmap
       (-> texmap
-          (assoc-in [:contents texid] [newtlx newtly newbrx newbry])
-          (assoc :lastx texw)
-          (assoc :lasty newy)
-          (assoc :lasth newh)
-          (assoc :texbmp (bitmap/insert texbmp bitmap newx newy))
-          (assoc :changed true)))))
+        (assoc-in [:contents texid] [newtlx newtly newbrx newbry])
+        (assoc :lastx texw)
+        (assoc :lasty newy)
+        (assoc :lasth newh)
+        (assoc :texbmp (bitmap/insert texbmp bitmap newx newy))
+        (assoc :changed true)))))

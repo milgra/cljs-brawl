@@ -1,6 +1,7 @@
 (ns brawl.actorwalk
-  (:require [mpd.math2 :as math2]
-            [mpd.phys2 :as phys2]))
+  (:require
+    [mpd.math2 :as math2]
+    [mpd.phys2 :as phys2]))
 
 
 (defn triangle-with-bases
@@ -19,19 +20,19 @@
   [actor]
   (let [{:keys [id color facing]} actor
         {:keys [neck hand_l hand_r]} (:masses actor)
-        {:keys [punch-hand]} (:attack actor) 
+        {:keys [punch-hand]} (:attack actor)
         base (:p neck)
         target (if (= punch-hand :hand_l) (:p hand_l) (:p hand_r))]
     (-> actor
-        (update :commands conj {:id id
-                                :text "attack"
-                                :base base
-                                :target target
-                                :radius 100.0
-                                :facing facing
-                                :color color
-                                :power 20})
-        (assoc-in [:attack :action-sent] true))))
+      (update :commands conj {:id id
+                              :text "attack"
+                              :base base
+                              :target target
+                              :radius 100.0
+                              :facing facing
+                              :color color
+                              :power 20})
+      (assoc-in [:attack :action-sent] true))))
 
 
 (defn send-kick-attack
@@ -42,15 +43,15 @@
         base (:p hip)
         target (if (= :base_l (:active order)) (:p foot_l) (:p foot_r))]
     (-> actor
-        (update :commands conj {:id id
-                                :text "attack"
-                                :base base
-                                :target target
-                                :facing facing
-                                :radius 100.0
-                                :color color
-                                :power 40})
-        (assoc-in [:attack :action-sent] true))))
+      (update :commands conj {:id id
+                              :text "attack"
+                              :base base
+                              :target target
+                              :facing facing
+                              :radius 100.0
+                              :color color
+                              :power 40})
+      (assoc-in [:attack :action-sent] true))))
 
 
 (defn send-shoot-attack
@@ -61,25 +62,25 @@
         base (:p neck)
         target (math2/add-v2 (:p neck) [(* facing 500.0) 0.0])]
     (-> actor
-        (update :commands conj {:text "play-shoot"})
-        (update :commands conj {:id id
-                                :text "attack"
-                                :base base
-                                :target target
-                                :radius 500.0
-                                :facing facing
-                                :color color
-                                :power 100})
-        (assoc-in [:attack :action-sent] true)
-        (assoc-in [:attack :bullets] (dec bullets)))))
+      (update :commands conj {:text "play-shoot"})
+      (update :commands conj {:id id
+                              :text "attack"
+                              :base base
+                              :target target
+                              :radius 500.0
+                              :facing facing
+                              :color color
+                              :power 100})
+      (assoc-in [:attack :action-sent] true)
+      (assoc-in [:attack :bullets] (dec bullets)))))
 
 
 (defn send-pickup
   [actor]
   (let [{:keys [id]} actor]
     (-> actor
-        (update :commands conj {:text "pickup" :id id})
-        (assoc-in [:attack :pickup-sent] true))))
+      (update :commands conj {:text "pickup" :id id})
+      (assoc-in [:attack :pickup-sent] true))))
 
 
 (defn send-commands
@@ -89,7 +90,7 @@
         {:keys [gun body]} (:drag actor)
         {:keys [order]} (:walk actor)
         {:keys [neck hip hand_l hand_r foot_l foot_r]} (:masses actor)
-        {:keys [bullets punch-hand pickup-sent action-sent]} (:attack actor) 
+        {:keys [bullets punch-hand pickup-sent action-sent]} (:attack actor)
         {:keys [left right down punch shoot kick]} (:control actor)]
     (cond
       ;; pick up gun or body
@@ -117,15 +118,15 @@
         {:keys [bodyl headl]} (:metrics actor)
         {{[hx hy] :p} :hip} (:masses actor)
         {{[ax ay] :p} :base_l {[bx by] :p} :base_r} (:bases actor)
-        nx (* facing (+ (* (Math/abs speed) 1.0) (/ (Math/abs (- bx ax )) 15.0 ))) ; head move forward and backwards when stepping
+        nx (* facing (+ (* (Math/abs speed) 1.0) (/ (Math/abs (- bx ax)) 15.0))) ; head move forward and backwards when stepping
         nnx (* facing squat-size 0.5) ; head move even forward when squatting
         ny (* squat-size 0.25) ; head should move lower when squatting
         pnx (if punch (* facing 10.0) 0.0)
         neck [(+ hx nx nnx pnx) (- (+ hy ny) bodyl)]
         head [(+ hx nx nnx pnx) (- (+ hy ny) (+ bodyl headl))]]
     (-> actor
-        (assoc-in [:masses :neck :p] neck)
-        (assoc-in [:masses :head :p] head))))
+      (assoc-in [:masses :neck :p] neck)
+      (assoc-in [:masses :head :p] head))))
 
 
 (defn move-hand-walk
@@ -134,16 +135,16 @@
   (let [{:keys [facing]} actor
         {:keys [punch-hand punch-y]} (:attack actor)
         {:keys [left right punch shoot block]} (:control actor)
-        {{[hx hy] :p} :hip {[nx ny :as neck] :p} :neck } (:masses actor)
+        {{[hx hy] :p} :hip {[nx ny :as neck] :p} :neck} (:masses actor)
         {{[ax ay] :p} :base_l {[bx by] :p} :base_r} (:bases actor)
         {arml :arml} (:metrics actor)
         {angle :idle-angle} (:walk actor)
 
-        nlx (+ (* facing (+ (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
-        nrx (- (* facing (- (* arml 0.4 ) (/ (Math/abs (- bx ax )) 8.0 ))) (* (Math/sin angle ) 5.0))
-        nly (+ (* arml 0.1 ) (* (Math/cos angle ) 5.0))
-        nry (- (* arml 0.14 )(* (Math/cos angle ) 5.0))
-        
+        nlx (+ (* facing (+ (* arml 0.4) (/ (Math/abs (- bx ax)) 8.0))) (* (Math/sin angle) 5.0))
+        nrx (- (* facing (- (* arml 0.4) (/ (Math/abs (- bx ax)) 8.0))) (* (Math/sin angle) 5.0))
+        nly (+ (* arml 0.1) (* (Math/cos angle) 5.0))
+        nry (- (* arml 0.14) (* (Math/cos angle) 5.0))
+
         hand_l (cond
                  block [(+ nx (* facing arml 0.3)) (- ny (* arml 0.4))]
                  (or shoot (and punch (= punch-hand :hand_l) (not left) (not right))) [(+ nx (* facing arml 0.99)) (+ ny punch-y)]
@@ -157,10 +158,10 @@
         elbow_r (triangle-with-bases neck hand_r (* arml 0.5) facing)]
 
     (-> actor
-        (assoc-in [:masses :hand_l :p] hand_l)
-        (assoc-in [:masses :hand_r :p] hand_r)
-        (assoc-in [:masses :elbow_l :p] elbow_l)
-        (assoc-in [:masses :elbow_r :p] elbow_r))))
+      (assoc-in [:masses :hand_l :p] hand_l)
+      (assoc-in [:masses :hand_r :p] hand_r)
+      (assoc-in [:masses :elbow_l :p] elbow_l)
+      (assoc-in [:masses :elbow_r :p] elbow_r))))
 
 
 (defn move-hip-walk
@@ -169,16 +170,16 @@
   (let [{:keys [next-mode facing speed]} actor
         {:keys [order squat-size jump-state idle-angle]} (:walk actor)
         {:keys [up down run kick]} (:control actor)
-        {{[hx hy] :p} :hip } (:masses actor)
+        {{[hx hy] :p} :hip} (:masses actor)
         {{[lx ly] :p} :base_l {[rx ry] :p} :base_r} (:bases actor)
-        {legl :legl } (:metrics actor)
+        {legl :legl} (:metrics actor)
         cx (if (or (< speed -0.5) (> speed 0.5) (not kick)) (+ lx (/ (- rx lx) 2)) ; x center of bases when walking
-               (if (= :base_l (:active order)) rx lx)) ; passive foot when kic
+             (if (= :base_l (:active order)) rx lx)) ; passive foot when kic
         cy (+ ly (/ (- ry ly) 2)) ; y center of bases
         sty (- cy (+ (* legl 0.85) ; standing y pos, starting position is 0.85 leglength
-                     (/ (Math/abs (- rx lx)) 20.0) ; if legs are closer hip is higher
-                     (* (Math/sin idle-angle) 2.0) ; breathing movement
-                     (if (< (Math/abs speed) 3.0) (- (* (- 3.0 (Math/abs speed)) 2.0) (/ (Math/abs (- rx lx)) 5.0)) 0))) ; if stangind stand up more with straight back
+                    (/ (Math/abs (- rx lx)) 20.0) ; if legs are closer hip is higher
+                    (* (Math/sin idle-angle) 2.0) ; breathing movement
+                    (if (< (Math/abs speed) 3.0) (- (* (- 3.0 (Math/abs speed)) 2.0) (/ (Math/abs (- rx lx)) 5.0)) 0))) ; if stangind stand up more with straight back
         squat-size (cond
                      (or down (and up (= jump-state 0)))
                      (+ squat-size (/ (- (* legl 0.5) squat-size) 3)) ; move to standing pos 
@@ -189,15 +190,15 @@
              :else (+ cx (* facing 2.0))) ; when waling
         fy (+ sty squat-size) ; final 
         newstate (cond
-                (and up (= jump-state 0) (> squat-size (* legl 0.4))) 1
-                (and up (= jump-state 1) (< squat-size 1.0)) 2
-                :else jump-state)
+                   (and up (= jump-state 0) (> squat-size (* legl 0.4))) 1
+                   (and up (= jump-state 1) (< squat-size 1.0)) 2
+                   :else jump-state)
         newnext (if (= newstate 2) :jump next-mode)]
     (-> actor
-        (assoc :next-mode newnext)
-        (assoc-in [:masses :hip :p] [fx fy])
-        (assoc-in [:walk :squat-size] squat-size)
-        (assoc-in [:walk :jump-state] newstate))))
+      (assoc :next-mode newnext)
+      (assoc-in [:masses :hip :p] [fx fy])
+      (assoc-in [:walk :squat-size] squat-size)
+      (assoc-in [:walk :jump-state] newstate))))
 
 
 (defn move-knee-walk
@@ -208,11 +209,11 @@
         knee_l (triangle-with-bases (get-in masses [:foot_l :p]) (get-in masses [:hip :p]) (/ legl 1.95) facing)
         knee_r (triangle-with-bases (get-in masses [:foot_r :p]) (get-in masses [:hip :p]) (/ legl 1.95) facing)]
     (-> actor
-        (assoc-in [:masses :knee_l :p] knee_l) 
-        (assoc-in [:masses :knee_r :p] knee_r))))
+      (assoc-in [:masses :knee_l :p] knee_l)
+      (assoc-in [:masses :knee_r :p] knee_r))))
 
 
-(defn move-feet-walk-still 
+(defn move-feet-walk-still
   "do kick if needed"
   [actor surfaces]
   (let [{:keys [bases facing]} actor
@@ -223,7 +224,7 @@
 
         active-base (:active order)
         passive-base (:passive order)
-        
+
         [apx apy :as act] (:p (active-base bases)) ; active position
         [ppx ppy :as pas] (:p (passive-base bases)) ; passive position
         kick-point [(+ ppx (* legl facing 1.2)) (+ (- ppy (* legl 1.5)) kick-y)]
@@ -234,9 +235,9 @@
                  (if kick kick-point act)
                  pas)]
     (-> actor
-        (assoc-in [:masses :foot_l :p] foot_l) 
-        (assoc-in [:masses :foot_r :p] foot_r)
-        (assoc-in [:walk :target] nil))))
+      (assoc-in [:masses :foot_l :p] foot_l)
+      (assoc-in [:masses :foot_r :p] foot_r)
+      (assoc-in [:walk :target] nil))))
 
 
 (defn get-step-zone
@@ -248,7 +249,7 @@
                :else (+ (* (/ speed (Math/abs speed)) 40.0) (* speed 6.0)))
         A [(+ x size) y]
         B [(- size) (/ (Math/abs size) 2.0)]
-        C [(- size) (-(/ (Math/abs size) 2.0))]]
+        C [(- size) (- (/ (Math/abs size) 2.0))]]
     {:A A :B B :C C :T (math2/add-v2 A C) :M (math2/add-v2 A B)}))
 
 
@@ -262,7 +263,8 @@
       {:active :base_r :passive :base_l})))
 
 
-(defn get-collided [step-zone surfaces base-point direction]
+(defn get-collided
+  [step-zone surfaces base-point direction]
   (let [collided-top (sort-by first < (phys2/get-colliding-surfaces-by-distance (:T step-zone) (math2/sub-v2 (:A step-zone) (:T step-zone)) 4.0 surfaces base-point))
         collided-bot (sort-by first < (phys2/get-colliding-surfaces-by-distance (:A step-zone) (math2/sub-v2 (:M step-zone) (:A step-zone)) 4.0 surfaces base-point))]
     (cond
@@ -292,27 +294,27 @@
       (if (and empty-step new-empty-step)
         ;; fall
         (cond-> actor
-            true (assoc :health -1)
-            true (assoc :next-mode :rag)
-            true (assoc-in [:attack :timeout] (+ time 2000))
-            true (update :commands conj {:text "drop" :id id})
-            (= id :hero) (update :commands conj {:text "show-wasted"}))
+          true (assoc :health -1)
+          true (assoc :next-mode :rag)
+          true (assoc-in [:attack :timeout] (+ time 2000))
+          true (update :commands conj {:text "drop" :id id})
+          (= id :hero) (update :commands conj {:text "show-wasted"}))
         ;; normal step        
         (if-not (and (< newslope 50) (> newslope -50))
           ;; too steep slope, stop stepping
           (-> actor
-              (assoc actor :speed 0.0)
-              (assoc-in [:walk :empty-step] new-empty-step))
+            (assoc actor :speed 0.0)
+            (assoc-in [:walk :empty-step] new-empty-step))
           ;; slope is okay, normal step
           (-> actor
-              (assoc-in [:walk :empty-step] new-empty-step)
-              (assoc-in [:walk :zone] {:A (:A step-zone)
-                                       :B (math2/add-v2 (:A step-zone)(:B step-zone))
-                                       :C (math2/add-v2 (:A step-zone)(:C step-zone))})
-              (assoc-in [:walk :step-size] step-size)
-              (assoc-in [:walk :order] base-order)
-              (assoc-in [:walk :target] base-target)
-              (assoc-in [:walk :surfaces] {:active newactivesurf :passive (or newpassivesurf newactivesurf)})))))))
+            (assoc-in [:walk :empty-step] new-empty-step)
+            (assoc-in [:walk :zone] {:A (:A step-zone)
+                                     :B (math2/add-v2 (:A step-zone) (:B step-zone))
+                                     :C (math2/add-v2 (:A step-zone) (:C step-zone))})
+            (assoc-in [:walk :step-size] step-size)
+            (assoc-in [:walk :order] base-order)
+            (assoc-in [:walk :target] base-target)
+            (assoc-in [:walk :surfaces] {:active newactivesurf :passive (or newpassivesurf newactivesurf)})))))))
 
 
 (defn lift-active
@@ -335,8 +337,8 @@
   "calculate passive leg's lift height"
   [step-size remaining-size speed walks runs legl]
   (let [run-ratio  (if (< remaining-size (/ step-size 3)) ;; when running. highest foot position is third for passive
-                                  (/ (- (/  step-size 3.0) remaining-size ) ( / step-size 3.0 ))
-                                  0.0)
+                     (/ (- (/  step-size 3.0) remaining-size) (/ step-size 3.0))
+                     0.0)
         speed-ratio (if (> (Math/abs speed) walks) ;; walk / run speed ratio in actual state
                       (let [speed-diff (- runs (Math/abs speed))]
                         (/ speed-diff (- runs walks)))
@@ -364,16 +366,16 @@
         (let [actual-pos (:p ((:active order) bases))
               actual-vec (math2/sub-v2 target actual-pos)
               actual-size (math2/length-v2 actual-vec)
-              
+
               current-size (* (Math/abs speed) delta)
               current-vec (math2/resize-v2 actual-vec current-size)
               current-pos (math2/add-v2 actual-pos current-vec) ; current position
-              
+
               remaining-size (- actual-size current-size)
 
               lift-active (lift-active step-size remaining-size speed walks runs legl)
               lift-passive (lift-passive step-size remaining-size speed walks runs legl)
-              
+
               [cpx cpy] current-pos
               [ppx ppy] (:p (bases (:passive order))) ; passive position
 
@@ -386,9 +388,9 @@
                        [ppx (- ppy lift-passive)])
 
               actor-new (-> actor
-                            (assoc-in [:bases (:active order) :p] current-pos)
-                            (assoc-in [:masses :foot_l :p] foot_l) 
-                            (assoc-in [:masses :foot_r :p] foot_r))]
+                          (assoc-in [:bases (:active order) :p] current-pos)
+                          (assoc-in [:masses :foot_l :p] foot_l)
+                          (assoc-in [:masses :foot_r :p] foot_r))]
 
           (if (< actual-size current-size) ;; do we need to step?
             (step-feet-walk actor-new surfaces time)
@@ -406,26 +408,26 @@
                       (+ max 0.1)
                       (+ speed (* 0.5 delta)))
               left (if (< speed (- max))
-                      (- (- max) 0.1)
-                      (- speed (* 0.5 delta)))
+                     (- (- max) 0.1)
+                     (- speed (* 0.5 delta)))
               :else (* speed (- 1.0 (* 0.15 delta))))
         dir (cond
               (and (> nsx 0.0) right (not block)) 1
               (and (< nsx 0.0) left (not block)) -1
               :else facing)]
     (-> actor
-        (assoc :speed nsx)
-        (assoc :facing dir))))
+      (assoc :speed nsx)
+      (assoc :facing dir))))
 
 
 (defn update-walk
   "update walk state"
   [state surfaces time delta]
   (-> state
-      (update-speed delta)
-      (move-feet-walk surfaces time delta)
-      (move-hip-walk)
-      (move-knee-walk)
-      (move-head-walk)
-      (move-hand-walk surfaces)
-      (send-commands)))
+    (update-speed delta)
+    (move-feet-walk surfaces time delta)
+    (move-hip-walk)
+    (move-knee-walk)
+    (move-head-walk)
+    (move-hand-walk surfaces)
+    (send-commands)))

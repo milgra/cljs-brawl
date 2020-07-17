@@ -1,23 +1,23 @@
 (ns brawl.world
   (:require
-   [cljs.core.async :refer-macros [go]]
-   [cljs-http.client :as http]
-   [cljs.core.async :refer [<! chan put! take! poll!]]
-   [tubax.core :refer [xml->clj]]
-   [mpd.phys2 :as phys2]
-   [mpd.math2 :as math2]
-   [gui.math4 :as math4]
-   [brawl.ui :as brawlui]
-   [brawl.svg :as svg]
-   [brawl.gun :as gun]
-   [brawl.webgl :as webgl]
-   [brawl.actor :as actor]
-   [brawl.names :as names]
-   [brawl.metrics :as metrics]
-   [brawl.layouts :as layouts]
-   [brawl.defaults :as defaults]
-   [brawl.particle :as particle]
-   [brawl.actorskin :as actorskin]))
+    [brawl.actor :as actor]
+    [brawl.actorskin :as actorskin]
+    [brawl.defaults :as defaults]
+    [brawl.gun :as gun]
+    [brawl.layouts :as layouts]
+    [brawl.metrics :as metrics]
+    [brawl.names :as names]
+    [brawl.particle :as particle]
+    [brawl.svg :as svg]
+    [brawl.ui :as brawlui]
+    [brawl.webgl :as webgl]
+    [cljs-http.client :as http]
+    [cljs.core.async :refer-macros [go]]
+    [cljs.core.async :refer [<! chan put! take! poll!]]
+    [gui.math4 :as math4]
+    [mpd.math2 :as math2]
+    [mpd.phys2 :as phys2]
+    [tubax.core :refer [xml->clj]]))
 
 
 (defn init
@@ -65,8 +65,8 @@
         actors-new (reduce (fn [result _]
                              (let [actor (create-actor tokens herometrics pos currlevel)]
                                (assoc result (:id actor) actor)))
-                           actors
-                           (range 0 count))]
+                     actors
+                     (range 0 count))]
     (assoc state :actors actors-new)))
 
 
@@ -88,7 +88,7 @@
   "add actors, infos, guns and enpoint to scene based on pivot points in svg"
   [state pivots herometrics currlevel]
   (reduce (fn [{:keys [actors guns infos] :as oldstate}
-               {:keys [id path] :as pivot}]         
+               {:keys [id path] :as pivot}]
             (let [pos (nth path 3)
                   tokens (clojure.string/split id #"_")
                   type (first (second tokens))]
@@ -103,10 +103,10 @@
   [contacts [dx dy]]
   (reduce (fn [res [x y]]
             (concat
-             res
-             (repeatedly 5 #(particle/init x y [1.0 0.0 0.0 0.5] [ (+ dx -2.0 (rand 2.0)) (+ dy -2.0 (rand 2.0))] :blood))))
-          []
-          contacts))
+              res
+              (repeatedly 5 #(particle/init x y [1.0 0.0 0.0 0.5] [(+ dx -2.0 (rand 2.0)) (+ dy -2.0 (rand 2.0))] :blood))))
+    []
+    contacts))
 
 
 (defn normal-attack
@@ -116,15 +116,16 @@
         {:keys [id]} command
         sender (id actors)
         main-dir (math2/resize-v2 (math2/sub-v2 (:target command) (:base command)) 4.0)
-        [id isps :as attacked] (first (reduce (fn [res [id actor]] (let [isps (actor/hitpoints actor command)]
-                                                                     (if (empty? (remove nil? isps)) res (conj res [id isps])))) [] actors))]
+        [id isps :as attacked] (first (reduce (fn [res [id actor]]
+                                                (let [isps (actor/hitpoints actor command)]
+                                                  (if (empty? (remove nil? isps)) res (conj res [id isps])))) [] actors))]
     (if-not attacked
       state
       (let [new-particles (create-particles [(first (remove nil? isps))] main-dir)
             new-actor (actor/hit (id actors) command time)]
         (-> state
-            (assoc-in [:world :particles] (concat particles new-particles))
-            (assoc-in [:world :actors id] new-actor))))))
+          (assoc-in [:world :particles] (concat particles new-particles))
+          (assoc-in [:world :actors id] new-actor))))))
 
 
 (defn throw-body
@@ -136,19 +137,20 @@
         sender (id actors)
         dragged ((get-in sender [:drag :body]) actors)
         masses (:masses dragged)
-        newmasses (reduce (fn [res [id mass]] ; reset mass directions for next rag
+        newmasses (reduce (fn [res [id mass]]
+; reset mass directions for next rag
                             (assoc res id (assoc mass :d [(+ (* 6.0 (:facing sender)) (* (:speed sender) 0.5)) -2])))
-                          masses
-                          masses)
+                    masses
+                    masses)
         newdragged (-> dragged
-                       (assoc :masses newmasses)
-                       (assoc-in [:drag :injure?] true)
-                       (assoc-in [:drag :dragged?] false)
-                       (assoc-in [:attack :timeout] (+ time 500)))
+                     (assoc :masses newmasses)
+                     (assoc-in [:drag :injure?] true)
+                     (assoc-in [:drag :dragged?] false)
+                     (assoc-in [:attack :timeout] (+ time 500)))
         newsender (assoc-in sender [:drag :body] nil)]
     (-> state
-        (assoc-in [:world :actors id] newsender)
-        (assoc-in [:world :actors (:id dragged)] newdragged))))
+      (assoc-in [:world :actors id] newsender)
+      (assoc-in [:world :actors (:id dragged)] newdragged))))
 
 
 (defn execute-attack
@@ -160,27 +162,27 @@
     (if-not (:body (:drag sender))
       (normal-attack state command time)
       (throw-body state command time))))
-    
+
 
 (defn calc-view-rect
   "calculates the visible rectangle of the world"
-  [state time]  
+  [state time]
   (let [{:keys [actors warned warntime viewpos] :as world} (:world state)
         actor (if (or (> time warntime) (= nil warned)) (:hero actors) (warned actors))
         [vx vy] viewpos
         [fax fay] (:p (get-in actor [:bases :base_l]))
         [fbx fby] (:p (get-in actor [:bases :base_r]))
-        [hx hy] [ (+ fax (/ (- fbx fax ) 2)) (+ fay (/ (- fby fay) 2))]
-        [tx ty] [ (+ vx (/ (- hx vx ) 6)) (+ vy (/ (- hy vy) 6) -10)]
-        r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
+        [hx hy] [(+ fax (/ (- fbx fax) 2)) (+ fay (/ (- fby fay) 2))]
+        [tx ty] [(+ vx (/ (- hx vx) 6)) (+ vy (/ (- hy vy) 6) -10)]
+        r (/ (.-innerWidth js/window) (.-innerHeight js/window))
         h 300.0
         w (* h r)
         [l r b t :as new-rect] [(- tx w) (+ tx w) (+ ty h) (- ty h)]
         new-proj (math4/proj_ortho (+ l 50) (- r 50) (- b 50) (+ t 50) -1.0 1.0)]
     (-> state
-        (assoc-in [:world :viewpos] [tx ty])
-        (assoc-in [:world :view-rect] new-rect)
-        (assoc-in [:world :projection] new-proj))))
+      (assoc-in [:world :viewpos] [tx ty])
+      (assoc-in [:world :view-rect] new-rect)
+      (assoc-in [:world :projection] new-proj))))
 
 
 (defn check-ended
@@ -199,12 +201,12 @@
             new-commands (if (and (not finished) ended?) (conj commands-world {:text "next-level"}) commands-world)]
         (if (empty? all-dead)
           (-> state
-              (assoc :commands-world new-commands)
-              (assoc-in [:world :finished] ended?))
+            (assoc :commands-world new-commands)
+            (assoc-in [:world :finished] ended?))
           (if-not warned
             (-> state
-                (assoc-in [:world :warntime] (+ time 1000))
-                (assoc-in [:world :warned] (:id (first all-dead))))
+              (assoc-in [:world :warntime] (+ time 1000))
+              (assoc-in [:world :warned] (:id (first all-dead))))
             state))))))
 
 
@@ -212,7 +214,7 @@
   "step with particles"
   [state]
   (let [{:keys [particles view-rect]} (:world state)
-         new-particles (map (fn [particle] (particle/update-particle particle view-rect)) particles)]
+        new-particles (map (fn [particle] (particle/update-particle particle view-rect)) particles)]
     (assoc-in state [:world :particles] new-particles)))
 
 
@@ -232,9 +234,9 @@
   [state time]
   (let [{:keys [guns actors]} (:world state)
         new-actors (reduce (fn [result [id {{:keys [body]} :drag :as actor}]]
-                           (if-not body
-                             result
-                             (assoc result body (actor/update-dragged (body result) actor time)))) actors actors)]
+                             (if-not body
+                               result
+                               (assoc result body (actor/update-dragged (body result) actor time)))) actors actors)]
     (assoc-in state [:world :actors] new-actors)))
 
 
@@ -248,19 +250,19 @@
                                (if (empty? (:commands actor))
                                  result
                                  (into result (:commands actor))))
-                             commands-world
-                             actors)
+                       commands-world
+                       actors)
         new-actors (if (empty? new-commands)
                      actors
                      (reduce (fn [result [id actor]]
                                (if (empty? (:commands actor))
                                  result
                                  (assoc result id (-> actor (assoc :commands [])))))
-                             actors
-                             actors))]
+                       actors
+                       actors))]
     (-> state
-        (assoc :commands-world new-commands)
-        (assoc-in [:world :actors] new-actors)))) 
+      (assoc :commands-world new-commands)
+      (assoc-in [:world :actors] new-actors))))
 
 
 (defn update-actors
@@ -269,12 +271,12 @@
   (let [{:keys [controls]} state
         {:keys [actors surfaces guns]} (:world state)
         new-actors (reduce (fn [result [id actor]]
-                              (let [newactor (cond
-                                               (not= :hero id) (actor/update-actor actor nil surfaces result guns time delta)
-                                               :else (actor/update-actor actor controls surfaces result guns time delta))]
-                                (assoc result id newactor)))
-                           actors
-                           actors)]
+                             (let [newactor (cond
+                                              (not= :hero id) (actor/update-actor actor nil surfaces result guns time delta)
+                                              :else (actor/update-actor actor controls surfaces result guns time delta))]
+                               (assoc result id newactor)))
+                     actors
+                     actors)]
     (assoc-in state [:world :actors] new-actors)))
 
 
@@ -285,13 +287,13 @@
     (if-not loaded
       state
       (-> state
-          (update-actors time delta)
-          (extract-actor-commands)
-          (update-guns)
-          (update-dragged time)
-          (check-ended time)
-          (calc-view-rect time)
-          (update-particles)))))
+        (update-actors time delta)
+        (extract-actor-commands)
+        (update-guns)
+        (update-dragged time)
+        (check-ended time)
+        (calc-view-rect time)
+        (update-particles)))))
 
 
 (defn init-seeds
@@ -315,17 +317,17 @@
   (if (and msg (= (:id msg) "level"))
     (let [{:keys [level world world-drawer metrics]} state
           svglevel (:shapes msg)
-          points (map :path (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) svglevel ))
+          points (map :path (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) svglevel))
           pivots (filter #(if (:id %) (clojure.string/includes? (:id %) "Pivot") false) svglevel)
           surfaces (phys2/surfaces-from-pointlist points)
           lines (clj->js (reduce (fn [result {[tx ty] :t [bx by] :b}] (concat result [tx ty 1.0 1.0 1.0 1.0 (+ tx bx) (+ ty by) 1.0 1.0 1.0 1.0])) [] surfaces))
           newdrawer (webgl/load-shapes world-drawer (filter #(if (:id %) (not (clojure.string/includes? (:id %) "Pivot")) true) (:shapes msg)))
           newworld (-> (init)
-                       (assoc :inited true)
-                       (assoc :loaded true)
-                       (assoc :surfaces surfaces)
-                       (assoc :surfacelines lines)
-                       (create-objects pivots metrics (:level state)))]
+                     (assoc :inited true)
+                     (assoc :loaded true)
+                     (assoc :surfaces surfaces)
+                     (assoc :surfacelines lines)
+                     (create-objects pivots metrics (:level state)))]
       (cond-> state
         true (assoc :world-drawer newdrawer)
         true (assoc :world newworld)
@@ -345,7 +347,7 @@
   (go
     (let [channel (:msgch state)
           response (<! (http/get (str "levels/level" level ".svg")
-                                 {:with-credentials? false}))
+                         {:with-credentials? false}))
           xmlstr (xml->clj (:body response) {:strict false})
           shapes (svg/parse-svg xmlstr "")]
       (put! channel {:id "level" :shapes shapes}))))
@@ -356,9 +358,9 @@
   (let [{:keys [level sounds]} state]
     (load-level! state 0)
     (-> state
-        (assoc-in [:world :loaded] false)
-        (assoc :level 0)
-        (defaults/save-defaults!))))
+      (assoc-in [:world :loaded] false)
+      (assoc :level 0)
+      (defaults/save-defaults!))))
 
 
 (defn load-next-level
@@ -367,9 +369,9 @@
         next-level (min (inc level) 6)]
     (load-level! state next-level)
     (-> state
-        (assoc-in [:world :loaded] false)
-        (assoc :level next-level)
-        (defaults/save-defaults!))))
+      (assoc-in [:world :loaded] false)
+      (assoc :level next-level)
+      (defaults/save-defaults!))))
 
 
 (defn load-same-level
@@ -377,8 +379,8 @@
   (let [{:keys [level sounds]} state]
     (load-level! state level)
     (-> state
-        (assoc-in [:world :loaded] false))))
-  
+      (assoc-in [:world :loaded] false))))
+
 
 (defn pickup-object
   [state command]
@@ -389,22 +391,22 @@
         {{hip :hip} :masses color :color :as actor} actor
         ;; look for gun
         nearby-gun (->> (vals guns)
-                       (filter #(not (:dragged? %)))
-                       (filter (fn [{:keys [id p d]}] (< (math2/length-v2 (math2/sub-v2 p (:p hip))) 80.0)))
-                       (first))
+                     (filter #(not (:dragged? %)))
+                     (filter (fn [{:keys [id p d]}] (< (math2/length-v2 (math2/sub-v2 p (:p hip))) 80.0)))
+                     (first))
 
         nearby-body (->> (vals actors)
-                          (filter #(= (:mode %) :idle))
-                          (filter #(< (:health %) 0))
-                          (filter #(not (get-in % [:drag :dragged?])))
-                          (filter #(not= (:id %) id))
-                          (filter (fn [{{ehip :hip} :masses}] (< (math2/length-v2 (math2/sub-v2 (:p ehip) (:p hip))) 150.0)))
-                          (first))
+                      (filter #(= (:mode %) :idle))
+                      (filter #(< (:health %) 0))
+                      (filter #(not (get-in % [:drag :dragged?])))
+                      (filter #(not= (:id %) id))
+                      (filter (fn [{{ehip :hip} :masses}] (< (math2/length-v2 (math2/sub-v2 (:p ehip) (:p hip))) 150.0)))
+                      (first))
 
         dragged-body (if (and (not body) nearby-body)
-                        (-> nearby-body
-                            (assoc-in [:drag :dragged?] true)
-                            (assoc :next-mode :rag)))
+                       (-> nearby-body
+                         (assoc-in [:drag :dragged?] true)
+                         (assoc :next-mode :rag)))
 
         dragged-gun (if (and (not gun) nearby-gun (= id :hero))
                       (assoc nearby-gun :dragged? true))
@@ -432,14 +434,14 @@
         ;; look for gun
         dragged-gun (if gun
                       (-> (gun guns)
-                          (assoc :dragged? false))
+                        (assoc :dragged? false))
                       nil)
-        
+
         dragged-actor (if body
-                       (-> (body actors)
-                           (assoc-in [:drag :dragged?] false)
-                           (assoc-in [:drag :injure?] false))
-                       nil)
+                        (-> (body actors)
+                          (assoc-in [:drag :dragged?] false)
+                          (assoc-in [:drag :injure?] false))
+                        nil)
 
         new-actor (-> actor
                     (assoc-in [:drag :gun] nil)
@@ -465,8 +467,8 @@
                         (brawlui/load-ui state layouts/finished)
                         ;; load next level
                         (-> state
-                            (brawlui/load-ui layouts/info)
-                            (update :commands-world conj {:text "load-level"})))
+                          (brawlui/load-ui layouts/info)
+                          (update :commands-world conj {:text "load-level"})))
       "load-level"    (load-next-level state)
       "restart-level" (load-same-level state)
       "show-wasted"   (brawlui/load-ui state layouts/wasted)
@@ -480,7 +482,7 @@
   [state time]
   (let [{:keys [level commands-world ui-drawer]} state]
     (reduce
-     (fn [oldstate command]
-       (execute-command oldstate command time))
-     (assoc state :commands-world [])
-     commands-world)))
+      (fn [oldstate command]
+        (execute-command oldstate command time))
+      (assoc state :commands-world [])
+      commands-world)))

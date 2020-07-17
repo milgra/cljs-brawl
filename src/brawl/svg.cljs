@@ -1,6 +1,7 @@
 (ns brawl.svg
-  (:require [tubax.core :refer [xml->clj]]
-            [clojure.string :as s]))
+  (:require
+    [clojure.string :as s]
+    [tubax.core :refer [xml->clj]]))
 
 
 (defn parse-path
@@ -69,7 +70,6 @@
                          :else
                          (parse-svg content id)))
       (vector? element) (reduce #(concat %1 (parse-svg %2 id)) [] element))))
-
 
 ;; (parse-svg (xml->clj
 ;; "<?xml version='1.0' encoding='UTF-8'?>
